@@ -5,7 +5,8 @@ use App\Models\Tramite;
 use App\Models\DocumentoAdjunto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-
+use App\Services\TramiteStateService;
+Use Exception;
 class TramiteController extends Controller
 {
     public function store(Request $request)
@@ -76,5 +77,39 @@ class TramiteController extends Controller
         $tramite->save();
 
         return response()->json($tramite);
+    }
+    public function transicionar(Request $request, $id, TramiteStateService $stateService)
+{
+    // Solo roles autorizados pueden cambiar estados
+    if (!in_array($request->user()->rol, ['kardex', 'secretaria', 'direccion', 'admin', 'concejo'])) {
+        return response()->json(['message' => 'No autorizado'], 403);
+    }
+
+    $validated = $request->validate([
+        'nuevo_estado' => 'required|string',
+        'observaciones' => 'nullable|string',
+    ]);
+
+    $tramite = Tramite::with('modalidad')->findOrFail($id);
+
+    try {
+        $historial = $stateService->transicionar(
+            $tramite,
+            $validated['nuevo_estado'],
+            $validated['observaciones'],
+            $request->user()->id_usuario
+        );
+        return response()->json($historial, 201);
+    } catch (Exception $e) {
+        return response()->json(['message' => $e->getMessage()], 400);
+    }
+}
+
+    public function show($id)
+    {
+    // Ver detalle completo del trámite con su historial
+    $tramite = Tramite::with(['modalidad', 'estudiante.user', 'documentos', 'estados.responsable'])
+        ->findOrFail($id);
+    return response()->json($tramite);
     }
 }

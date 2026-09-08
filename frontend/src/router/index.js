@@ -22,6 +22,12 @@ const router = createRouter({
             component: RevisionKardex,
             meta: { requiresAuth: true, roles: ['kardex', 'secretaria', 'direccion', 'admin'] }
         },
+        { 
+            path: '/tramites/:id/gestion', 
+            name: 'GestionTramite', 
+            component: () => import('../views/GestionTramite.vue'),
+            meta: { requiresAuth: true, roles: ['kardex', 'secretaria', 'direccion', 'admin'] }
+        },
     ],
 });
 

@@ -56,12 +56,16 @@ onMounted(() => {
   tramitesStore.cargarPendientes();
 });
 
+
+// En lugar de aprobar directamente:
+router.push({ name: 'GestionTramite', params: { id: tramite.id_tramite } });
+/*
 const aprobar = async (id) => {
   const obs = prompt('Observaciones (opcional):');
   await tramitesStore.revisarTramite(id, 'aprobar', obs || '');
   alert('Solicitud aprobada. El estudiante puede continuar con el pago en Secretaría.');
 };
-
+*/
 const rechazar = async (id) => {
   const obs = prompt('Motivo del rechazo (obligatorio):');
   if (obs) {

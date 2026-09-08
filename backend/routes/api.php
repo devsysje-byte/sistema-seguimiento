@@ -21,4 +21,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tramites', [TramiteController::class, 'store']);
     Route::get('/tramites/pendientes', [TramiteController::class, 'pendientes']);
     Route::post('/tramites/{id}/revisar', [TramiteController::class, 'revisar']);
+    Route::get('/tramites/{id}', [TramiteController::class, 'show']);
+    Route::post('/tramites/{id}/transicionar', [TramiteController::class, 'transicionar']);
 });

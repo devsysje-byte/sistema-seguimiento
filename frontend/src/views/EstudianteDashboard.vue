@@ -1,4 +1,21 @@
 <template>
+<div v-if="tramiteActivo" class="bg-white p-6 rounded-lg shadow mt-6">
+  <h2 class="text-2xl font-bold text-gray-800 mb-2">Seguimiento de mi Titulación</h2>
+  <p class="text-gray-600 mb-6">Modalidad: <span class="font-bold text-blue-600">{{ tramiteActivo.modalidad.nombre }}</span></p>
+  
+  <Stepper 
+    :estados="tramiteActivo.estados" 
+    :estado-actual="tramiteActivo.estado_actual" 
+    :modalidad="tramiteActivo.modalidad.nombre" 
+  />
+
+  <div class="mt-8 border-t pt-4">
+    <h3 class="font-bold text-gray-700 mb-2">Última Observación:</h3>
+    <p class="bg-yellow-50 p-3 rounded text-sm text-gray-700">
+      {{ tramiteActivo.estados[tramiteActivo.estados.length - 1]?.observaciones || 'Sin observaciones recientes.' }}
+    </p>
+  </div>
+</div>
   <div class="min-h-screen bg-gray-100">
     <nav class="bg-blue-600 text-white p-4 flex justify-between items-center">
       <h1 class="text-xl font-bold">Portal del Estudiante</h1>
@@ -72,10 +89,15 @@
 </template>
 
 <script setup>
+
+import Stepper from '../components/Stepper.vue';
+import api from '../services/api';
+
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useTramitesStore } from '../stores/tramites';
 
+const tramiteActivo = ref(null);
 const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
 
@@ -128,4 +150,13 @@ const logout = () => {
   authStore.logout();
   window.location.href = '/login';
 };
+
+onMounted(async () => {
+  // ... cargar perfil ...
+  try {
+    // Asumiendo un endpoint para obtener el trámite activo del estudiante logueado
+    const { data } = await api.get('/estudiante/tramite-activo'); 
+    tramiteActivo.value = data;
+  } catch(e) { console.log('No hay trámite activo'); }
+});
 </script>
