@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import RevisionKardex from '../views/RevisionKardex.vue';
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,14 +16,28 @@ const router = createRouter({
             component: () => import('../views/EstudianteDashboard.vue'),
             meta: { requiresAuth: true }
         },
+         { 
+            path: '/kardex', 
+            name: 'RevisionKardex', 
+            component: RevisionKardex,
+            meta: { requiresAuth: true, roles: ['kardex', 'secretaria', 'direccion', 'admin'] }
+        },
     ],
 });
 
+// Actualizar la guardia
 router.beforeEach((to, from, next) => {
     const authStore = useAuthStore();
     if (to.meta.requiresAuth && !authStore.isAuthenticated) return next('/login');
-    if (to.meta.requiresAdmin && !authStore.isAdmin) return next('/estudiante');
+    if (to.meta.roles && !to.meta.roles.includes(authStore.user?.rol)) {
+        // Redirigir según rol
+        if (authStore.user?.rol === 'estudiante') return next('/estudiante');
+        if (authStore.user?.rol === 'admin') return next('/admin');
+        return next('/login'); // O página de error
+    }
     next();
+
+
 });
 
 export default router;
