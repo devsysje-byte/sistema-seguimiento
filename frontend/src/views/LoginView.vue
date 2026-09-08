@@ -33,7 +33,16 @@ const handleLogin = async () => {
   error.value = '';
   const result = await authStore.login(email.value, password.value);
   if (result === true) {
-    router.push(authStore.isAdmin ? '/admin' : '/estudiante');
+    const byRol = {
+      admin: '/admin',
+      estudiante: '/estudiante',
+      kardex: '/kardex',
+      secretaria: '/kardex',
+      direccion: '/kardex',
+      concejo: '/kardex',
+      docente: '/kardex'
+    };
+    router.push(byRol[authStore.user?.rol] || '/estudiante');
   } else {
     error.value = result;
   }

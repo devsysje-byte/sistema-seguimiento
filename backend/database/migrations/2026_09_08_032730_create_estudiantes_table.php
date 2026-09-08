@@ -12,7 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('estudiantes', function (Blueprint $table) {
-            $table->id();
+            $table->id('id_estudiante');
+            $table->foreignId('id_usuario')->constrained('users', 'id_usuario')->onDelete('cascade');
+            $table->string('codigo_universitario')->unique();
+            $table->string('plan_estudios');
+            $table->date('fecha_conclusion_plan');
+            $table->decimal('promedio_global', 5, 2);
+            $table->enum('estado', ['activo', 'inactivo'])->default('activo');
             $table->timestamps();
         });
     }

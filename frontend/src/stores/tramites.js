@@ -5,7 +5,9 @@ export const useTramitesStore = defineStore('tramites', {
     state: () => ({
         perfilEstudiante: JSON.parse(localStorage.getItem('perfilEstudiante')) || null,
         modalidades: [],
-        tramitesPendientes: []
+        tramitesPendientes: [],
+        tramiteActivo: null,
+        cargandoTramite: false,
     }),
     actions: {
         async cargarPerfil() {
@@ -23,27 +25,40 @@ export const useTramitesStore = defineStore('tramites', {
             localStorage.setItem('perfilEstudiante', JSON.stringify(data));
         },
         async cargarModalidades() {
-            // Asumiendo que tienes un endpoint o puedes harcodearlas si no hay index público
-            // Para este sprint, las hardcodeamos o usamos un endpoint simple
-            this.modalidades = [
-                { id_modalidad: 1, nombre: 'Examen de Grado' },
-                { id_modalidad: 2, nombre: 'Tesis de Grado' },
-                { id_modalidad: 3, nombre: 'Trabajo Dirigido' },
-                { id_modalidad: 4, nombre: 'Excelencia Académica' }
-            ];
+            try {
+                const { data } = await api.get('/modalidades');
+                this.modalidades = data;
+            } catch (error) {
+                this.modalidades = [];
+            }
+        },
+        async cargarTramiteActivo() {
+            this.cargandoTramite = true;
+            try {
+                const { data } = await api.get('/estudiante/tramite-activo');
+                this.tramiteActivo = data;
+            } catch (error) {
+                this.tramiteActivo = null;
+            } finally {
+                this.cargandoTramite = false;
+            }
+            return this.tramiteActivo;
         },
         async iniciarTramite(formData) {
-            return await api.post('/tramites', formData, {
+            const response = await api.post('/tramites', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
+            await this.cargarTramiteActivo();
+            return response;
         },
         async cargarPendientes() {
             const { data } = await api.get('/tramites/pendientes');
             this.tramitesPendientes = data;
         },
         async revisarTramite(id, accion, observaciones) {
-            await api.post(`/tramites/${id}/revisar`, { accion, observaciones });
+            const { data } = await api.post(`/tramites/${id}/revisar`, { accion, observaciones });
             await this.cargarPendientes();
+            return data;
         }
     }
 });

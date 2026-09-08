@@ -13,9 +13,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('/usuarios', UserController::class)->only(['index', 'store', 'destroy']);
 
-        // Perfil de Estudiante
+    Route::get('/modalidades', function () {
+        return \App\Models\Modalidad::where('activo', true)->orderBy('nombre')->get();
+    });
+
+    // Perfil de Estudiante
     Route::get('/estudiante/perfil', [EstudianteController::class, 'me']);
     Route::post('/estudiante/perfil', [EstudianteController::class, 'store']);
+    Route::get('/estudiante/tramite-activo', [TramiteController::class, 'tramiteActivo']);
 
     // Trámites
     Route::post('/tramites', [TramiteController::class, 'store']);

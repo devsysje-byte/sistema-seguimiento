@@ -7,7 +7,7 @@
       <div class="absolute top-4 left-0 h-1 bg-blue-600 z-0 transition-all duration-500" :style="{ width: progressWidth }"></div>
 
       <div v-for="(paso, index) in pasos" :key="index" class="relative z-10 flex flex-col items-center">
-        <div 
+        <div
           class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors"
           :class="getCircleClass(index)"
         >
@@ -25,33 +25,19 @@
 import { computed } from 'vue';
 
 const props = defineProps({
-  estados: { type: Array, required: true }, // Lista de estados del historial
-  estadoActual: { type: String, required: true },
-  modalidad: { type: String, required: true }
+  secuencia: { type: Array, required: true }, // Lista ordenada de estados de la modalidad
+  estadoActual: { type: String, required: true }
 });
 
-// Mapeo de estados a pasos visuales (Simplificado para Examen de Grado como ejemplo)
-const pasosMap = {
-  'Examen de Grado': [
-    'solicitud_presentada', 'certificacion_acreditacion', 'inscripcion_pagada', 
-    'espera_de_sorteo', 'tema_sorteado', 'examen_en_curso', 'acta_registrada', 'aprobado'
-  ],
-  'Tesis de Grado': [
-    'solicitud_presentada', 'perfil_presentado', 'perfil_aprobado', 
-    'investigacion_en_desarrollo', 'documento_final_presentado', 'defensa_en_curso', 'aprobado'
-  ]
-};
-
 const pasos = computed(() => {
-  const estadosBase = pasosMap[props.modalidad] || [];
-  return estadosBase.map(e => ({ 
-    id: e, 
-    nombre: e.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) 
+  return (props.secuencia || []).map((e) => ({
+    id: e,
+    nombre: String(e).replace(/_/g, ' ')
   }));
 });
 
 const currentIndex = computed(() => {
-  return pasos.value.findIndex(p => p.id === props.estadoActual);
+  return pasos.value.findIndex((p) => p.id === props.estadoActual);
 });
 
 const progressWidth = computed(() => {

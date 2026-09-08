@@ -27,4 +27,6 @@ class User extends Authenticatable
             'password' => 'hashed', // Laravel 11/12/13 casteo nativo
         ];
     }
+
+    public function estudiante() { return $this->hasOne(Estudiante::class, 'id_usuario', 'id_usuario'); }
 }

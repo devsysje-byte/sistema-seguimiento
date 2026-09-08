@@ -15,7 +15,7 @@ public function up(): void
         $table->id('id_documento');
 
         // FORMA ESTÁNDAR: Laravel buscará automáticamente la tabla 'tramites' y su clave primaria
-        $table->foreignId('id_tramite')->constrained('tramites')->onDelete('cascade');
+        $table->foreignId('id_tramite')->constrained('tramites', 'id_tramite')->onDelete('cascade');
 
         // Relación con usuarios corregida
         $table->foreignId('id_usuario_subio')->constrained('users', 'id_usuario');

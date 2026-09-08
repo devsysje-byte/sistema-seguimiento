@@ -4,6 +4,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class EstadoTramite extends Model
 {
+    protected $table = 'estados_tramite';
     protected $primaryKey = 'id_estado';
     protected $fillable = ['id_tramite', 'nombre_estado', 'descripcion', 'id_usuario_responsable', 'observaciones'];
 
