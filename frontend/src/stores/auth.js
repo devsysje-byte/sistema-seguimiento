@@ -28,6 +28,7 @@ export const useAuthStore = defineStore('auth', {
             this.token = null; this.user = null;
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            localStorage.removeItem('perfilEstudiante');
         }
     }
 });

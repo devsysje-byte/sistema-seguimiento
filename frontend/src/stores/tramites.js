@@ -13,10 +13,15 @@ export const useTramitesStore = defineStore('tramites', {
         async cargarPerfil() {
             try {
                 const { data } = await api.get('/estudiante/perfil');
-                this.perfilEstudiante = data;
-                localStorage.setItem('perfilEstudiante', JSON.stringify(data));
+                this.perfilEstudiante = data?.id_estudiante ? data : null;
+                if (this.perfilEstudiante) {
+                    localStorage.setItem('perfilEstudiante', JSON.stringify(this.perfilEstudiante));
+                } else {
+                    localStorage.removeItem('perfilEstudiante');
+                }
             } catch (error) {
                 this.perfilEstudiante = null;
+                localStorage.removeItem('perfilEstudiante');
             }
         },
         async guardarPerfil(datos) {
@@ -36,7 +41,7 @@ export const useTramitesStore = defineStore('tramites', {
             this.cargandoTramite = true;
             try {
                 const { data } = await api.get('/estudiante/tramite-activo');
-                this.tramiteActivo = data;
+                this.tramiteActivo = data?.id_tramite ? data : null;
             } catch (error) {
                 this.tramiteActivo = null;
             } finally {
