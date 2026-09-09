@@ -10,6 +10,10 @@ const router = createRouter({
     routes: [
         { path: '/login', name: 'Login', component: () => import('../views/LoginView.vue') },
         { 
+            path: '/dashboard', name: 'Dashboard', 
+            component: () => import('../views/DashboardView.vue'),
+        },
+        { 
             path: '/admin', name: 'AdminDashboard', 
             component: () => import('../views/AdminDashboard.vue'),
             meta: { requiresAuth: true, requiresAdmin: true }

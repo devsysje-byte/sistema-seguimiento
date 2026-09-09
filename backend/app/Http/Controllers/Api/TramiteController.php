@@ -96,6 +96,45 @@ class TramiteController extends Controller
             ->get();
     }
 
+    // Resumen estadístico de trámites aprobados y reprobados por modalidad
+    public function estadisticas(Request $request)
+    {
+        if (!in_array($request->user()->rol, ['admin', 'kardex', 'secretaria', 'direccion'])) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $aprobadosEstados = ['aprobado'];
+        $reprobadosEstados = ['rechazado', 'reprobado', 'reprobado_ausencia'];
+
+        $porModalidad = Tramite::with('modalidad')
+            ->get()
+            ->groupBy('id_modalidad')
+            ->map(function ($tramites, $idModalidad) use ($aprobadosEstados, $reprobadosEstados) {
+                $primero = $tramites->first();
+
+                return [
+                    'id_modalidad' => $idModalidad,
+                    'nombre' => $primero->modalidad->nombre ?? 'Sin modalidad',
+                    'aprobados' => $tramites->whereIn('estado_actual', $aprobadosEstados)->count(),
+                    'reprobados' => $tramites->whereIn('estado_actual', $reprobadosEstados)->count(),
+                    'total' => $tramites->count(),
+                ];
+            })
+            ->sortBy('nombre')
+            ->values();
+
+        $totales = [
+            'aprobados' => $porModalidad->sum('aprobados'),
+            'reprobados' => $porModalidad->sum('reprobados'),
+            'total' => $porModalidad->sum('total'),
+        ];
+
+        return response()->json([
+            'totales' => $totales,
+            'porModalidad' => $porModalidad,
+        ]);
+    }
+
     // Para Kardex/Dirección: Aprobar o Rechazar documentación inicial
     public function revisar(Request $request, $id, TramiteStateService $stateService)
     {

@@ -3,15 +3,15 @@
     <template v-if="!tramitesStore.perfilEstudiante">
       <div class="max-w-2xl mx-auto">
         <div class="card overflow-hidden">
-          <div class="h-2 bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500"></div>
+          <div class="h-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500"></div>
           <div class="p-8">
             <div class="flex items-center gap-3 mb-6">
-              <div class="w-12 h-12 rounded-2xl bg-indigo-50 ring-1 ring-indigo-200 flex items-center justify-center text-indigo-600">
+              <div class="w-12 h-12 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
                 <AppIcon name="user" :size="24" />
               </div>
               <div>
-                <h1 class="text-xl font-extrabold text-slate-900">Complete su Perfil Académico</h1>
-                <p class="text-sm text-slate-500">Necesitamos estos datos para habilitar tu solicitud de titulación.</p>
+                <h1 class="text-xl font-extrabold text-stone-900">Complete su Perfil Académico</h1>
+                <p class="text-sm text-stone-500">Necesitamos estos datos para habilitar tu solicitud de titulación.</p>
               </div>
             </div>
 
@@ -46,33 +46,33 @@
 
     <template v-else>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Código Universitario" :value="tramitesStore.perfilEstudiante.codigo_universitario" icon="file-text" tone="indigo" />
-        <StatCard label="Plan de Estudios" :value="tramitesStore.perfilEstudiante.plan_estudios" icon="book" tone="sky" />
-        <StatCard label="Promedio Global" :value="tramitesStore.perfilEstudiante.promedio_global" icon="chart" tone="emerald" />
+        <StatCard label="Código Universitario" :value="tramitesStore.perfilEstudiante.codigo_universitario" icon="file-text" tone="amber" />
+        <StatCard label="Plan de Estudios" :value="tramitesStore.perfilEstudiante.plan_estudios" icon="book" tone="rose" />
+        <StatCard label="Promedio Global" :value="tramitesStore.perfilEstudiante.promedio_global" icon="chart" tone="orange" />
         <StatCard
           label="Estado del Trámite"
           :value="tramitesStore.tramiteActivo ? formatoEstado(tramitesStore.tramiteActivo.estado_actual) : '—'"
           :icon="tramitesStore.tramiteActivo ? 'trending-up' : 'inbox'"
-          :tone="tramitesStore.tramiteActivo ? 'violet' : 'amber'"
+          :tone="tramitesStore.tramiteActivo ? 'amber' : 'rose'"
           :sublabel="tramitesStore.tramiteActivo ? tramitesStore.tramiteActivo.modalidad.nombre : 'Sin trámite activo'"
         />
       </div>
 
-      <div v-if="cargandoTramite" class="card flex items-center justify-center gap-2 py-16 text-slate-400">
+      <div v-if="cargandoTramite" class="card flex items-center justify-center gap-2 py-16 text-stone-400">
         <AppIcon name="loader" :size="20" class="animate-spin" />
         Cargando tu trámite...
       </div>
 
       <div v-else class="space-y-6">
         <div v-if="tramitesStore.tramiteActivo" class="card overflow-hidden">
-          <div class="h-2 bg-gradient-to-r from-indigo-500 to-violet-600"></div>
+          <div class="h-2 bg-gradient-to-r from-amber-500 to-orange-600"></div>
           <div class="p-6 sm:p-8">
             <TimelineTramite :tramite="tramitesStore.tramiteActivo" title="Seguimiento de mi Titulación" />
           </div>
         </div>
 
         <template v-if="mostrarInicioSolicitud">
-          <div v-if="tramiteTerminado" class="rounded-xl bg-emerald-50 ring-1 ring-emerald-200 p-4 flex items-start gap-3 text-emerald-800">
+          <div v-if="tramiteTerminado" class="rounded-xl bg-orange-50 ring-1 ring-orange-200 p-4 flex items-start gap-3 text-orange-800">
             <AppIcon name="check-circle" :size="20" class="mt-0.5 shrink-0" />
             <p class="text-sm font-medium">
               Tu último trámite finalizó con estado
@@ -82,18 +82,18 @@
           </div>
 
           <div class="card overflow-hidden relative">
-            <div class="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+            <div class="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-orange-400 to-amber-400"></div>
             <div class="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 flex items-center justify-center text-emerald-600">
+                <div class="w-14 h-14 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
                   <AppIcon name="graduation" :size="28" />
                 </div>
                 <div>
-                  <h2 class="text-lg font-extrabold text-slate-900">Iniciar Modalidad de Titulación</h2>
-                  <p class="text-sm text-slate-500">Selecciona la modalidad y sube los documentos en PDF.</p>
+                  <h2 class="text-lg font-extrabold text-stone-900">Iniciar Modalidad de Titulación</h2>
+                  <p class="text-sm text-stone-500">Selecciona la modalidad y sube los documentos en PDF.</p>
                 </div>
               </div>
-              <button class="btn-emerald px-6 py-3" @click="mostrarFormularioTramite = true">
+              <button class="btn-warm px-6 py-3" @click="mostrarFormularioTramite = true">
                 <AppIcon name="plus" :size="17" />
                 Nueva Solicitud de Graduación
               </button>
@@ -113,7 +113,7 @@
               {{ mod.nombre }}
             </option>
           </select>
-          <div v-if="modalidadSeleccionada" class="mt-3 rounded-xl bg-amber-50 ring-1 ring-amber-200 p-3.5 text-sm text-amber-800">
+          <div v-if="modalidadSeleccionada" class="mt-3 rounded-xl bg-orange-50 ring-1 ring-orange-200 p-3.5 text-sm text-orange-800">
             <p class="font-bold mb-1 inline-flex items-center gap-1.5">
               <AppIcon name="info" :size="15" />
               Requisitos
@@ -124,8 +124,8 @@
 
         <div>
           <label class="label">Certificado de Notas (PDF)</label>
-          <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoCertificado ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 bg-slate-50 hover:border-indigo-400']">
-            <span class="flex items-center gap-2 text-sm" :class="archivoCertificado ? 'text-emerald-700' : 'text-slate-500'">
+          <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoCertificado ? 'border-amber-300 bg-amber-50' : 'border-stone-300 bg-stone-50 hover:border-amber-400']">
+            <span class="flex items-center gap-2 text-sm" :class="archivoCertificado ? 'text-amber-700' : 'text-stone-500'">
               <AppIcon name="file-text" :size="18" />
               <span class="truncate max-w-[260px]">{{ archivoCertificado?.name || 'Selecciona el archivo...' }}</span>
             </span>
@@ -139,8 +139,8 @@
 
         <div>
           <label class="label">Carta de Solicitud (PDF)</label>
-          <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoCarta ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 bg-slate-50 hover:border-indigo-400']">
-            <span class="flex items-center gap-2 text-sm" :class="archivoCarta ? 'text-emerald-700' : 'text-slate-500'">
+          <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoCarta ? 'border-amber-300 bg-amber-50' : 'border-stone-300 bg-stone-50 hover:border-amber-400']">
+            <span class="flex items-center gap-2 text-sm" :class="archivoCarta ? 'text-amber-700' : 'text-stone-500'">
               <AppIcon name="file-text" :size="18" />
               <span class="truncate max-w-[260px]">{{ archivoCarta?.name || 'Selecciona el archivo...' }}</span>
             </span>

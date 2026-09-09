@@ -1,15 +1,15 @@
 <template>
   <AppShell title="Mis Tutorías" subtitle="Estudiantes a los que acompañas en su titulación">
     <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-      <StatCard label="Estudiantes en Proceso" :value="activos.length" icon="book" tone="indigo" />
-      <StatCard label="Tutorías Finalizadas" :value="finalizados.length" icon="award" tone="emerald" />
-      <StatCard label="Carga Académica Global" :value="promedioGlobal" icon="trending-up" tone="violet" sublabel="Promedio de avance de mis trámites" />
+      <StatCard label="Estudiantes en Proceso" :value="activos.length" icon="book" tone="amber" />
+      <StatCard label="Tutorías Finalizadas" :value="finalizados.length" icon="award" tone="orange" />
+      <StatCard label="Carga Académica Global" :value="promedioGlobal" icon="trending-up" tone="rose" sublabel="Promedio de avance de mis trámites" />
     </div>
 
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h2 class="text-lg font-bold text-slate-900">Mis Estudiantes</h2>
-        <p class="text-sm text-slate-500">Seguimiento completo de cada tutoría asignada.</p>
+        <h2 class="text-lg font-bold text-stone-900">Mis Estudiantes</h2>
+        <p class="text-sm text-stone-500">Seguimiento completo de cada tutoría asignada.</p>
       </div>
       <button class="btn-ghost" :disabled="cargando" @click="recargar">
         <AppIcon name="loader" v-if="cargando" :size="15" class="animate-spin" />
@@ -18,7 +18,7 @@
       </button>
     </div>
 
-    <div v-if="cargando" class="card flex items-center justify-center gap-2 py-16 text-slate-400">
+    <div v-if="cargando" class="card flex items-center justify-center gap-2 py-16 text-stone-400">
       <AppIcon name="loader" :size="20" class="animate-spin" />
       Cargando tutorías...
     </div>
@@ -32,28 +32,28 @@
     </div>
 
     <template v-else>
-      <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3 inline-flex items-center gap-2">
+      <h3 class="text-sm font-bold uppercase tracking-wider text-stone-500 mb-3 inline-flex items-center gap-2">
         <AppIcon name="clock" :size="15" />
         En Proceso ({{ activos.length }})
       </h3>
       <div v-if="activos.length" class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
         <div v-for="tramite in activos" :key="tramite.id_tramite" class="card overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-0.5 transition duration-200">
-          <div class="relative h-2 bg-gradient-to-r from-indigo-500 to-violet-600"></div>
+          <div class="relative h-2 bg-gradient-to-r from-amber-500 to-orange-600"></div>
           <div class="p-5 flex-1 flex flex-col">
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3">
                 <Avatar :nombres="tramite.estudiante.user.nombres" :apellidos="tramite.estudiante.user.apellidos" size="12" />
                 <div>
-                  <h4 class="text-lg font-bold text-slate-900 leading-tight">
+                  <h4 class="text-lg font-bold text-stone-900 leading-tight">
                     {{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}
                   </h4>
-                  <p class="text-sm text-indigo-600 font-semibold">{{ tramite.modalidad.nombre }}</p>
+                  <p class="text-sm text-amber-600 font-semibold">{{ tramite.modalidad.nombre }}</p>
                 </div>
               </div>
               <EstadoBadge :estado="tramite.estado_actual" />
             </div>
 
-            <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+            <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500">
               <span class="inline-flex items-center gap-1">
                 <AppIcon name="file-text" :size="12" />
                 Cod: {{ tramite.estudiante.codigo_universitario }}
@@ -69,9 +69,9 @@
             </div>
 
             <div class="mt-4">
-              <div class="flex justify-between text-xs text-slate-500 mb-1">
+              <div class="flex justify-between text-xs text-stone-500 mb-1">
                 <span class="font-semibold">Avance de la modalidad</span>
-                <span class="font-bold text-indigo-600">{{ porcentaje(tramite) }}%</span>
+                <span class="font-bold text-amber-600">{{ porcentaje(tramite) }}%</span>
               </div>
               <ProgressBar :value="porcentaje(tramite)" />
             </div>
@@ -83,23 +83,23 @@
           </div>
         </div>
       </div>
-      <div v-else class="rounded-xl bg-amber-50 ring-1 ring-amber-200 p-4 text-amber-800 text-sm mb-8">
+      <div v-else class="rounded-xl bg-orange-50 ring-1 ring-orange-200 p-4 text-orange-800 text-sm mb-8">
         No tienes tutorías activas en este momento.
       </div>
 
-      <h3 v-if="finalizados.length" class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3 inline-flex items-center gap-2">
+      <h3 v-if="finalizados.length" class="text-sm font-bold uppercase tracking-wider text-stone-500 mb-3 inline-flex items-center gap-2">
         <AppIcon name="award" :size="15" />
         Finalizados ({{ finalizados.length }})
       </h3>
       <div v-if="finalizados.length" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div v-for="tramite in finalizados" :key="tramite.id_tramite" class="card overflow-hidden opacity-80">
-          <div class="relative h-2 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+          <div class="relative h-2 bg-gradient-to-r from-orange-400 to-amber-400"></div>
           <div class="p-5 flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
               <Avatar :nombres="tramite.estudiante.user.nombres" :apellidos="tramite.estudiante.user.apellidos" size="10" />
               <div>
-                <h4 class="font-bold text-slate-800">{{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}</h4>
-                <p class="text-sm text-slate-500">{{ tramite.modalidad.nombre }}</p>
+                <h4 class="font-bold text-stone-800">{{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}</h4>
+                <p class="text-sm text-stone-500">{{ tramite.modalidad.nombre }}</p>
               </div>
             </div>
             <EstadoBadge :estado="tramite.estado_actual" />

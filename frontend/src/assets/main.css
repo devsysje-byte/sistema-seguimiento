@@ -9,38 +9,38 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-slate-100 text-slate-800 antialiased;
+    @apply bg-stone-100 text-stone-800 antialiased;
     font-family: var(--font-sans);
   }
 }
 
 @layer components {
   .card {
-    @apply bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/70;
+    @apply bg-white rounded-2xl shadow-sm ring-1 ring-stone-200/70;
   }
   .input {
-    @apply w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder:text-slate-400 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed;
+    @apply w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white text-sm text-stone-800 placeholder:text-stone-400 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:bg-stone-100 disabled:cursor-not-allowed;
   }
   .label {
-    @apply block text-sm font-semibold text-slate-700 mb-1.5;
+    @apply block text-sm font-semibold text-stone-700 mb-1.5;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-white shadow-sm transition bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-white shadow-sm transition bg-amber-600 hover:bg-amber-500 active:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  .btn-emerald {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-white shadow-sm transition bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
+  .btn-warm {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-white shadow-sm transition bg-orange-600 hover:bg-orange-500 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-rose {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-white shadow-sm transition bg-rose-600 hover:bg-rose-500 active:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-white shadow-sm transition bg-rose-500 hover:bg-rose-400 active:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-300 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-slate-700 shadow-sm transition bg-white ring-1 ring-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-stone-700 shadow-sm transition bg-white ring-1 ring-stone-300 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-300 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .th {
-    @apply px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500;
+    @apply px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-stone-500;
   }
   .td {
-    @apply px-4 py-3 text-sm text-slate-700;
+    @apply px-4 py-3 text-sm text-stone-700;
   }
 }
 

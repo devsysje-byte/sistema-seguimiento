@@ -6,6 +6,7 @@ export const useTramitesStore = defineStore('tramites', {
         perfilEstudiante: JSON.parse(localStorage.getItem('perfilEstudiante')) || null,
         modalidades: [],
         tramitesPendientes: [],
+        estadisticas: { totales: { aprobados: 0, reprobados: 0, total: 0 }, porModalidad: [] },
         tramiteActivo: null,
         tutorias: [],
         docentes: [],
@@ -72,6 +73,17 @@ export const useTramitesStore = defineStore('tramites', {
             const { data } = await api.get('/tramites/pendientes');
             this.tramitesPendientes = data;
             this._ts.pendientes = Date.now();
+        },
+        async cargarEstadisticas(force = false) {
+            if (!force && this._fresco('estadisticas', 30000)) return this.estadisticas;
+            try {
+                const { data } = await api.get('/tramites/estadisticas');
+                this.estadisticas = data;
+            } catch (error) {
+                this.estadisticas = { totales: { aprobados: 0, reprobados: 0, total: 0 }, porModalidad: [] };
+            }
+            this._ts.estadisticas = Date.now();
+            return this.estadisticas;
         },
         async revisarTramite(id, accion, observaciones) {
             const { data } = await api.post(`/tramites/${id}/revisar`, { accion, observaciones });

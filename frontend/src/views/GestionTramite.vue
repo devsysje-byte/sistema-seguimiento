@@ -1,7 +1,7 @@
 <template>
   <AppShell :title="`Trámite #${tramite?.id_tramite || ''}`" :subtitle="tramite ? `${tramite.estudiante.user.nombres} ${tramite.estudiante.user.apellidos} · ${tramite.modalidad.nombre}` : ''">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-      <p class="text-sm text-slate-500">
+      <p class="text-sm text-stone-500">
         Estado actual:
         <EstadoBadge v-if="tramite" :estado="tramite.estado_actual" class="ml-1" />
       </p>
@@ -11,15 +11,15 @@
       </button>
     </div>
 
-    <div v-if="cargando" class="card flex items-center justify-center gap-2 py-16 text-slate-400">
+    <div v-if="cargando" class="card flex items-center justify-center gap-2 py-16 text-stone-400">
       <AppIcon name="loader" :size="20" class="animate-spin" />
       Cargando trámite...
     </div>
 
     <div v-else-if="tramite" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div class="card p-6">
-        <h3 class="font-bold text-slate-800 mb-4 inline-flex items-center gap-2">
-          <span class="w-8 h-8 rounded-lg bg-indigo-50 ring-1 ring-indigo-200 flex items-center justify-center text-indigo-600">
+        <h3 class="font-bold text-stone-800 mb-4 inline-flex items-center gap-2">
+          <span class="w-8 h-8 rounded-lg bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
             <AppIcon name="user" :size="17" />
           </span>
           Datos del Postulante
@@ -27,42 +27,42 @@
         <div class="flex items-center gap-4">
           <Avatar :nombres="tramite.estudiante.user.nombres" :apellidos="tramite.estudiante.user.apellidos" size="14" />
           <div>
-            <p class="text-lg font-bold text-slate-900">
+            <p class="text-lg font-bold text-stone-900">
               {{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}
             </p>
-            <p class="text-sm text-slate-500 capitalize">{{ rolLabel(tramite.estudiante.user.rol) }}</p>
+            <p class="text-sm text-stone-500 capitalize">{{ rolLabel(tramite.estudiante.user.rol) }}</p>
           </div>
         </div>
         <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div class="rounded-xl bg-slate-50 p-3">
-            <dt class="text-xs text-slate-400 font-semibold uppercase">Código</dt>
-            <dd class="font-semibold text-slate-800">{{ tramite.estudiante.codigo_universitario }}</dd>
+          <div class="rounded-xl bg-stone-50 p-3">
+            <dt class="text-xs text-stone-400 font-semibold uppercase">Código</dt>
+            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.codigo_universitario }}</dd>
           </div>
-          <div class="rounded-xl bg-slate-50 p-3">
-            <dt class="text-xs text-slate-400 font-semibold uppercase">Promedio</dt>
-            <dd class="font-semibold text-slate-800">{{ tramite.estudiante.promedio_global }}</dd>
+          <div class="rounded-xl bg-stone-50 p-3">
+            <dt class="text-xs text-stone-400 font-semibold uppercase">Promedio</dt>
+            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.promedio_global }}</dd>
           </div>
-          <div class="rounded-xl bg-slate-50 p-3">
-            <dt class="text-xs text-slate-400 font-semibold uppercase">Plan</dt>
-            <dd class="font-semibold text-slate-800">{{ tramite.estudiante.plan_estudios }}</dd>
+          <div class="rounded-xl bg-stone-50 p-3">
+            <dt class="text-xs text-stone-400 font-semibold uppercase">Plan</dt>
+            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.plan_estudios }}</dd>
           </div>
-          <div class="rounded-xl bg-slate-50 p-3">
-            <dt class="text-xs text-slate-400 font-semibold uppercase">Conclusión del plan</dt>
-            <dd class="font-semibold text-slate-800">{{ tramite.estudiante.fecha_conclusion_plan }}</dd>
+          <div class="rounded-xl bg-stone-50 p-3">
+            <dt class="text-xs text-stone-400 font-semibold uppercase">Conclusión del plan</dt>
+            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.fecha_conclusion_plan }}</dd>
           </div>
         </dl>
       </div>
 
       <div class="card p-6">
-        <h3 class="font-bold text-slate-800 mb-4 inline-flex items-center gap-2">
-          <span class="w-8 h-8 rounded-lg bg-violet-50 ring-1 ring-violet-200 flex items-center justify-center text-violet-600">
+        <h3 class="font-bold text-stone-800 mb-4 inline-flex items-center gap-2">
+          <span class="w-8 h-8 rounded-lg bg-orange-50 ring-1 ring-orange-200 flex items-center justify-center text-orange-600">
             <AppIcon name="graduation" :size="17" />
           </span>
           Modalidad
         </h3>
-        <p class="text-lg font-bold text-indigo-700">{{ tramite.modalidad.nombre }}</p>
-        <p class="mt-2 text-sm text-slate-600">{{ tramite.modalidad.descripcion || '' }}</p>
-        <div class="mt-4 rounded-xl bg-amber-50 ring-1 ring-amber-200 p-3.5 text-sm text-amber-800">
+        <p class="text-lg font-bold text-amber-700">{{ tramite.modalidad.nombre }}</p>
+        <p class="mt-2 text-sm text-stone-600">{{ tramite.modalidad.descripcion || '' }}</p>
+        <div class="mt-4 rounded-xl bg-orange-50 ring-1 ring-orange-200 p-3.5 text-sm text-orange-800">
           <p class="font-bold mb-1 inline-flex items-center gap-1.5">
             <AppIcon name="info" :size="15" />
             Requisitos mínimos
@@ -73,8 +73,8 @@
 
       <div class="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="card p-6">
-          <h3 class="font-bold text-slate-800 mb-4 inline-flex items-center gap-2">
-            <span class="w-8 h-8 rounded-lg bg-emerald-50 ring-1 ring-emerald-200 flex items-center justify-center text-emerald-600">
+          <h3 class="font-bold text-stone-800 mb-4 inline-flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-orange-50 ring-1 ring-orange-200 flex items-center justify-center text-orange-600">
               <AppIcon name="user-check" :size="17" />
             </span>
             Tutor Asignado
@@ -82,13 +82,13 @@
           <div v-if="tramite.tutor" class="flex items-center gap-3">
             <Avatar :nombres="tramite.tutor.nombres" :apellidos="tramite.tutor.apellidos" size="12" />
             <div>
-              <p class="font-semibold text-slate-800">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</p>
-              <p class="text-xs text-slate-500">{{ tramite.tutor.email }}</p>
+              <p class="font-semibold text-stone-800">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</p>
+              <p class="text-xs text-stone-500">{{ tramite.tutor.email }}</p>
             </div>
           </div>
-          <div v-else class="text-sm text-amber-600 font-medium">No hay tutor asignado todavía.</div>
+          <div v-else class="text-sm text-orange-500 font-medium">No hay tutor asignado todavía.</div>
 
-          <div v-if="esPersonal" class="mt-4 pt-4 border-t border-slate-100">
+          <div v-if="esPersonal" class="mt-4 pt-4 border-t border-stone-100">
             <label class="label">Cambiar / Asignar tutor</label>
             <div class="flex flex-col sm:flex-row gap-2">
               <select v-model="tutorSeleccionado" class="input flex-1 min-w-0">
@@ -107,8 +107,8 @@
         </div>
 
         <div class="card p-6">
-          <h3 class="font-bold text-slate-800 mb-4 inline-flex items-center gap-2">
-            <span class="w-8 h-8 rounded-lg bg-sky-50 ring-1 ring-sky-200 flex items-center justify-center text-sky-600">
+          <h3 class="font-bold text-stone-800 mb-4 inline-flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
               <AppIcon name="file-text" :size="17" />
             </span>
             Documentos Presentados
@@ -116,18 +116,18 @@
           <div v-if="tramite.documentos.length" class="space-y-2">
             <a v-for="doc in tramite.documentos" :key="doc.id_documento"
                :href="`${baseStorageUrl}/${doc.ruta_archivo}`" target="_blank"
-               class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-indigo-700 bg-indigo-50 ring-1 ring-indigo-200 hover:bg-indigo-100 transition">
+               class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 transition">
               <AppIcon name="link" :size="16" />
               {{ doc.tipo_documento }}
-              <span class="ml-auto text-xs text-slate-400">{{ new Date(doc.created_at).toLocaleDateString('es-BO') }}</span>
+              <span class="ml-auto text-xs text-stone-400">{{ new Date(doc.created_at).toLocaleDateString('es-BO') }}</span>
             </a>
           </div>
-          <p v-else class="text-sm text-slate-400">Sin documentos registrados.</p>
+          <p v-else class="text-sm text-stone-400">Sin documentos registrados.</p>
         </div>
       </div>
 
       <div class="lg:col-span-2 card overflow-hidden">
-        <div class="h-2 bg-gradient-to-r from-indigo-500 to-violet-600"></div>
+        <div class="h-2 bg-gradient-to-r from-amber-500 to-orange-600"></div>
         <div class="p-6 sm:p-8">
           <TimelineTramite :tramite="tramite" :title="esDocente ? 'Seguimiento de la Tutoría' : 'Historial de Seguimiento'" />
         </div>
@@ -135,16 +135,16 @@
 
       <div v-if="esPersonal" class="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div v-if="tramite.estado_actual === 'solicitud_presentada'" class="card p-6">
-          <h3 class="font-bold text-slate-800 mb-2 inline-flex items-center gap-2">
-            <span class="w-8 h-8 rounded-lg bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
+          <h3 class="font-bold text-stone-800 mb-2 inline-flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-orange-50 ring-1 ring-orange-200 flex items-center justify-center text-orange-600">
               <AppIcon name="inbox" :size="17" />
             </span>
             Revisión de Documentación Inicial
           </h3>
-          <p class="text-sm text-slate-500 mb-4">Aprobar inicia el flujo de estados según la modalidad. Indica observaciones para registrar en el historial.</p>
+          <p class="text-sm text-stone-500 mb-4">Aprobar inicia el flujo de estados según la modalidad. Indica observaciones para registrar en el historial.</p>
           <textarea v-model="observacionesRev" rows="3" class="input resize-none mb-3" placeholder="Observaciones (obligatorio para rechazar)"></textarea>
           <div class="flex gap-2">
-            <button class="btn-emerald flex-1" @click="revisar('aprobar')">
+            <button class="btn-primary flex-1" @click="revisar('aprobar')">
               <AppIcon name="check" :size="15" />
               Aprobar
             </button>
@@ -156,13 +156,13 @@
         </div>
 
         <div class="card p-6">
-          <h3 class="font-bold text-slate-800 mb-2 inline-flex items-center gap-2">
-            <span class="w-8 h-8 rounded-lg bg-indigo-50 ring-1 ring-indigo-200 flex items-center justify-center text-indigo-600">
+          <h3 class="font-bold text-stone-800 mb-2 inline-flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
               <AppIcon name="trending-up" :size="17" />
             </span>
             Avanzar Trámite
           </h3>
-          <p class="text-sm text-slate-500 mb-4">Mueve el trámite al siguiente estado del flujo correspondiente.</p>
+          <p class="text-sm text-stone-500 mb-4">Mueve el trámite al siguiente estado del flujo correspondiente.</p>
           <div v-if="siguientesEstados.length" class="space-y-3">
             <select v-model="nuevoEstado" class="input">
               <option value="" disabled>Seleccione el siguiente estado...</option>
@@ -177,11 +177,11 @@
               {{ ejecutando ? 'Ejecutando...' : 'Ejecutar Transición' }}
             </button>
           </div>
-          <p v-else class="text-sm text-slate-500">No hay más transiciones permitidas desde este estado.</p>
+          <p v-else class="text-sm text-stone-500">No hay más transiciones permitidas desde este estado.</p>
         </div>
       </div>
 
-      <div v-else class="lg:col-span-2 rounded-xl bg-sky-50 ring-1 ring-sky-200 p-4 flex items-start gap-3 text-sky-800 text-sm">
+      <div v-else class="lg:col-span-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 p-4 flex items-start gap-3 text-amber-800 text-sm">
         <AppIcon name="info" :size="18" class="mt-0.5 shrink-0" />
         Estás viendo el seguimiento de la tutoría en modo lectura. Las acciones de revisión las realizan Kardex y Dirección.
       </div>

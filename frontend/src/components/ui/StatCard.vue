@@ -32,6 +32,7 @@ const tones = {
   sky: { icon: 'from-sky-500 to-sky-600', blob: 'bg-sky-400' },
   emerald: { icon: 'from-emerald-500 to-emerald-600', blob: 'bg-emerald-400' },
   amber: { icon: 'from-amber-500 to-amber-600', blob: 'bg-amber-400' },
+  orange: { icon: 'from-orange-500 to-orange-600', blob: 'bg-orange-400' },
   rose: { icon: 'from-rose-500 to-rose-600', blob: 'bg-rose-400' },
 };
 
