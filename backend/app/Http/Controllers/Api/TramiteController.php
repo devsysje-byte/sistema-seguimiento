@@ -4,6 +4,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Tramite;
 use App\Models\EstadoTramite;
 use App\Models\DocumentoAdjunto;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +22,7 @@ class TramiteController extends Controller
             return response()->json(null);
         }
 
-        $tramite = Tramite::with(['modalidad', 'estudiante.user', 'documentos', 'estados.responsable'])
+        $tramite = Tramite::with(['modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor'])
             ->where('id_estudiante', $estudiante->id_estudiante)
             ->orderBy('created_at', 'desc')
             ->first();
@@ -89,7 +90,7 @@ class TramiteController extends Controller
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
-        return Tramite::with(['estudiante.user', 'modalidad', 'documentos'])
+        return Tramite::with(['estudiante.user', 'modalidad', 'documentos', 'tutor'])
             ->whereNotIn('estado_actual', ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -137,7 +138,7 @@ class TramiteController extends Controller
                 );
             }
 
-            return response()->json($this->formatTramite($tramite->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable'), $stateService));
+            return response()->json($this->formatTramite($tramite->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor'), $stateService));
         } catch (Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);
         }
@@ -164,16 +165,53 @@ class TramiteController extends Controller
                 $validated['observaciones'],
                 $request->user()->id_usuario
             );
-            return response()->json($this->formatTramite($tramite->refresh()->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable'), $stateService), 201);
+            return response()->json($this->formatTramite($tramite->refresh()->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor'), $stateService), 201);
         } catch (Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);
         }
     }
 
+    // Asignar (o cambiar) el docente tutor de un trámite
+    public function asignarTutor(Request $request, $id, TramiteStateService $stateService)
+    {
+        if (!in_array($request->user()->rol, ['kardex', 'secretaria', 'direccion', 'admin'])) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $validated = $request->validate([
+            'id_tutor' => 'required|exists:users,id_usuario',
+        ]);
+
+        $tutor = User::findOrFail($validated['id_tutor']);
+        if ($tutor->rol !== 'docente') {
+            return response()->json(['message' => 'El tutor debe ser un usuario con rol docente'], 422);
+        }
+
+        $tramite = Tramite::with('modalidad')->findOrFail($id);
+        $tramite->update(['id_tutor' => $tutor->id_usuario]);
+
+        return response()->json($this->formatTramite($tramite->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor'), $stateService));
+    }
+
+    // Panel del docente tutor: trámites donde es tutor
+    public function tutorias(Request $request, TramiteStateService $stateService)
+    {
+        if ($request->user()->rol !== 'docente') {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $tramites = Tramite::with(['modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor'])
+            ->where('id_tutor', $request->user()->id_usuario)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($tramites->map(fn ($t) => $this->formatTramite($t, $stateService)));
+    }
+
     public function show(Request $request, $id, TramiteStateService $stateService)
     {
         // Ver detalle completo del trámite con su historial
-        $tramite = Tramite::with(['modalidad', 'estudiante.user', 'documentos', 'estados.responsable'])
+        $tramite = Tramite::with(['modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor'])
             ->findOrFail($id);
 
         // Los estudiantes solo pueden ver sus propios trámites

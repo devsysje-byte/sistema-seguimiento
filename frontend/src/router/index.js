@@ -12,6 +12,11 @@ const router = createRouter({
             meta: { requiresAuth: true, requiresAdmin: true }
         },
         { 
+            path: '/docente', name: 'DocenteTutorias', 
+            component: () => import('../views/DocenteTutorias.vue'),
+            meta: { requiresAuth: true, roles: ['docente'] }
+        },
+        { 
             path: '/estudiante', name: 'EstudianteDashboard', 
             component: () => import('../views/EstudianteDashboard.vue'),
             meta: { requiresAuth: true }

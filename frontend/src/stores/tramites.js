@@ -7,6 +7,8 @@ export const useTramitesStore = defineStore('tramites', {
         modalidades: [],
         tramitesPendientes: [],
         tramiteActivo: null,
+        tutorias: [],
+        docentes: [],
         cargandoTramite: false,
     }),
     actions: {
@@ -63,6 +65,26 @@ export const useTramitesStore = defineStore('tramites', {
         async revisarTramite(id, accion, observaciones) {
             const { data } = await api.post(`/tramites/${id}/revisar`, { accion, observaciones });
             await this.cargarPendientes();
+            return data;
+        },
+        async cargarTutorias() {
+            try {
+                const { data } = await api.get('/tutorias');
+                this.tutorias = data;
+            } catch (error) {
+                this.tutorias = [];
+            }
+        },
+        async cargarDocentes() {
+            try {
+                const { data } = await api.get('/usuarios/docentes');
+                this.docentes = data;
+            } catch (error) {
+                this.docentes = [];
+            }
+        },
+        async asignarTutor(id, idTutor) {
+            const { data } = await api.post(`/tramites/${id}/asignar-tutor`, { id_tutor: idTutor });
             return data;
         }
     }

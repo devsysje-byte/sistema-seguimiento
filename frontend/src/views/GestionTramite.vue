@@ -15,6 +15,10 @@
           <p>{{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}</p>
           <p class="text-sm text-gray-600">Código: {{ tramite.estudiante.codigo_universitario }} | Promedio: {{ tramite.estudiante.promedio_global }}</p>
           <p class="text-sm text-gray-600 mt-1">Modalidad: <strong>{{ tramite.modalidad.nombre }}</strong></p>
+          <p class="text-sm text-gray-700 flex items-center gap-2">Tutor:
+            <span v-if="tramite.tutor">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</span>
+            <span v-else class="text-gray-400">No asignado</span>
+          </p>
           <p class="text-sm text-gray-700 mt-1 flex items-center gap-2">
             Estado actual:
             <span class="px-2 py-0.5 rounded-full text-xs font-bold text-white" :class="estadoChipClass(tramite.estado_actual)">
@@ -35,8 +39,27 @@
           </div>
         </div>
 
+        <!-- Asignación de tutor (solo personal) -->
+        <div v-if="esPersonal" class="col-span-2 bg-indigo-50 border border-indigo-200 p-4 rounded">
+          <h3 class="font-bold text-lg mb-2">Asignar Tutor</h3>
+          <p class="text-sm text-gray-600 mb-3">
+            Tutor actual: <strong>{{ tramite.tutor ? tramite.tutor.nombres + ' ' + tramite.tutor.apellidos : 'Ninguno' }}</strong>
+          </p>
+          <div class="flex gap-4 items-center">
+            <select v-model="tutorSeleccionado" class="border p-2 rounded flex-1">
+              <option value="" disabled>Seleccione un docente tutor...</option>
+              <option v-for="doc in tramitesStore.docentes" :key="doc.id_usuario" :value="doc.id_usuario">
+                {{ doc.nombres }} {{ doc.apellidos }} ({{ doc.email }})
+              </option>
+            </select>
+            <button @click="asignarTutor" :disabled="asignando || !tutorSeleccionado" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 disabled:opacity-50">
+              {{ asignando ? 'Asignando...' : 'Asignar Tutor' }}
+            </button>
+          </div>
+        </div>
+
         <!-- Aprobar/Rechazar documentación inicial -->
-        <div v-if="tramite.estado_actual === 'solicitud_presentada'" class="col-span-2 bg-yellow-50 border border-yellow-200 p-4 rounded">
+        <div v-if="esPersonal && tramite.estado_actual === 'solicitud_presentada'" class="col-span-2 bg-yellow-50 border border-yellow-200 p-4 rounded">
           <h3 class="font-bold text-lg mb-2">Revisión de Documentación Inicial</h3>
           <p class="text-sm text-gray-600 mb-3">Los documentos aún no fueron revisados. Aprobar la documentación inicia el flujo de estados según la modalidad.</p>
           <div class="flex gap-4 items-center">
@@ -67,7 +90,7 @@
         </div>
 
         <!-- Panel de Transición -->
-        <div class="col-span-2 border-t pt-4">
+        <div v-if="esPersonal" class="col-span-2 border-t pt-4">
           <h3 class="font-bold text-lg mb-2">Avanzar Trámite</h3>
           <div v-if="siguientesEstados.length" class="flex gap-4">
             <select v-model="nuevoEstado" class="border p-2 rounded flex-1">
@@ -83,6 +106,9 @@
           </div>
           <p v-else class="text-sm text-gray-500">No hay más transiciones permitidas desde este estado.</p>
         </div>
+        <div v-else class="col-span-2 border-t pt-4 text-sm text-gray-500">
+          Estás viendo el seguimiento en modo lectura. Las acciones las realizan Kardex / Dirección.
+        </div>
       </div>
     </div>
   </div>
@@ -92,9 +118,13 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
+import { useAuthStore } from '../stores/auth';
+import { useTramitesStore } from '../stores/tramites';
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
+const tramitesStore = useTramitesStore();
 const tramite = ref(null);
 const cargando = ref(false);
 const ejecutando = ref(false);
@@ -102,6 +132,11 @@ const siguientesEstados = ref([]);
 const nuevoEstado = ref('');
 const observaciones = ref('');
 const observacionesRev = ref('');
+const tutorSeleccionado = ref('');
+const asignando = ref(false);
+
+const esDocente = computed(() => authStore.user?.rol === 'docente');
+const esPersonal = computed(() => !esDocente.value && authStore.user?.rol !== 'estudiante');
 
 const baseStorageUrl = import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage';
 
@@ -119,7 +154,27 @@ const cargarTramite = async () => {
   }
 };
 
-onMounted(cargarTramite);
+onMounted(async () => {
+  if (esPersonal.value) {
+    await tramitesStore.cargarDocentes();
+  }
+  await cargarTramite();
+});
+
+const asignarTutor = async () => {
+  if (!tutorSeleccionado.value) return alert('Seleccione un docente');
+  asignando.value = true;
+  try {
+    const { data } = await tramitesStore.asignarTutor(tramite.value.id_tramite, tutorSeleccionado.value);
+    tramite.value = data;
+    tutorSeleccionado.value = '';
+    alert('Tutor asignado correctamente.');
+  } catch (error) {
+    alert('Error: ' + (error.response?.data?.message || 'No se pudo asignar el tutor'));
+  } finally {
+    asignando.value = false;
+  }
+};
 
 const ejecutarTransicion = async () => {
   if (!nuevoEstado.value) return alert('Seleccione un estado');

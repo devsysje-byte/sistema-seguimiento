@@ -38,9 +38,9 @@ const handleLogin = async () => {
       estudiante: '/estudiante',
       kardex: '/kardex',
       secretaria: '/kardex',
-      direccion: '/kardex',
-      concejo: '/kardex',
-      docente: '/kardex'
+direccion: '/kardex',
+                  concejo: '/kardex',
+                  docente: '/docente'
     };
     router.push(byRol[authStore.user?.rol] || '/estudiante');
   } else {

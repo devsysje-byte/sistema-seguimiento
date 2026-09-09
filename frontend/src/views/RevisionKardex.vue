@@ -29,6 +29,11 @@
                   {{ formatoEstado(tramite.estado_actual) }}
                 </span>
               </p>
+              <p class="text-sm mt-1">
+                <span class="font-semibold text-gray-600">Tutor:</span>
+                <span v-if="tramite.tutor">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</span>
+                <span v-else class="text-gray-400">No asignado (asignar en Gestionar)</span>
+              </p>
             </div>
             <div class="flex gap-2">
               <button

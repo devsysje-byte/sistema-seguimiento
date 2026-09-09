@@ -12,6 +12,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
 
     Route::apiResource('/usuarios', UserController::class)->only(['index', 'store', 'destroy']);
+    Route::get('/usuarios/docentes', [UserController::class, 'docentes']);
 
     Route::get('/modalidades', function () {
         return \App\Models\Modalidad::where('activo', true)->orderBy('nombre')->get();
@@ -25,7 +26,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Trámites
     Route::post('/tramites', [TramiteController::class, 'store']);
     Route::get('/tramites/pendientes', [TramiteController::class, 'pendientes']);
+    Route::get('/tutorias', [TramiteController::class, 'tutorias']);
     Route::post('/tramites/{id}/revisar', [TramiteController::class, 'revisar']);
+    Route::post('/tramites/{id}/asignar-tutor', [TramiteController::class, 'asignarTutor']);
     Route::get('/tramites/{id}', [TramiteController::class, 'show']);
     Route::post('/tramites/{id}/transicionar', [TramiteController::class, 'transicionar']);
 });

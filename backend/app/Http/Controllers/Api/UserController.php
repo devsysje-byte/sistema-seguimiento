@@ -16,6 +16,14 @@ class UserController extends Controller
         return User::where('activo', true)->get();
     }
 
+    public function docentes(Request $request)
+    {
+        if (!in_array($request->user()->rol, ['kardex', 'secretaria', 'direccion', 'admin'])) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+        return User::where('rol', 'docente')->where('activo', true)->orderBy('nombres')->get();
+    }
+
     public function store(Request $request)
     {
         if ($request->user()->rol !== 'admin') {
