@@ -1,9 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
-import RevisionKardex from '../views/RevisionKardex.vue';
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
+    scrollBehavior(to, from, savedPosition) {
+        if (savedPosition) return savedPosition;
+        return { top: 0 };
+    },
     routes: [
         { path: '/login', name: 'Login', component: () => import('../views/LoginView.vue') },
         { 
@@ -24,7 +27,7 @@ const router = createRouter({
          { 
             path: '/kardex', 
             name: 'RevisionKardex', 
-            component: RevisionKardex,
+            component: () => import('../views/RevisionKardex.vue'),
             meta: { requiresAuth: true, roles: ['kardex', 'secretaria', 'direccion', 'admin', 'concejo', 'docente'] }
         },
         { 

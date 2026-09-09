@@ -10,9 +10,14 @@ export const useTramitesStore = defineStore('tramites', {
         tutorias: [],
         docentes: [],
         cargandoTramite: false,
+        _ts: {},
     }),
     actions: {
-        async cargarPerfil() {
+        _fresco(clave, ttl) {
+            return this._ts[clave] && Date.now() - this._ts[clave] < ttl;
+        },
+        async cargarPerfil(force = false) {
+            if (!force && this._fresco('perfil', 30000)) return this.perfilEstudiante;
             try {
                 const { data } = await api.get('/estudiante/perfil');
                 this.perfilEstudiante = data?.id_estudiante ? data : null;
@@ -25,19 +30,23 @@ export const useTramitesStore = defineStore('tramites', {
                 this.perfilEstudiante = null;
                 localStorage.removeItem('perfilEstudiante');
             }
+            this._ts.perfil = Date.now();
+            return this.perfilEstudiante;
         },
         async guardarPerfil(datos) {
             const { data } = await api.post('/estudiante/perfil', datos);
             this.perfilEstudiante = data;
             localStorage.setItem('perfilEstudiante', JSON.stringify(data));
         },
-        async cargarModalidades() {
+        async cargarModalidades(force = false) {
+            if (!force && this._fresco('modalidades', 300000)) return this.modalidades;
             try {
                 const { data } = await api.get('/modalidades');
                 this.modalidades = data;
             } catch (error) {
                 this.modalidades = [];
             }
+            this._ts.modalidades = Date.now();
         },
         async cargarTramiteActivo() {
             this.cargandoTramite = true;
@@ -58,33 +67,40 @@ export const useTramitesStore = defineStore('tramites', {
             await this.cargarTramiteActivo();
             return response;
         },
-        async cargarPendientes() {
+        async cargarPendientes(force = false) {
+            if (!force && this._fresco('pendientes', 30000)) return this.tramitesPendientes;
             const { data } = await api.get('/tramites/pendientes');
             this.tramitesPendientes = data;
+            this._ts.pendientes = Date.now();
         },
         async revisarTramite(id, accion, observaciones) {
             const { data } = await api.post(`/tramites/${id}/revisar`, { accion, observaciones });
-            await this.cargarPendientes();
+            await this.cargarPendientes(true);
             return data;
         },
-        async cargarTutorias() {
+        async cargarTutorias(force = false) {
+            if (!force && this._fresco('tutorias', 30000)) return this.tutorias;
             try {
                 const { data } = await api.get('/tutorias');
                 this.tutorias = data;
             } catch (error) {
                 this.tutorias = [];
             }
+            this._ts.tutorias = Date.now();
         },
-        async cargarDocentes() {
+        async cargarDocentes(force = false) {
+            if (!force && this._fresco('docentes', 300000)) return this.docentes;
             try {
                 const { data } = await api.get('/usuarios/docentes');
                 this.docentes = data;
             } catch (error) {
                 this.docentes = [];
             }
+            this._ts.docentes = Date.now();
         },
         async asignarTutor(id, idTutor) {
             const { data } = await api.post(`/tramites/${id}/asignar-tutor`, { id_tutor: idTutor });
+            this.cargarDocentes(true);
             return data;
         }
     }

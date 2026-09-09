@@ -1,117 +1,192 @@
 <template>
-  <div class="min-h-screen bg-gray-100 p-8">
-    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold">Gestión de Trámite #{{ tramite?.id_tramite }}</h1>
-        <button @click="volver" class="text-blue-600 hover:underline text-sm">← Volver a la lista</button>
+  <AppShell :title="`Trámite #${tramite?.id_tramite || ''}`" :subtitle="tramite ? `${tramite.estudiante.user.nombres} ${tramite.estudiante.user.apellidos} · ${tramite.modalidad.nombre}` : ''">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <p class="text-sm text-slate-500">
+        Estado actual:
+        <EstadoBadge v-if="tramite" :estado="tramite.estado_actual" class="ml-1" />
+      </p>
+      <button class="btn-ghost" @click="volver">
+        <AppIcon name="arrow-left" :size="16" />
+        {{ esDocente ? 'Ir a Mis Tutorías' : 'Volver a Trámites' }}
+      </button>
+    </div>
+
+    <div v-if="cargando" class="card flex items-center justify-center gap-2 py-16 text-slate-400">
+      <AppIcon name="loader" :size="20" class="animate-spin" />
+      Cargando trámite...
+    </div>
+
+    <div v-else-if="tramite" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="card p-6">
+        <h3 class="font-bold text-slate-800 mb-4 inline-flex items-center gap-2">
+          <span class="w-8 h-8 rounded-lg bg-indigo-50 ring-1 ring-indigo-200 flex items-center justify-center text-indigo-600">
+            <AppIcon name="user" :size="17" />
+          </span>
+          Datos del Postulante
+        </h3>
+        <div class="flex items-center gap-4">
+          <Avatar :nombres="tramite.estudiante.user.nombres" :apellidos="tramite.estudiante.user.apellidos" size="14" />
+          <div>
+            <p class="text-lg font-bold text-slate-900">
+              {{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}
+            </p>
+            <p class="text-sm text-slate-500 capitalize">{{ rolLabel(tramite.estudiante.user.rol) }}</p>
+          </div>
+        </div>
+        <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div class="rounded-xl bg-slate-50 p-3">
+            <dt class="text-xs text-slate-400 font-semibold uppercase">Código</dt>
+            <dd class="font-semibold text-slate-800">{{ tramite.estudiante.codigo_universitario }}</dd>
+          </div>
+          <div class="rounded-xl bg-slate-50 p-3">
+            <dt class="text-xs text-slate-400 font-semibold uppercase">Promedio</dt>
+            <dd class="font-semibold text-slate-800">{{ tramite.estudiante.promedio_global }}</dd>
+          </div>
+          <div class="rounded-xl bg-slate-50 p-3">
+            <dt class="text-xs text-slate-400 font-semibold uppercase">Plan</dt>
+            <dd class="font-semibold text-slate-800">{{ tramite.estudiante.plan_estudios }}</dd>
+          </div>
+          <div class="rounded-xl bg-slate-50 p-3">
+            <dt class="text-xs text-slate-400 font-semibold uppercase">Conclusión del plan</dt>
+            <dd class="font-semibold text-slate-800">{{ tramite.estudiante.fecha_conclusion_plan }}</dd>
+          </div>
+        </dl>
       </div>
 
-      <div v-if="cargando" class="text-gray-500 text-center py-8">Cargando trámite...</div>
-
-      <div v-else-if="tramite" class="grid grid-cols-2 gap-6">
-        <!-- Datos del Estudiante -->
-        <div class="col-span-2 bg-gray-50 p-4 rounded">
-          <h3 class="font-bold text-lg">Datos del Postulante</h3>
-          <p>{{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}</p>
-          <p class="text-sm text-gray-600">Código: {{ tramite.estudiante.codigo_universitario }} | Promedio: {{ tramite.estudiante.promedio_global }}</p>
-          <p class="text-sm text-gray-600 mt-1">Modalidad: <strong>{{ tramite.modalidad.nombre }}</strong></p>
-          <p class="text-sm text-gray-700 flex items-center gap-2">Tutor:
-            <span v-if="tramite.tutor">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</span>
-            <span v-else class="text-gray-400">No asignado</span>
+      <div class="card p-6">
+        <h3 class="font-bold text-slate-800 mb-4 inline-flex items-center gap-2">
+          <span class="w-8 h-8 rounded-lg bg-violet-50 ring-1 ring-violet-200 flex items-center justify-center text-violet-600">
+            <AppIcon name="graduation" :size="17" />
+          </span>
+          Modalidad
+        </h3>
+        <p class="text-lg font-bold text-indigo-700">{{ tramite.modalidad.nombre }}</p>
+        <p class="mt-2 text-sm text-slate-600">{{ tramite.modalidad.descripcion || '' }}</p>
+        <div class="mt-4 rounded-xl bg-amber-50 ring-1 ring-amber-200 p-3.5 text-sm text-amber-800">
+          <p class="font-bold mb-1 inline-flex items-center gap-1.5">
+            <AppIcon name="info" :size="15" />
+            Requisitos mínimos
           </p>
-          <p class="text-sm text-gray-700 mt-1 flex items-center gap-2">
-            Estado actual:
-            <span class="px-2 py-0.5 rounded-full text-xs font-bold text-white" :class="estadoChipClass(tramite.estado_actual)">
-              {{ formatoEstado(tramite.estado_actual) }}
-            </span>
-          </p>
+          <p class="mt-0.5">{{ tramite.modalidad.requisitos_minimos || 'Sin requisitos registrados.' }}</p>
         </div>
+      </div>
 
-        <!-- Documentos subidos -->
-        <div class="col-span-2">
-          <h3 class="font-bold text-lg mb-2">Documentos</h3>
-          <div class="flex flex-wrap gap-3">
-            <a v-for="doc in tramite.documentos" :key="doc.id_documento"
-               :href="`${baseStorageUrl}/${doc.ruta_archivo}`" target="_blank"
-               class="bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded text-sm hover:bg-blue-100">
-               📄 {{ doc.tipo_documento }}
-            </a>
+      <div class="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card p-6">
+          <h3 class="font-bold text-slate-800 mb-4 inline-flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-emerald-50 ring-1 ring-emerald-200 flex items-center justify-center text-emerald-600">
+              <AppIcon name="user-check" :size="17" />
+            </span>
+            Tutor Asignado
+          </h3>
+          <div v-if="tramite.tutor" class="flex items-center gap-3">
+            <Avatar :nombres="tramite.tutor.nombres" :apellidos="tramite.tutor.apellidos" size="12" />
+            <div>
+              <p class="font-semibold text-slate-800">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</p>
+              <p class="text-xs text-slate-500">{{ tramite.tutor.email }}</p>
+            </div>
+          </div>
+          <div v-else class="text-sm text-amber-600 font-medium">No hay tutor asignado todavía.</div>
+
+          <div v-if="esPersonal" class="mt-4 pt-4 border-t border-slate-100">
+            <label class="label">Cambiar / Asignar tutor</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <select v-model="tutorSeleccionado" class="input flex-1 min-w-0">
+                <option value="" disabled>Seleccione un docente tutor...</option>
+                <option v-for="doc in tramitesStore.docentes" :key="doc.id_usuario" :value="doc.id_usuario">
+                  {{ doc.nombres }} {{ doc.apellidos }} ({{ doc.email }})
+                </option>
+              </select>
+              <button class="btn-primary w-full sm:w-auto shrink-0" :disabled="asignando || !tutorSeleccionado" @click="asignarTutor">
+                <AppIcon v-if="asignando" name="loader" :size="15" class="animate-spin" />
+                <AppIcon v-else name="check" :size="15" />
+                Asignar
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- Asignación de tutor (solo personal) -->
-        <div v-if="esPersonal" class="col-span-2 bg-indigo-50 border border-indigo-200 p-4 rounded">
-          <h3 class="font-bold text-lg mb-2">Asignar Tutor</h3>
-          <p class="text-sm text-gray-600 mb-3">
-            Tutor actual: <strong>{{ tramite.tutor ? tramite.tutor.nombres + ' ' + tramite.tutor.apellidos : 'Ninguno' }}</strong>
-          </p>
-          <div class="flex gap-4 items-center">
-            <select v-model="tutorSeleccionado" class="border p-2 rounded flex-1">
-              <option value="" disabled>Seleccione un docente tutor...</option>
-              <option v-for="doc in tramitesStore.docentes" :key="doc.id_usuario" :value="doc.id_usuario">
-                {{ doc.nombres }} {{ doc.apellidos }} ({{ doc.email }})
-              </option>
-            </select>
-            <button @click="asignarTutor" :disabled="asignando || !tutorSeleccionado" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 disabled:opacity-50">
-              {{ asignando ? 'Asignando...' : 'Asignar Tutor' }}
+        <div class="card p-6">
+          <h3 class="font-bold text-slate-800 mb-4 inline-flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-sky-50 ring-1 ring-sky-200 flex items-center justify-center text-sky-600">
+              <AppIcon name="file-text" :size="17" />
+            </span>
+            Documentos Presentados
+          </h3>
+          <div v-if="tramite.documentos.length" class="space-y-2">
+            <a v-for="doc in tramite.documentos" :key="doc.id_documento"
+               :href="`${baseStorageUrl}/${doc.ruta_archivo}`" target="_blank"
+               class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-indigo-700 bg-indigo-50 ring-1 ring-indigo-200 hover:bg-indigo-100 transition">
+              <AppIcon name="link" :size="16" />
+              {{ doc.tipo_documento }}
+              <span class="ml-auto text-xs text-slate-400">{{ new Date(doc.created_at).toLocaleDateString('es-BO') }}</span>
+            </a>
+          </div>
+          <p v-else class="text-sm text-slate-400">Sin documentos registrados.</p>
+        </div>
+      </div>
+
+      <div class="lg:col-span-2 card overflow-hidden">
+        <div class="h-2 bg-gradient-to-r from-indigo-500 to-violet-600"></div>
+        <div class="p-6 sm:p-8">
+          <TimelineTramite :tramite="tramite" :title="esDocente ? 'Seguimiento de la Tutoría' : 'Historial de Seguimiento'" />
+        </div>
+      </div>
+
+      <div v-if="esPersonal" class="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div v-if="tramite.estado_actual === 'solicitud_presentada'" class="card p-6">
+          <h3 class="font-bold text-slate-800 mb-2 inline-flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
+              <AppIcon name="inbox" :size="17" />
+            </span>
+            Revisión de Documentación Inicial
+          </h3>
+          <p class="text-sm text-slate-500 mb-4">Aprobar inicia el flujo de estados según la modalidad. Indica observaciones para registrar en el historial.</p>
+          <textarea v-model="observacionesRev" rows="3" class="input resize-none mb-3" placeholder="Observaciones (obligatorio para rechazar)"></textarea>
+          <div class="flex gap-2">
+            <button class="btn-emerald flex-1" @click="revisar('aprobar')">
+              <AppIcon name="check" :size="15" />
+              Aprobar
+            </button>
+            <button class="btn-rose flex-1" @click="revisar('rechazar')">
+              <AppIcon name="x" :size="15" />
+              Rechazar
             </button>
           </div>
         </div>
 
-        <!-- Aprobar/Rechazar documentación inicial -->
-        <div v-if="esPersonal && tramite.estado_actual === 'solicitud_presentada'" class="col-span-2 bg-yellow-50 border border-yellow-200 p-4 rounded">
-          <h3 class="font-bold text-lg mb-2">Revisión de Documentación Inicial</h3>
-          <p class="text-sm text-gray-600 mb-3">Los documentos aún no fueron revisados. Aprobar la documentación inicia el flujo de estados según la modalidad.</p>
-          <div class="flex gap-4 items-center">
-            <input v-model="observacionesRev" placeholder="Observaciones (obligatorio para rechazar)" class="border p-2 rounded flex-1">
-            <button @click="revisar('aprobar')" class="bg-green-600 text-white px-5 py-2 rounded hover:bg-green-700">Aprobar</button>
-            <button @click="revisar('rechazar')" class="bg-red-500 text-white px-5 py-2 rounded hover:bg-red-600">Rechazar</button>
-          </div>
-        </div>
-
-        <!-- Historial de Estados (línea de tiempo) -->
-        <div class="col-span-2">
-          <h3 class="font-bold text-lg mb-2">Historial de Seguimiento</h3>
-          <ol v-if="tramite.estados.length" class="relative border-l-2 border-gray-200 ml-4 space-y-4">
-            <li v-for="estado in tramite.estados.slice().reverse()" :key="estado.id_estado" class="relative pl-6">
-              <span class="absolute -left-[9px] top-1 w-4 h-4 rounded-full"
-                    :class="estado.nombre_estado === tramite.estado_actual ? 'bg-blue-600' : 'bg-green-500'"></span>
-              <div class="text-sm">
-                <p class="font-semibold text-gray-800">{{ formatoEstado(estado.nombre_estado) }}</p>
-                <p class="text-gray-600">{{ estado.observaciones || 'Sin observaciones.' }}</p>
-                <p class="text-gray-400 text-xs mt-0.5">
-                  {{ new Date(estado.created_at).toLocaleString('es-BO') }}
-                  · {{ estado.responsable?.nombres }} {{ estado.responsable?.apellidos }} ({{ estado.responsable?.rol }})
-                </p>
-              </div>
-            </li>
-          </ol>
-          <p v-else class="text-gray-500 text-sm">Sin historial registrado.</p>
-        </div>
-
-        <!-- Panel de Transición -->
-        <div v-if="esPersonal" class="col-span-2 border-t pt-4">
-          <h3 class="font-bold text-lg mb-2">Avanzar Trámite</h3>
-          <div v-if="siguientesEstados.length" class="flex gap-4">
-            <select v-model="nuevoEstado" class="border p-2 rounded flex-1">
+        <div class="card p-6">
+          <h3 class="font-bold text-slate-800 mb-2 inline-flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-indigo-50 ring-1 ring-indigo-200 flex items-center justify-center text-indigo-600">
+              <AppIcon name="trending-up" :size="17" />
+            </span>
+            Avanzar Trámite
+          </h3>
+          <p class="text-sm text-slate-500 mb-4">Mueve el trámite al siguiente estado del flujo correspondiente.</p>
+          <div v-if="siguientesEstados.length" class="space-y-3">
+            <select v-model="nuevoEstado" class="input">
               <option value="" disabled>Seleccione el siguiente estado...</option>
               <option v-for="estado in siguientesEstados" :key="estado" :value="estado">
                 {{ formatoEstado(estado).toUpperCase() }}
               </option>
             </select>
-            <input v-model="observaciones" placeholder="Observaciones" class="border p-2 rounded flex-1 w-full">
-            <button @click="ejecutarTransicion" :disabled="ejecutando" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50">
-              {{ ejecutando ? 'Ejecutando...' : 'Ejecutar' }}
+            <input v-model="observaciones" class="input" placeholder="Observaciones (opcional)">
+            <button class="btn-primary w-full" :disabled="ejecutando || !nuevoEstado" @click="ejecutarTransicion">
+              <AppIcon v-if="ejecutando" name="loader" :size="15" class="animate-spin" />
+              <AppIcon v-else name="send" :size="15" />
+              {{ ejecutando ? 'Ejecutando...' : 'Ejecutar Transición' }}
             </button>
           </div>
-          <p v-else class="text-sm text-gray-500">No hay más transiciones permitidas desde este estado.</p>
-        </div>
-        <div v-else class="col-span-2 border-t pt-4 text-sm text-gray-500">
-          Estás viendo el seguimiento en modo lectura. Las acciones las realizan Kardex / Dirección.
+          <p v-else class="text-sm text-slate-500">No hay más transiciones permitidas desde este estado.</p>
         </div>
       </div>
+
+      <div v-else class="lg:col-span-2 rounded-xl bg-sky-50 ring-1 ring-sky-200 p-4 flex items-start gap-3 text-sky-800 text-sm">
+        <AppIcon name="info" :size="18" class="mt-0.5 shrink-0" />
+        Estás viendo el seguimiento de la tutoría en modo lectura. Las acciones de revisión las realizan Kardex y Dirección.
+      </div>
     </div>
-  </div>
+  </AppShell>
 </template>
 
 <script setup>
@@ -120,6 +195,12 @@ import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
 import { useAuthStore } from '../stores/auth';
 import { useTramitesStore } from '../stores/tramites';
+import { formatoEstado, rolLabel } from '../utils/estados';
+import AppShell from '../components/ui/AppShell.vue';
+import AppIcon from '../components/ui/AppIcon.vue';
+import Avatar from '../components/ui/Avatar.vue';
+import EstadoBadge from '../components/ui/EstadoBadge.vue';
+import TimelineTramite from '../components/TimelineTramite.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -148,7 +229,7 @@ const cargarTramite = async () => {
     siguientesEstados.value = data.siguientes_estados || [];
   } catch (error) {
     alert('Error al cargar el trámite: ' + (error.response?.data?.message || 'Verifique el acceso'));
-    router.push('/kardex');
+    volver();
   } finally {
     cargando.value = false;
   }
@@ -160,6 +241,12 @@ onMounted(async () => {
   }
   await cargarTramite();
 });
+
+const volver = () => {
+  if (esDocente.value) return router.push('/docente');
+  if (authStore.user?.rol === 'admin') return router.push('/admin');
+  router.push('/kardex');
+};
 
 const asignarTutor = async () => {
   if (!tutorSeleccionado.value) return alert('Seleccione un docente');
@@ -212,17 +299,5 @@ const revisar = async (accion) => {
   } catch (error) {
     alert('Error: ' + (error.response?.data?.message || 'No se pudo completar la acción'));
   }
-};
-
-const volver = () => router.push('/kardex');
-
-const formatoEstado = (nombre) => String(nombre || '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-
-const estadoChipClass = (estado) => {
-  return ['aprobado', 'documentacion_ok', 'perfil_aprobado'].includes(estado)
-    ? 'bg-green-500'
-    : ['rechazado', 'reprobado', 'reprobado_ausencia'].includes(estado)
-      ? 'bg-red-500'
-      : 'bg-blue-500';
 };
 </script>
