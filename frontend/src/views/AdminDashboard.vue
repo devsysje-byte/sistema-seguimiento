@@ -140,7 +140,7 @@
           </div>
           <div>
             <label class="label">Contraseña</label>
-            <input v-model="nuevoUsuario.password" type="password" class="input" placeholder="Mín. 8 caracteres" required>
+            <input v-model="nuevoUsuario.password" type="" class="input" placeholder="Mín. 8 caracteres" required>
           </div>
         </div>
 
@@ -154,7 +154,7 @@
       </form>
     </UiModal>
 
-    <UiModal v-model="showModalActualizar" title="Actualizar Usuario" max-width="500px">
+    <UiModal v-model="showModalActualizar" title="Actualizar Usuario" max-width="560px">
       <form @submit.prevent="actualizarUsuario" class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -180,11 +180,47 @@
           <label class="label">Email</label>
           <input v-model="editarForm.email" type="email" class="input" placeholder="correo@upea.bo" required>
         </div>
-        <div>
-          <label class="label">Rol</label>
-          <select v-model="editarForm.rol" class="input" required>
-            <option v-for="rol in roles" :key="rol" :value="rol">{{ rolLabel(rol) }}</option>
-          </select>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="label">Rol</label>
+            <select v-model="editarForm.rol" class="input" required>
+              <option v-for="rol in roles" :key="rol" :value="rol">{{ rolLabel(rol) }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Contraseña</label>
+            <input v-model="editarForm.password" type="" class="input" placeholder="Mín. 8 caracteres" autocomplete="new-password">
+          </div>
+          <p class="sm:col-span-2 text-xs text-stone-400">Déjala vacía para mantener la contraseña actual o escríbela para reestablecerla.</p>
+        </div>
+
+        <div v-if="editarForm.rol === 'estudiante'" class="border-t border-stone-100 pt-4">
+          <h4 class="text-sm font-bold text-stone-700 mb-3">Datos del Estudiante</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="label">Código Universitario</label>
+              <input v-model="editarForm.codigo_universitario" class="input" placeholder="ej. 200109207">
+            </div>
+            <div>
+              <label class="label">Plan de Estudios</label>
+              <input v-model="editarForm.plan_estudios" class="input" placeholder="ej. 2016">
+            </div>
+            <div>
+              <label class="label">Fecha Conclusión de Plan</label>
+              <input v-model="editarForm.fecha_conclusion_plan" type="date" class="input">
+            </div>
+            <div>
+              <label class="label">Promedio Global</label>
+              <input v-model="editarForm.promedio_global" type="number" step="0.01" min="0" max="100" class="input" placeholder="0.00 - 100">
+            </div>
+            <div>
+              <label class="label">Estado</label>
+              <select v-model="editarForm.estado_estudiante" class="input">
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div class="flex justify-end gap-2 pt-2">
@@ -224,7 +260,17 @@ const roles = Object.keys(ROLE_LABELS);
 const usuarioSeleccionado = ref(null);
 
 const nuevoUsuario = ref({ ci: '', nombres: '', apellidos: '', email: '', telefono: '', rol: 'estudiante', password: '' });
-const editarForm = ref({ id_usuario: null, ci: '', nombres: '', apellidos: '', email: '', telefono: '', rol: 'estudiante' });
+const editarForm = ref({
+  id_usuario: null, ci: '', nombres: '', apellidos: '', email: '', telefono: '', rol: 'estudiante',
+  password: '', codigo_universitario: '', plan_estudios: '', fecha_conclusion_plan: '', promedio_global: '', estado_estudiante: 'activo',
+});
+
+const editarFormLimpiar = () => {
+  editarForm.value = {
+    id_usuario: null, ci: '', nombres: '', apellidos: '', email: '', telefono: '', rol: 'estudiante',
+    password: '', codigo_universitario: '', plan_estudios: '', fecha_conclusion_plan: '', promedio_global: '', estado_estudiante: 'activo',
+  };
+};
 
 onMounted(() => {
   fetchUsers();
@@ -266,14 +312,22 @@ const seleccionarUsuario = (user) => {
 
 const editarUsuario = (user) => {
   usuarioSeleccionado.value = user;
-  editarForm.value = { ...user };
+  editarFormLimpiar();
+  editarForm.value = {
+    ...user,
+    password: '',
+    codigo_universitario: user.estudiante?.codigo_universitario || '',
+    plan_estudios: user.estudiante?.plan_estudios || '',
+    fecha_conclusion_plan: user.estudiante?.fecha_conclusion_plan || '',
+    promedio_global: user.estudiante?.promedio_global ?? '',
+    estado_estudiante: user.estudiante?.estado || 'activo',
+  };
   showModalActualizar.value = true;
 };
 
 const abrirActualizar = () => {
   if (usuarioSeleccionado.value) {
-    editarForm.value = { ...usuarioSeleccionado.value };
-    showModalActualizar.value = true;
+    editarUsuario(usuarioSeleccionado.value);
   }
 };
 
@@ -290,14 +344,27 @@ const crearUsuario = async () => {
 
 const actualizarUsuario = async () => {
   try {
-    await api.put(`/usuarios/${editarForm.value.id_usuario}`, {
+    const payload = {
       ci: editarForm.value.ci,
       nombres: editarForm.value.nombres,
       apellidos: editarForm.value.apellidos,
       email: editarForm.value.email,
       telefono: editarForm.value.telefono,
       rol: editarForm.value.rol,
-    });
+    };
+    if (editarForm.value.password) payload.password = editarForm.value.password;
+
+    if (payload.rol === 'estudiante') {
+      payload.estudiante = {
+        codigo_universitario: editarForm.value.codigo_universitario,
+        plan_estudios: editarForm.value.plan_estudios,
+        fecha_conclusion_plan: editarForm.value.fecha_conclusion_plan,
+        promedio_global: editarForm.value.promedio_global,
+        estado: editarForm.value.estado_estudiante,
+      };
+    }
+
+    await api.put(`/usuarios/${editarForm.value.id_usuario}`, payload);
     showModalActualizar.value = false;
     await fetchUsers();
     usuarioSeleccionado.value = null;

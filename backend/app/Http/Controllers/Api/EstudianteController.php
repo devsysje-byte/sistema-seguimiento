@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Estudiante;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class EstudianteController extends Controller
 {
@@ -14,18 +15,22 @@ class EstudianteController extends Controller
         }
 
         $validated = $request->validate([
-            'codigo_universitario' => 'required|unique:estudiantes',
+            'codigo_universitario' => [
+                'required',
+                Rule::unique('estudiantes', 'codigo_universitario')
+                    ->ignore($user->estudiante?->id_estudiante, 'id_estudiante'),
+            ],
             'plan_estudios' => 'required|string',
             'fecha_conclusion_plan' => 'required|date',
             'promedio_global' => 'required|numeric|between:0,100',
         ]);
 
-        $estudiante = Estudiante::create([
-            'id_usuario' => $user->id_usuario,
-            ...$validated
-        ]);
+        $estudiante = $user->estudiante()->updateOrCreate(
+            ['id_usuario' => $user->id_usuario],
+            $validated
+        );
 
-        return response()->json($estudiante, 201);
+        return response()->json($estudiante->fresh());
     }
 
     public function me(Request $request)

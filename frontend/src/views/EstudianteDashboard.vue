@@ -196,7 +196,7 @@ const tramiteTerminado = computed(() => ESTADOS_TERMINALES.includes(tramitesStor
 const mostrarInicioSolicitud = computed(() => !tramitesStore.tramiteActivo || tramiteTerminado.value);
 
 onMounted(async () => {
-    await tramitesStore.cargarPerfil();
+    await tramitesStore.cargarPerfil(true);
     await tramitesStore.cargarModalidades();
     await tramitesStore.cargarTramiteActivo();
 });
@@ -224,6 +224,14 @@ const handleFileUpload = (event, tipo) => {
 };
 
 const enviarSolicitud = async () => {
+    if (!tramitesStore.perfilEstudiante?.id_estudiante) {
+        await tramitesStore.cargarPerfil(true);
+        if (!tramitesStore.perfilEstudiante?.id_estudiante) {
+            alert('Debe completar su perfil de estudiante primero.');
+            return;
+        }
+    }
+
     enviando.value = true;
     const formData = new FormData();
     formData.append('id_modalidad', nuevoTramite.value.id_modalidad);

@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-slate-50">
-    <div class="lg:flex">
+  <div class="h-screen w-full overflow-hidden bg-slate-50">
+    <div class="flex h-full">
       <div
         v-if="open"
         class="fixed inset-0 z-40 bg-stone-900/60 lg:hidden"
@@ -8,7 +8,7 @@
       ></div>
 
       <aside
-        class="fixed inset-y-0 left-0 z-50 w-72 bg-stone-900 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static"
+        class="fixed inset-y-0 left-0 z-50 w-72 bg-stone-900 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static lg:h-full"
         :class="open ? 'translate-x-0' : '-translate-x-full'"
       >
         <div class="flex items-center gap-3 px-6 py-5 border-b border-stone-800">
@@ -37,8 +37,8 @@
         </nav>
       </aside>
 
-      <div class="flex-1 flex flex-col min-w-0">
-        <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-stone-200">
+      <div class="flex-1 flex flex-col min-w-0 h-full">
+        <header class="shrink-0 z-30 bg-white/80 backdrop-blur-md border-b border-stone-200">
           <div class="flex items-center gap-3 px-4 sm:px-6 lg:px-8 py-4">
             <button class="p-2 rounded-lg text-stone-500 hover:bg-stone-100 lg:hidden" @click="open = true">
               <AppIcon name="menu" :size="22" />
@@ -66,7 +66,7 @@
           </div>
         </header>
 
-        <main class="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto">
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto">
           <slot />
         </main>
       </div>

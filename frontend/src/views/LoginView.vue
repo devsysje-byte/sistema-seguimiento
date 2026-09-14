@@ -11,7 +11,7 @@
         </div>
         <div>
           <p class="font-bold leading-tight">Titulación UPEA</p>
-          <p class="text-xs text-stone-400">Seguimiento de Modalidades</p>
+          <p class="text-xs text-stone-400">Seguimiento de Modalidades de Graduación</p>
         </div>
       </div>
 
@@ -25,7 +25,7 @@
           <span class="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">paso a paso.</span>
         </h1>
         <p class="mt-4 text-stone-300">
-          Presenta tu modalidad, sube tus documentos y sigue en tiempo real cada etapa de tu trámite, con tu docente tutor junto a vos.
+          Presenta tu modalidad, sube tus documentos y sigue en tiempo real cada etapa de tu trámite, con tu docente tutor junto a ti.
         </p>
 
         <div class="mt-8 space-y-3">
@@ -83,11 +83,6 @@
               </div>
             </div>
 
-            <div v-if="error" class="flex items-start gap-2 px-3.5 py-3 rounded-xl bg-rose-50 ring-1 ring-rose-200 text-sm text-rose-600">
-              <AppIcon name="x-circle" :size="17" class="mt-0.5 shrink-0" />
-              {{ error }}
-            </div>
-
             <button type="submit" :disabled="ingresando" class="btn-primary w-full py-3">
               <AppIcon v-if="ingresando" name="loader" :size="17" class="animate-spin" />
               <AppIcon v-else name="send" :size="16" />
@@ -97,15 +92,44 @@
         </div>
 
         <p class="mt-6 text-center text-xs text-stone-400">
-          ¿Problemas para acceder? Contacta al Administrador de la facultad.
+          ¿Problemas para acceder? Contacta al Administrador de la carrera.
         </p>
       </div>
     </div>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showErrorModal"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+          @keydown.escape="closeErrorModal"
+          tabindex="0"
+          ref="modalOverlay"
+        >
+          <div class="absolute inset-0 bg-stone-950/60 backdrop-blur-sm" @click="closeErrorModal"></div>
+
+          <div class="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl shadow-rose-900/20 p-8 text-center">
+            <div class="mx-auto w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center mb-5">
+              <AppIcon name="alert-triangle" :size="28" class="text-rose-500" />
+            </div>
+
+            <h3 class="text-lg font-bold text-stone-900">Error de autenticación</h3>
+            <p class="mt-2 text-sm text-stone-500 leading-relaxed">{{ errorMessage }}</p>
+
+            <button
+              @click="closeErrorModal"
+              class="mt-6 w-full py-2.5 rounded-xl bg-stone-900 text-white text-sm font-semibold hover:bg-stone-800 active:scale-[0.98] transition-all duration-200"
+            >
+              Intentar de nuevo
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import AppIcon from '../components/ui/AppIcon.vue';
@@ -114,9 +138,28 @@ const router = useRouter();
 const authStore = useAuthStore();
 const email = ref('');
 const password = ref('');
-const error = ref('');
 const showPassword = ref(false);
 const ingresando = ref(false);
+const showErrorModal = ref(false);
+const errorMessage = ref('');
+
+const closeErrorModal = () => {
+  showErrorModal.value = false;
+};
+
+const onKeydown = (event) => {
+  if (event.key === 'Escape' && showErrorModal.value) {
+    closeErrorModal();
+  }
+};
+
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onUnmounted(() => window.removeEventListener('keydown', onKeydown));
+
+const openErrorModal = (message) => {
+  errorMessage.value = message;
+  showErrorModal.value = true;
+};
 
 const features = [
   { title: 'Solicita tu modalidad de titulación en línea', icon: 'layers' },
@@ -126,23 +169,27 @@ const features = [
 ];
 
 const handleLogin = async () => {
-  error.value = '';
   ingresando.value = true;
-  const result = await authStore.login(email.value, password.value);
-  ingresando.value = false;
-  if (result === true) {
-    const byRol = {
-      admin: '/admin',
-      estudiante: '/estudiante',
-      kardex: '/kardex',
-      secretaria: '/kardex',
-      direccion: '/kardex',
-      concejo: '/kardex',
-      docente: '/docente',
-    };
-    router.push(byRol[authStore.user?.rol] || '/estudiante');
-  } else {
-    error.value = result;
+  try {
+    const result = await authStore.login(email.value, password.value);
+    if (result === true) {
+      const byRol = {
+        admin: '/admin',
+        estudiante: '/estudiante',
+        kardex: '/kardex',
+        secretaria: '/kardex',
+        direccion: '/kardex',
+        concejo: '/kardex',
+        docente: '/docente',
+      };
+      router.push(byRol[authStore.user?.rol] || '/estudiante');
+    } else {
+      openErrorModal(result || 'Credenciales incorrectas.');
+    }
+  } catch (err) {
+    openErrorModal('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+  } finally {
+    ingresando.value = false;
   }
 };
 </script>

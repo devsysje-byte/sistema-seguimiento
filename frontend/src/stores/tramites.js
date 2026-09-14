@@ -38,6 +38,7 @@ export const useTramitesStore = defineStore('tramites', {
             const { data } = await api.post('/estudiante/perfil', datos);
             this.perfilEstudiante = data;
             localStorage.setItem('perfilEstudiante', JSON.stringify(data));
+            this._ts.perfil = Date.now();
         },
         async cargarModalidades(force = false) {
             if (!force && this._fresco('modalidades', 300000)) return this.modalidades;

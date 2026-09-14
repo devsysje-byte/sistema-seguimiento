@@ -13,7 +13,7 @@ class UserController extends Controller
         if ($request->user()->rol !== 'admin') {
             return response()->json(['message' => 'No autorizado'], 403);
         }
-        return User::where('activo', true)->get();
+        return User::with('estudiante')->where('activo', true)->get();
     }
 
     public function docentes(Request $request)
@@ -57,10 +57,10 @@ class UserController extends Controller
         $user = User::findOrFail($id);
 
         $validated = $request->validate([
-            'ci' => 'required|unique:users,ci,' . $user->id,
+            'ci' => 'required|unique:users,ci,' . $user->id_usuario . ',id_usuario',
             'nombres' => 'required',
             'apellidos' => 'required',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'required|email|unique:users,email,' . $user->id_usuario . ',id_usuario',
             'telefono' => 'nullable|string',
             'rol' => 'required|in:admin,estudiante,docente,kardex,secretaria,direccion,concejo',
             'password' => 'nullable|min:6',
@@ -73,7 +73,23 @@ class UserController extends Controller
 
         $user->update($data);
 
-        return $user;
+        if ($request->input('estudiante') && $request->user()->rol === 'admin' && $validated['rol'] === 'estudiante') {
+            $estudianteData = $request->validate([
+                'estudiante.codigo_universitario' => 'nullable|string',
+                'estudiante.plan_estudios' => 'nullable|string',
+                'estudiante.fecha_conclusion_plan' => 'nullable|date',
+                'estudiante.promedio_global' => 'nullable|numeric|between:0,100',
+                'estudiante.estado' => 'nullable|in:activo,inactivo',
+            ]);
+
+            $perfil = collect($estudianteData['estudiante'] ?? [])
+                ->map(fn ($value) => $value === '' || $value === null ? null : $value)
+                ->all();
+
+            $user->estudiante()->updateOrCreate([], $perfil);
+        }
+
+        return $user->load('estudiante');
     }
 
     public function destroy(Request $request, $id)

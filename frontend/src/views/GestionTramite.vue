@@ -94,7 +94,7 @@
               <select v-model="tutorSeleccionado" class="input flex-1 min-w-0">
                 <option value="" disabled>Seleccione un docente tutor...</option>
                 <option v-for="doc in tramitesStore.docentes" :key="doc.id_usuario" :value="doc.id_usuario">
-                  {{ doc.nombres }} {{ doc.apellidos }} ({{ doc.email }})
+                  {{ doc.nombres }} {{ doc.apellidos }}
                 </option>
               </select>
               <button class="btn-primary w-full sm:w-auto shrink-0" :disabled="asignando || !tutorSeleccionado" @click="asignarTutor">
