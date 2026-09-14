@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\EstudianteController;
 use App\Http\Controllers\Api\TramiteController;
+use App\Http\Controllers\Api\NotificacionController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -32,4 +33,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tramites/{id}/asignar-tutor', [TramiteController::class, 'asignarTutor']);
     Route::get('/tramites/{id}', [TramiteController::class, 'show']);
     Route::post('/tramites/{id}/transicionar', [TramiteController::class, 'transicionar']);
+
+    // Notificaciones
+    Route::get('/notificaciones', [NotificacionController::class, 'index']);
+    Route::patch('/notificaciones/{id}', [NotificacionController::class, 'marcarLeida']);
+    Route::post('/notificaciones/leer-todas', [NotificacionController::class, 'marcarTodasLeidas']);
 });

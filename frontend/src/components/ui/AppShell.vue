@@ -48,6 +48,7 @@
               <p v-if="subtitle" class="text-xs sm:text-sm text-stone-500 truncate">{{ subtitle }}</p>
             </div>
             <div class="ml-auto flex items-center gap-3">
+              <NotificationBell />
               <div class="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white ring-1 ring-stone-200">
                 <Avatar :nombres="authStore.user?.nombres" :apellidos="authStore.user?.apellidos" size="8" />
                 <span class="text-sm font-semibold text-stone-700">
@@ -80,6 +81,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import AppIcon from './AppIcon.vue';
 import Avatar from './Avatar.vue';
+import NotificationBell from './NotificationBell.vue';
 
 defineProps({
   title: { type: String, required: true },

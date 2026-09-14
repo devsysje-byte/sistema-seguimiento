@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Services\TramiteStateService;
+use App\Services\NotificacionService;
 use Exception;
 class TramiteController extends Controller
 {
@@ -50,7 +51,7 @@ class TramiteController extends Controller
             'documentos.*.tipo' => 'required|string',
         ]);
 
-        return DB::transaction(function () use ($estudiante, $user, $validated) {
+        $tramite = DB::transaction(function () use ($estudiante, $user, $validated) {
             $tramite = Tramite::create([
                 'id_estudiante' => $estudiante->id_estudiante,
                 'id_modalidad' => $validated['id_modalidad'],
@@ -79,8 +80,19 @@ class TramiteController extends Controller
                 ]);
             }
 
-            return response()->json($tramite->load('modalidad', 'documentos', 'estados'), 201);
+            return $tramite->load('modalidad', 'documentos', 'estados');
         });
+
+        // Notificar a Kardex/Secretaría/Dirección sobre el nuevo trámite
+        NotificacionService::paraUsuarios(
+            ['kardex', 'secretaria', 'direccion', 'admin'],
+            'tramite_nuevo',
+            'Nuevo trámite presentado',
+            "{$user->nombres} {$user->apellidos} presentó una solicitud de {$tramite->modalidad->nombre}.",
+            '/kardex'
+        );
+
+        return response()->json($tramite, 201);
     }
 
     // Para Kardex/Dirección: Ver solicitudes en proceso
@@ -177,6 +189,25 @@ class TramiteController extends Controller
                 );
             }
 
+            $estudiante = $tramite->load('estudiante.user')->estudiante;
+            if ($validated['accion'] === 'aprobar') {
+                NotificacionService::paraUsuario(
+                    $estudiante->id_usuario,
+                    'cambio_estado',
+                    'Su documentación fue aprobada',
+                    'Su solicitud de modalidad fue aprobada y continúa en evaluación.',
+                    '/estudiante'
+                );
+            } else {
+                NotificacionService::paraUsuario(
+                    $estudiante->id_usuario,
+                    'cambio_estado',
+                    'Su solicitud fue rechazada',
+                    $validated['observaciones'] ?? 'La documentación presentada fue rechazada.',
+                    '/estudiante'
+                );
+            }
+
             return response()->json($this->formatTramite($tramite->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor'), $stateService));
         } catch (Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);
@@ -204,6 +235,27 @@ class TramiteController extends Controller
                 $validated['observaciones'],
                 $request->user()->id_usuario
             );
+
+            $tramite->load('estudiante.user');
+            if ($tramite->estudiante) {
+                NotificacionService::paraUsuario(
+                    $tramite->estudiante->id_usuario,
+                    'cambio_estado',
+                    'Actualización en su trámite',
+                    "Su trámite de {$tramite->modalidad->nombre} avanzó al estado: {$validated['nuevo_estado']}.",
+                    '/estudiante'
+                );
+            }
+            if ($tramite->id_tutor) {
+                NotificacionService::paraUsuario(
+                    $tramite->id_tutor,
+                    'cambio_estado',
+                    'Actualización en su tutoría',
+                    "El trámite del estudiante {$tramite->estudiante->user->nombres} {$tramite->estudiante->user->apellidos} avanzó al estado: {$validated['nuevo_estado']}.",
+                    '/docente'
+                );
+            }
+
             return response()->json($this->formatTramite($tramite->refresh()->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor'), $stateService), 201);
         } catch (Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);
@@ -228,6 +280,14 @@ class TramiteController extends Controller
 
         $tramite = Tramite::with('modalidad')->findOrFail($id);
         $tramite->update(['id_tutor' => $tutor->id_usuario]);
+
+        NotificacionService::paraUsuario(
+            $tutor->id_usuario,
+            'asignacion_tutor',
+            'Tutoría asignada',
+            "Le asignaron la tutoría del trámite de {$tramite->estudiante->user->nombres} {$tramite->estudiante->user->apellidos} ({$tramite->modalidad->nombre}).",
+            '/docente'
+        );
 
         return response()->json($this->formatTramite($tramite->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor'), $stateService));
     }

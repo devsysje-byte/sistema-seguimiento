@@ -29,4 +29,5 @@ class User extends Authenticatable
     }
 
     public function estudiante() { return $this->hasOne(Estudiante::class, 'id_usuario', 'id_usuario'); }
+    public function notificaciones() { return $this->hasMany(Notificacion::class, 'id_usuario', 'id_usuario'); }
 }
