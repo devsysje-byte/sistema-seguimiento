@@ -170,6 +170,7 @@ import TimelineTramite from '../components/TimelineTramite.vue';
 import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useTramitesStore } from '../stores/tramites';
+import { useToastStore } from '../stores/toast';
 import { formatoEstado, ESTADOS_TERMINALES } from '../utils/estados';
 import AppShell from '../components/ui/AppShell.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
@@ -178,6 +179,7 @@ import UiModal from '../components/ui/UiModal.vue';
 
 const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
+const toastStore = useToastStore();
 
 const perfil = ref({ codigo_universitario: '', plan_estudios: '', fecha_conclusion_plan: '', promedio_global: '' });
 const mostrarFormularioTramite = ref(false);
@@ -204,9 +206,9 @@ onMounted(async () => {
 const guardarPerfil = async () => {
     try {
         await tramitesStore.guardarPerfil(perfil.value);
-        alert('Perfil guardado correctamente.');
+        toastStore.success('Perfil guardado correctamente.');
     } catch (error) {
-        alert('Error al guardar: ' + (error.response?.data?.message || 'Verifique los datos'));
+        toastStore.error('Error al guardar: ' + (error.response?.data?.message || 'Verifique los datos'));
     }
 };
 
@@ -227,7 +229,7 @@ const enviarSolicitud = async () => {
     if (!tramitesStore.perfilEstudiante?.id_estudiante) {
         await tramitesStore.cargarPerfil(true);
         if (!tramitesStore.perfilEstudiante?.id_estudiante) {
-            alert('Debe completar su perfil de estudiante primero.');
+            toastStore.warning('Debe completar su perfil de estudiante primero.');
             return;
         }
     }
@@ -243,13 +245,13 @@ const enviarSolicitud = async () => {
 
     try {
         await tramitesStore.iniciarTramite(formData);
-        alert('Solicitud enviada correctamente. Espere la revisión de Kardex.');
+        toastStore.success('Solicitud enviada correctamente. Espere la revisión de Kardex.');
         mostrarFormularioTramite.value = false;
         nuevoTramite.value = { id_modalidad: '', documentos: [] };
         archivoCertificado.value = null;
         archivoCarta.value = null;
     } catch (error) {
-        alert('Error al enviar: ' + (error.response?.data?.message || 'Verifique los datos'));
+        toastStore.error('Error al enviar: ' + (error.response?.data?.message || 'Verifique los datos'));
     } finally {
         enviando.value = false;
     }

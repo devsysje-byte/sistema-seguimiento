@@ -195,6 +195,7 @@ import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
 import { useAuthStore } from '../stores/auth';
 import { useTramitesStore } from '../stores/tramites';
+import { useToastStore } from '../stores/toast';
 import { formatoEstado, rolLabel } from '../utils/estados';
 import AppShell from '../components/ui/AppShell.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
@@ -206,6 +207,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
+const toastStore = useToastStore();
 const tramite = ref(null);
 const cargando = ref(false);
 const ejecutando = ref(false);
@@ -228,7 +230,7 @@ const cargarTramite = async () => {
     tramite.value = data;
     siguientesEstados.value = data.siguientes_estados || [];
   } catch (error) {
-    alert('Error al cargar el trámite: ' + (error.response?.data?.message || 'Verifique el acceso'));
+    toastStore.error('Error al cargar el trámite: ' + (error.response?.data?.message || 'Verifique el acceso'));
     volver();
   } finally {
     cargando.value = false;
@@ -249,22 +251,22 @@ const volver = () => {
 };
 
 const asignarTutor = async () => {
-  if (!tutorSeleccionado.value) return alert('Seleccione un docente');
+  if (!tutorSeleccionado.value) return toastStore.warning('Seleccione un docente');
   asignando.value = true;
   try {
     const { data } = await tramitesStore.asignarTutor(tramite.value.id_tramite, tutorSeleccionado.value);
     tramite.value = data;
     tutorSeleccionado.value = '';
-    alert('Tutor asignado correctamente.');
+    toastStore.success('Tutor asignado correctamente.');
   } catch (error) {
-    alert('Error: ' + (error.response?.data?.message || 'No se pudo asignar el tutor'));
+    toastStore.error('Error: ' + (error.response?.data?.message || 'No se pudo asignar el tutor'));
   } finally {
     asignando.value = false;
   }
 };
 
 const ejecutarTransicion = async () => {
-  if (!nuevoEstado.value) return alert('Seleccione un estado');
+  if (!nuevoEstado.value) return toastStore.warning('Seleccione un estado');
   ejecutando.value = true;
   try {
     const { data } = await api.post(`/tramites/${tramite.value.id_tramite}/transicionar`, {
@@ -275,9 +277,9 @@ const ejecutarTransicion = async () => {
     siguientesEstados.value = data.siguientes_estados || [];
     nuevoEstado.value = '';
     observaciones.value = '';
-    alert('Estado actualizado correctamente.');
+    toastStore.success('Estado actualizado correctamente.');
   } catch (error) {
-    alert('Error: ' + (error.response?.data?.message || 'Transición no permitida'));
+    toastStore.error('Error: ' + (error.response?.data?.message || 'Transición no permitida'));
   } finally {
     ejecutando.value = false;
   }
@@ -285,7 +287,7 @@ const ejecutarTransicion = async () => {
 
 const revisar = async (accion) => {
   if (accion === 'rechazar' && !observacionesRev.value) {
-    return alert('Debe ingresar un motivo para rechazar.');
+    return toastStore.warning('Debe ingresar un motivo para rechazar.');
   }
   try {
     const { data } = await api.post(`/tramites/${tramite.value.id_tramite}/revisar`, {
@@ -295,9 +297,9 @@ const revisar = async (accion) => {
     tramite.value = data;
     siguientesEstados.value = data.siguientes_estados || [];
     observacionesRev.value = '';
-    alert(accion === 'aprobar' ? 'Documentación aprobada. El trámite avanza en la línea de tiempo.' : 'Solicitud rechazada.');
+    toastStore.success(accion === 'aprobar' ? 'Documentación aprobada. El trámite avanza en la línea de tiempo.' : 'Solicitud rechazada.');
   } catch (error) {
-    alert('Error: ' + (error.response?.data?.message || 'No se pudo completar la acción'));
+    toastStore.error('Error: ' + (error.response?.data?.message || 'No se pudo completar la acción'));
   }
 };
 </script>

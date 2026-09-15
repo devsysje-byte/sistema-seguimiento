@@ -73,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useNotificacionesStore } from '../../stores/notificaciones';
 import AppIcon from './AppIcon.vue';
@@ -122,13 +122,29 @@ const tiempoRelativo = (fechaIso) => {
 };
 
 let intervalo = null;
+let intervaloAbierto = null;
+
+const refrescoEnFoco = () => store.cargar(true);
+
 onMounted(async () => {
     await store.cargar();
-    intervalo = setInterval(() => store.cargar(true), 60000);
+    intervalo = setInterval(() => store.cargar(true), 30000);
     document.addEventListener('click', fuera);
+    window.addEventListener('focus', refrescoEnFoco);
 });
+
 onUnmounted(() => {
     clearInterval(intervalo);
+    clearInterval(intervaloAbierto);
     document.removeEventListener('click', fuera);
+    window.removeEventListener('focus', refrescoEnFoco);
+});
+
+watch(abierto, (value) => {
+    clearInterval(intervaloAbierto);
+    if (value) {
+        store.cargar(true);
+        intervaloAbierto = setInterval(() => store.cargar(true), 5000);
+    }
 });
 </script>

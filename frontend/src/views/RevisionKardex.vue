@@ -96,7 +96,7 @@
 
                 <div class="mt-4 pt-4 border-t border-stone-100 flex flex-wrap gap-2">
                   <button v-if="esPersonal && tramite.estado_actual === 'solicitud_presentada'"
-                          class="btn-primary flex-1 py-2.5" @click="aprobar(tramite)">
+                          class="btn-primary flex-1 py-2.5" @click="abrirAprobar(tramite)">
                     <AppIcon name="check" :size="15" />
                     Aprobar
                   </button>
@@ -114,6 +114,23 @@
             </div>
           </div>
         </div>
+
+    <UiModal v-model="showAprobar" :title="`Aprobar solicitud #${tramiteAprobar?.id_tramite || ''}`" max-width="460px">
+      <div class="bg-emerald-50 ring-1 ring-emerald-200 rounded-xl p-3.5 text-sm text-emerald-800 mb-4">
+        <p class="font-bold mb-1">Estudiante:</p>
+        <p>{{ tramiteAprobar?.estudiante?.user?.nombres }} {{ tramiteAprobar?.estudiante?.user?.apellidos }}</p>
+        <p class="text-xs mt-1">{{ tramiteAprobar?.modalidad?.nombre }}</p>
+      </div>
+      <p class="text-sm text-stone-600">Se dará por aprobada la documentación inicial y el trámite avanzará al siguiente estado del flujo.</p>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="btn-ghost px-4 py-2.5" @click="showAprobar = false">Cancelar</button>
+        <button class="btn-primary px-4 py-2.5" :disabled="aprobando" @click="aprobar(tramiteAprobar)">
+          <AppIcon v-if="aprobando" name="loader" :size="15" class="animate-spin" />
+          <AppIcon v-else name="check" :size="15" />
+          {{ aprobando ? 'Aprobando...' : 'Confirmar Aprobación' }}
+        </button>
+      </div>
+    </UiModal>
 
     <UiModal v-model="showRechazo" :title="`Rechazar solicitud #${tramiteRechazo?.id_tramite || ''}`" max-width="460px">
       <div class="bg-orange-50 ring-1 ring-orange-200 rounded-xl p-3.5 text-sm text-orange-800 mb-4">
@@ -139,6 +156,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useTramitesStore } from '../stores/tramites';
+import { useToastStore } from '../stores/toast';
 import { progresoEstado } from '../utils/estados';
 import AppShell from '../components/ui/AppShell.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
@@ -153,11 +171,15 @@ import UiModal from '../components/ui/UiModal.vue';
 const router = useRouter();
 const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
+const toastStore = useToastStore();
 const cargando = ref(false);
 const buscar = ref('');
 const showRechazo = ref(false);
+const showAprobar = ref(false);
 const tramiteRechazo = ref(null);
+const tramiteAprobar = ref(null);
 const motivoRechazo = ref('');
+const aprobando = ref(false);
 
 const baseStorageUrl = import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage';
 
@@ -189,12 +211,22 @@ const gestionar = (tramite) => {
   router.push({ name: 'GestionTramite', params: { id: tramite.id_tramite } });
 };
 
+const abrirAprobar = (tramite) => {
+  tramiteAprobar.value = tramite;
+  showAprobar.value = true;
+};
+
 const aprobar = async (tramite) => {
-  if (!confirm(`¿Aprobar la documentación inicial de ${tramite.estudiante.user.nombres} ${tramite.estudiante.user.apellidos}?`)) return;
+  aprobando.value = true;
   try {
     await tramitesStore.revisarTramite(tramite.id_tramite, 'aprobar', 'Documentación inicial aprobada.');
+    showAprobar.value = false;
+    tramiteAprobar.value = null;
+    toastStore.success(`Documentación de ${tramite.estudiante.user.nombres} ${tramite.estudiante.user.apellidos} aprobada. El trámite avanza en la línea de tiempo.`);
   } catch (error) {
-    alert('Error: ' + (error.response?.data?.message || 'No se pudo aprobar.'));
+    toastStore.error('Error: ' + (error.response?.data?.message || 'No se pudo aprobar.'));
+  } finally {
+    aprobando.value = false;
   }
 };
 
@@ -210,7 +242,7 @@ const rechazar = async (tramite) => {
     showRechazo.value = false;
     tramiteRechazo.value = null;
   } catch (error) {
-    alert('Error: ' + (error.response?.data?.message || 'No se pudo rechazar.'));
+    toastStore.error('Error: ' + (error.response?.data?.message || 'No se pudo rechazar.'));
   }
 };
 </script>

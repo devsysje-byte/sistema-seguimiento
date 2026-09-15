@@ -89,7 +89,7 @@ class TramiteController extends Controller
             'tramite_nuevo',
             'Nuevo trámite presentado',
             "{$user->nombres} {$user->apellidos} presentó una solicitud de {$tramite->modalidad->nombre}.",
-            '/kardex'
+            "/tramites/{$tramite->id_tramite}/gestion"
         );
 
         return response()->json($tramite, 201);

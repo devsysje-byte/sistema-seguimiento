@@ -240,6 +240,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import api from '../services/api';
 import { rolLabel, ROLE_LABELS } from '../utils/estados';
+import { useToastStore } from '../stores/toast';
 import AppShell from '../components/ui/AppShell.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
 import Avatar from '../components/ui/Avatar.vue';
@@ -250,6 +251,7 @@ import UiModal from '../components/ui/UiModal.vue';
 import EmptyState from '../components/ui/EmptyState.vue';
 
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 const users = ref([]);
 const cargando = ref(false);
 const showModalCrear = ref(false);
@@ -335,10 +337,11 @@ const crearUsuario = async () => {
   try {
     await api.post('/usuarios', nuevoUsuario.value);
     showModalCrear.value = false;
+    toastStore.success(`Usuario ${nuevoUsuario.value.nombres} ${nuevoUsuario.value.apellidos} dado de alta correctamente.`);
     nuevoUsuario.value = { ci: '', nombres: '', apellidos: '', email: '', telefono: '', rol: 'estudiante', password: '' };
     await fetchUsers();
   } catch (error) {
-    alert('Error: ' + (error.response?.data?.message || 'Verifica los datos'));
+    toastStore.error('Error: ' + (error.response?.data?.message || 'Verifica los datos'));
   }
 };
 
@@ -366,10 +369,11 @@ const actualizarUsuario = async () => {
 
     await api.put(`/usuarios/${editarForm.value.id_usuario}`, payload);
     showModalActualizar.value = false;
+    toastStore.success(`Datos de ${editarForm.value.nombres} ${editarForm.value.apellidos} actualizados correctamente.`);
     await fetchUsers();
     usuarioSeleccionado.value = null;
   } catch (error) {
-    alert('Error: ' + (error.response?.data?.message || 'No se pudo actualizar'));
+    toastStore.error('Error: ' + (error.response?.data?.message || 'No se pudo actualizar'));
   }
 };
 
@@ -379,7 +383,7 @@ const eliminarUsuario = async (user) => {
     await api.delete(`/usuarios/${user.id_usuario}`);
     await fetchUsers();
   } catch (error) {
-    alert('No se pudo dar de baja al usuario.');
+    toastStore.error('No se pudo dar de baja al usuario.');
   }
 };
 </script>
