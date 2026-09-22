@@ -1,59 +1,65 @@
 import { defineStore } from 'pinia';
-import api from '../services/api';
+import { tramitesService } from '../services/tramites';
 
+/**
+ * Store de trámites de titulación.
+ *
+ * Centraliza el estado relacionado con trámites: modalidades disponibles,
+ * trámites pendientes, estadísticas, trámite activo, tutorías del docente y
+ * catálogo de docentes. Usa caché temporal (`_ts`) para evitar peticiones
+ * repetidas cuando estén vigentes.
+ *
+ * NOTA: el perfil académico del estudiante vive en el store `estudiantes`
+ * (módulo Estudiantes); aquí solo se gestiona lo estrictamente del dominio
+ * de trámites.
+ */
 export const useTramitesStore = defineStore('tramites', {
     state: () => ({
-        perfilEstudiante: JSON.parse(localStorage.getItem('perfilEstudiante')) || null,
-        modalidades: [],
-        tramitesPendientes: [],
+        modalidades: [],                                                        // Modalidades activas disponibles.
+        tramitesPendientes: [],                                                 // Solicitudes en proceso (Kardex/Dirección).
         estadisticas: { totales: { aprobados: 0, reprobados: 0, total: 0 }, porModalidad: [] },
-        tramiteActivo: null,
-        tutorias: [],
-        docentes: [],
-        cargandoTramite: false,
-        _ts: {},
+        tramiteActivo: null,                                                    // Trámite más reciente del estudiante.
+        tutorias: [],                                                           // Trámites donde el docente es tutor.
+        docentes: [],                                                           // Usuarios con rol docente (para asignar tutor).
+        cargandoTramite: false,                                                 // true mientras se carga el trámite activo.
+        _ts: {},                                                                // Marcas de tiempo de la última carga por clave.
     }),
     actions: {
+        /**
+         * Comprueba si una clave de caché sigue vigente según un TTL en milisegundos.
+         *
+         * @param {string} clave Identificador de la caché.
+         * @param {number} ttl   Duración máxima de vigencia en ms.
+         * @returns {boolean} true si la caché aún es válida.
+         */
         _fresco(clave, ttl) {
             return this._ts[clave] && Date.now() - this._ts[clave] < ttl;
         },
-        async cargarPerfil(force = false) {
-            if (!force && this._fresco('perfil', 30000)) return this.perfilEstudiante;
-            try {
-                const { data } = await api.get('/estudiante/perfil');
-                this.perfilEstudiante = data?.id_estudiante ? data : null;
-                if (this.perfilEstudiante) {
-                    localStorage.setItem('perfilEstudiante', JSON.stringify(this.perfilEstudiante));
-                } else {
-                    localStorage.removeItem('perfilEstudiante');
-                }
-            } catch (error) {
-                this.perfilEstudiante = null;
-                localStorage.removeItem('perfilEstudiante');
-            }
-            this._ts.perfil = Date.now();
-            return this.perfilEstudiante;
-        },
-        async guardarPerfil(datos) {
-            const { data } = await api.post('/estudiante/perfil', datos);
-            this.perfilEstudiante = data;
-            localStorage.setItem('perfilEstudiante', JSON.stringify(data));
-            this._ts.perfil = Date.now();
-        },
+        /**
+         * Carga la lista de modalidades activas desde GET /api/modalidades.
+         *
+         * @param {boolean} [force=false] Si es true ignora la caché.
+         * @returns {Promise<void>}
+         */
         async cargarModalidades(force = false) {
             if (!force && this._fresco('modalidades', 300000)) return this.modalidades;
             try {
-                const { data } = await api.get('/modalidades');
+                const { data } = await tramitesService.modalidades();
                 this.modalidades = data;
             } catch (error) {
                 this.modalidades = [];
             }
             this._ts.modalidades = Date.now();
         },
+        /**
+         * Carga el trámite activo del estudiante desde GET /api/estudiante/tramite-activo.
+         *
+         * @returns {Promise<Object|null>} Trámite activo o null si no existe.
+         */
         async cargarTramiteActivo() {
             this.cargandoTramite = true;
             try {
-                const { data } = await api.get('/estudiante/tramite-activo');
+                const { data } = await tramitesService.tramiteActivo();
                 this.tramiteActivo = data?.id_tramite ? data : null;
             } catch (error) {
                 this.tramiteActivo = null;
@@ -62,23 +68,40 @@ export const useTramitesStore = defineStore('tramites', {
             }
             return this.tramiteActivo;
         },
+        /**
+         * Crea un nuevo trámite enviando un FormData multipart a POST /api/tramites.
+         *
+         * @param {FormData} formData Contiene `id_modalidad` y los documentos `documentos[...]`.
+         * @returns {Promise<Object>} Respuesta de la API (trámite creado).
+         */
         async iniciarTramite(formData) {
-            const response = await api.post('/tramites', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            const response = await tramitesService.crear(formData);
             await this.cargarTramiteActivo();
             return response;
         },
+        /**
+         * Carga las solicitudes pendientes desde GET /api/tramites/pendientes.
+         *
+         * @param {boolean} [force=false] Si es true ignora la caché.
+         * @returns {Promise<void>}
+         */
         async cargarPendientes(force = false) {
             if (!force && this._fresco('pendientes', 30000)) return this.tramitesPendientes;
-            const { data } = await api.get('/tramites/pendientes');
+            const { data } = await tramitesService.pendientes();
             this.tramitesPendientes = data;
             this._ts.pendientes = Date.now();
         },
+        /**
+         * Carga las estadísticas de aprobados/reprobados por modalidad desde
+         * GET /api/tramites/estadisticas.
+         *
+         * @param {boolean} [force=false] Si es true ignora la caché.
+         * @returns {Promise<Object>} Estructura `{ totales, porModalidad }`.
+         */
         async cargarEstadisticas(force = false) {
             if (!force && this._fresco('estadisticas', 30000)) return this.estadisticas;
             try {
-                const { data } = await api.get('/tramites/estadisticas');
+                const { data } = await tramitesService.estadisticas();
                 this.estadisticas = data;
             } catch (error) {
                 this.estadisticas = { totales: { aprobados: 0, reprobados: 0, total: 0 }, porModalidad: [] };
@@ -86,33 +109,62 @@ export const useTramitesStore = defineStore('tramites', {
             this._ts.estadisticas = Date.now();
             return this.estadisticas;
         },
+        /**
+         * Aprueba o rechaza la documentación inicial de un trámite vía
+         * POST /api/tramites/{id}/revisar; refresca la lista de pendientes.
+         *
+         * @param {number|string} id          Identificador del trámite.
+         * @param {string} accion              'aprobar' | 'rechazar'.
+         * @param {string} observaciones       Motivo/comentario del revisor.
+         * @returns {Promise<Object>} Trámite actualizado.
+         */
         async revisarTramite(id, accion, observaciones) {
-            const { data } = await api.post(`/tramites/${id}/revisar`, { accion, observaciones });
+            const { data } = await tramitesService.revisar(id, accion, observaciones);
             await this.cargarPendientes(true);
             return data;
         },
+        /**
+         * Carga las tutorías del docente autenticado desde GET /api/tutorias.
+         *
+         * @param {boolean} [force=false] Si es true ignora la caché.
+         * @returns {Promise<void>}
+         */
         async cargarTutorias(force = false) {
             if (!force && this._fresco('tutorias', 30000)) return this.tutorias;
             try {
-                const { data } = await api.get('/tutorias');
+                const { data } = await tramitesService.tutorias();
                 this.tutorias = data;
             } catch (error) {
                 this.tutorias = [];
             }
             this._ts.tutorias = Date.now();
         },
+        /**
+         * Carga la lista de docentes activos desde GET /api/usuarios/docentes.
+         *
+         * @param {boolean} [force=false] Si es true ignora la caché.
+         * @returns {Promise<void>}
+         */
         async cargarDocentes(force = false) {
             if (!force && this._fresco('docentes', 300000)) return this.docentes;
             try {
-                const { data } = await api.get('/usuarios/docentes');
+                const { data } = await tramitesService.docentes();
                 this.docentes = data;
             } catch (error) {
                 this.docentes = [];
             }
             this._ts.docentes = Date.now();
         },
+        /**
+         * Asigna (o reasigna) el tutor de un trámite vía
+         * POST /api/tramites/{id}/asignar-tutor.
+         *
+         * @param {number|string} id      Identificador del trámite.
+         * @param {number|string} idTutor Identificador del usuario docente.
+         * @returns {Promise<Object>} Trámite actualizado con el tutor asignado.
+         */
         async asignarTutor(id, idTutor) {
-            const { data } = await api.post(`/tramites/${id}/asignar-tutor`, { id_tutor: idTutor });
+            const { data } = await tramitesService.asignarTutor(id, idTutor);
             this.cargarDocentes(true);
             return data;
         }

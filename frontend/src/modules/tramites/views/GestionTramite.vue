@@ -115,7 +115,7 @@
           </h3>
           <div v-if="tramite.documentos.length" class="space-y-2">
             <a v-for="doc in tramite.documentos" :key="doc.id_documento"
-               :href="`${baseStorageUrl}/${doc.ruta_archivo}`" target="_blank"
+               :href="assetUrl(doc.ruta_archivo)" target="_blank"
                class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 transition">
               <AppIcon name="link" :size="16" />
               {{ doc.tipo_documento }}
@@ -190,17 +190,24 @@
 </template>
 
 <script setup>
+// Vista de gestión de un trámite concreto.
+// Muestra los datos del postulante, modalidad, tutor, documentos y la línea de
+// tiempo. El personal académico puede asignar tutor, aprobar/rechazar la
+// documentación inicial y ejecutar transiciones de estado; el docente solo ve
+// en modo lectura la tutoría.
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import api from '../services/api';
-import { useAuthStore } from '../stores/auth';
+import { tramitesService } from '../services/tramites';
+import { useAuthStore } from '@/modules/auth';
 import { useTramitesStore } from '../stores/tramites';
-import { useToastStore } from '../stores/toast';
-import { formatoEstado, rolLabel } from '../utils/estados';
-import AppShell from '../components/ui/AppShell.vue';
-import AppIcon from '../components/ui/AppIcon.vue';
-import Avatar from '../components/ui/Avatar.vue';
-import EstadoBadge from '../components/ui/EstadoBadge.vue';
+import { useToastStore } from '@/core/stores/toast';
+import { rolLabel } from '@/core/roles';
+import { formatoEstado } from '../utils/estados';
+import { assetUrl } from '@/core/http/storage';
+import { AppShell } from '@/modules/layout';
+import AppIcon from '@/ui/AppIcon.vue';
+import Avatar from '@/ui/Avatar.vue';
+import EstadoBadge from '../components/EstadoBadge.vue';
 import TimelineTramite from '../components/TimelineTramite.vue';
 
 const route = useRoute();
@@ -208,25 +215,27 @@ const router = useRouter();
 const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
 const toastStore = useToastStore();
-const tramite = ref(null);
-const cargando = ref(false);
-const ejecutando = ref(false);
-const siguientesEstados = ref([]);
-const nuevoEstado = ref('');
-const observaciones = ref('');
-const observacionesRev = ref('');
-const tutorSeleccionado = ref('');
-const asignando = ref(false);
 
+// Estado del trámite cargado y de las acciones en curso.
+const tramite = ref(null);
+const cargando = ref(false);            // true mientras se carga el trámite.
+const ejecutando = ref(false);          // true al ejecutar una transición.
+const siguientesEstados = ref([]);      // Estados permitidos desde el actual.
+const nuevoEstado = ref('');            // Estado destino seleccionado.
+const observaciones = ref('');          // Observaciones para transicionar.
+const observacionesRev = ref('');       // Observaciones para aprobar/rechazar.
+const tutorSeleccionado = ref('');      // Docente elegido como tutor.
+const asignando = ref(false);           // true mientras se asigna tutor.
+
+// Rol del usuario: docente (solo lectura) o personal académico (acciones).
 const esDocente = computed(() => authStore.user?.rol === 'docente');
 const esPersonal = computed(() => !esDocente.value && authStore.user?.rol !== 'estudiante');
 
-const baseStorageUrl = import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage';
-
+/** Carga el detalle del trámite desde GET /api/tramites/{id}. */
 const cargarTramite = async () => {
   cargando.value = true;
   try {
-    const { data } = await api.get(`/tramites/${route.params.id}`);
+    const { data } = await tramitesService.detalle(route.params.id);
     tramite.value = data;
     siguientesEstados.value = data.siguientes_estados || [];
   } catch (error) {
@@ -238,18 +247,21 @@ const cargarTramite = async () => {
 };
 
 onMounted(async () => {
+  // El personal académico también carga el catálogo de docentes para el selector de tutor.
   if (esPersonal.value) {
     await tramitesStore.cargarDocentes();
   }
   await cargarTramite();
 });
 
+/** Regresa a la vista principal según el rol del usuario. */
 const volver = () => {
   if (esDocente.value) return router.push('/docente');
   if (authStore.user?.rol === 'admin') return router.push('/admin');
   router.push('/kardex');
 };
 
+/** Asigna el tutor seleccionado al trámite vía POST /api/tramites/{id}/asignar-tutor. */
 const asignarTutor = async () => {
   if (!tutorSeleccionado.value) return toastStore.warning('Seleccione un docente');
   asignando.value = true;
@@ -265,14 +277,12 @@ const asignarTutor = async () => {
   }
 };
 
+/** Ejecuta una transición al estado seleccionado vía POST /api/tramites/{id}/transicionar. */
 const ejecutarTransicion = async () => {
   if (!nuevoEstado.value) return toastStore.warning('Seleccione un estado');
   ejecutando.value = true;
   try {
-    const { data } = await api.post(`/tramites/${tramite.value.id_tramite}/transicionar`, {
-      nuevo_estado: nuevoEstado.value,
-      observaciones: observaciones.value
-    });
+    const { data } = await tramitesService.transicionar(tramite.value.id_tramite, nuevoEstado.value, observaciones.value);
     tramite.value = data;
     siguientesEstados.value = data.siguientes_estados || [];
     nuevoEstado.value = '';
@@ -285,15 +295,22 @@ const ejecutarTransicion = async () => {
   }
 };
 
+/**
+ * Aprueba o rechaza la documentación inicial vía POST /api/tramites/{id}/revisar.
+ * Para rechazar exige un motivo en `observacionesRev`.
+ *
+ * @param {string} accion 'aprobar' | 'rechazar'.
+ */
 const revisar = async (accion) => {
   if (accion === 'rechazar' && !observacionesRev.value) {
     return toastStore.warning('Debe ingresar un motivo para rechazar.');
   }
   try {
-    const { data } = await api.post(`/tramites/${tramite.value.id_tramite}/revisar`, {
+    const { data } = await tramitesService.revisar(
+      tramite.value.id_tramite,
       accion,
-      observaciones: observacionesRev.value || (accion === 'aprobar' ? 'Documentación inicial aprobada.' : 'Solicitud rechazada.')
-    });
+      observacionesRev.value || (accion === 'aprobar' ? 'Documentación inicial aprobada.' : 'Solicitud rechazada.')
+    );
     tramite.value = data;
     siguientesEstados.value = data.siguientes_estados || [];
     observacionesRev.value = '';

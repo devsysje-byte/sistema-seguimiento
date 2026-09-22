@@ -9,12 +9,15 @@
 </template>
 
 <script setup>
+// Etiqueta de estado de trámite.
+// Muestra el estado formateado (formatoEstado) con un punto de color y clases
+// de fondo/borde según su tono (toneEstado), opcionalmente en mayúsculas.
 import { computed } from 'vue';
-import { formatoEstado, toneEstado } from '../../utils/estados';
+import { formatoEstado, toneEstado } from '../utils/estados';
 
 const props = defineProps({
   estado: { type: String, required: true },
-  upper: { type: Boolean, default: false },
+  upper: { type: Boolean, default: false }, // true para mostrar en mayúsculas.
 });
 
 const tone = computed(() => toneEstado(props.estado));

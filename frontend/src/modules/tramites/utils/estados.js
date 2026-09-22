@@ -1,5 +1,15 @@
+// ============================================================================
+// Utilidades del dominio de trámites: estados del flujo de titulación.
+//
+// Solo contiene clasificaciones de estados (terminales, éxito, error), la
+// conversión a texto legible, los tonos de color (clases Tailwind) y helpers de
+// progreso. Los helpers de ROLES ya NO viven aquí: usan `@/core/roles`.
+// ============================================================================
+
+// Estados que cierran el flujo de un trámite (no permiten avanzar).
 export const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'];
 
+// Estados considerados de éxito/aprobación con tono verde.
 export const ESTADOS_OK = [
   'aprobado',
   'documentacion_ok',
@@ -9,6 +19,7 @@ export const ESTADOS_OK = [
   'conformidad_tutor',
 ];
 
+// Estados de error/rechazo con tono rojo.
 export const ESTADOS_ERROR = [
   'rechazado',
   'reprobado',
@@ -17,12 +28,27 @@ export const ESTADOS_ERROR = [
   'monografia_rechazada',
 ];
 
+/**
+ * Convierte un nombre de estado a texto legible (ej. "solicitud_presentada"
+ * -> "Solicitud Presentada").
+ *
+ * @param {string} nombre Nombre interno del estado (snake_case).
+ * @returns {string} Etiqueta formateada para mostrar al usuario.
+ */
 export function formatoEstado(nombre) {
   return String(nombre || '')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
+/**
+ * Devuelve las clases Tailwind de color correspondientes al tono de un estado
+ * (verde = éxito, rojo = error, índigo = neutro/en proceso).
+ *
+ * @param {string} estado Nombre interno del estado.
+ * @returns {{soft: string, solid: string, bar: string, dot: string}} Clases
+ *          para fondo suave, sólido, barra de progreso e indicador puntual.
+ */
 export function toneEstado(estado) {
   if (ESTADOS_OK.includes(estado)) {
     return {
@@ -48,42 +74,27 @@ export function toneEstado(estado) {
   };
 }
 
+/**
+ * Calcula el porcentaje de avance de un trámite según su posición dentro de la
+ * secuencia completa de estados de la modalidad.
+ *
+ * @param {Object} tramite Trámite con `secuencia` (array) y `estado_actual`.
+ * @returns {number} Porcentaje 0-100.
+ */
 export function progresoEstado(tramite) {
   const idx = (tramite?.secuencia || []).indexOf(tramite?.estado_actual);
   if (idx === -1 || !tramite?.secuencia?.length) return 0;
   return Math.min(Math.round(((idx + 1) / tramite.secuencia.length) * 100), 100);
 }
 
+/**
+ * Resumen global de un estado para insignias: Aprobado, Rechazado o En Proceso.
+ *
+ * @param {string} estado Nombre interno del estado.
+ * @returns {{label: string, tone: string}} Etiqueta y clases de color.
+ */
 export function statusGlobal(estado) {
   if (estado === 'aprobado') return { label: 'Aprobado', tone: toneEstado(estado).soft };
   if (ESTADOS_ERROR.includes(estado)) return { label: 'Rechazado', tone: toneEstado(estado).soft };
   return { label: 'En Proceso', tone: 'bg-sky-50 text-sky-700 border-sky-200' };
-}
-
-export const ROLE_LABELS = {
-  admin: 'Administrador',
-  estudiante: 'Estudiante',
-  docente: 'Docente',
-  kardex: 'Kardex',
-  secretaria: 'Secretaría',
-  direccion: 'Dirección',
-  concejo: 'Concejo',
-};
-
-export const ROLE_TONES = {
-  admin: 'bg-rose-50 text-rose-700 border-rose-200',
-  estudiante: 'bg-sky-50 text-sky-700 border-sky-200',
-  docente: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  kardex: 'bg-violet-50 text-violet-700 border-violet-200',
-  secretaria: 'bg-amber-50 text-amber-700 border-amber-200',
-  direccion: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  concejo: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
-};
-
-export function rolLabel(rol) {
-  return ROLE_LABELS[rol] || rol || 'Sistema';
-}
-
-export function toneRol(rol) {
-  return ROLE_TONES[rol] || 'bg-slate-100 text-slate-700 border-slate-200';
 }

@@ -12,6 +12,8 @@
 </template>
 
 <script setup>
+// Estado vacío reutilizable (ochenta/vacío).
+// Muestra un icono centrado, un título, un mensaje opcional y slot de acciones.
 import AppIcon from './AppIcon.vue';
 
 defineProps({

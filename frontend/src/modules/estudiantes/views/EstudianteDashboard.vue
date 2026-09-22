@@ -1,6 +1,6 @@
 <template>
   <AppShell title="Portal del Estudiante" subtitle="Seguimiento de tu modalidad de titulación">
-    <template v-if="!tramitesStore.perfilEstudiante">
+    <template v-if="!estudianteStore.perfilEstudiante">
       <div class="max-w-2xl mx-auto">
         <div class="card overflow-hidden">
           <div class="h-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500"></div>
@@ -46,9 +46,9 @@
 
     <template v-else>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Código Universitario" :value="tramitesStore.perfilEstudiante.codigo_universitario" icon="file-text" tone="amber" />
-        <StatCard label="Plan de Estudios" :value="tramitesStore.perfilEstudiante.plan_estudios" icon="book" tone="rose" />
-        <StatCard label="Promedio Global" :value="tramitesStore.perfilEstudiante.promedio_global" icon="chart" tone="orange" />
+        <StatCard label="Código Universitario" :value="estudianteStore.perfilEstudiante.codigo_universitario" icon="file-text" tone="amber" />
+        <StatCard label="Plan de Estudios" :value="estudianteStore.perfilEstudiante.plan_estudios" icon="book" tone="rose" />
+        <StatCard label="Promedio Global" :value="estudianteStore.perfilEstudiante.promedio_global" icon="chart" tone="orange" />
         <StatCard
           label="Estado del Trámite"
           :value="tramitesStore.tramiteActivo ? formatoEstado(tramitesStore.tramiteActivo.estado_actual) : '—'"
@@ -123,7 +123,7 @@
         </div>
 
         <div>
-          <label class="label">Certificado de Notas (PDF)</label>
+          <label class="label">Certificado de Conclusión de Estudios (PDF)</label>
           <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoCertificado ? 'border-amber-300 bg-amber-50' : 'border-stone-300 bg-stone-50 hover:border-amber-400']">
             <span class="flex items-center gap-2 text-sm" :class="archivoCertificado ? 'text-amber-700' : 'text-stone-500'">
               <AppIcon name="file-text" :size="18" />
@@ -166,52 +166,71 @@
 </template>
 
 <script setup>
-import TimelineTramite from '../components/TimelineTramite.vue';
+// Vista del portal del estudiante.
+// Si el estudiante no tiene perfil completo muestra el formulario para crearlo;
+// en caso contrario despliega las estadísticas de su perfil, la línea de tiempo
+// de su trámite activo y un modal para iniciar una nueva solicitud de titulación.
+import { TimelineTramite, useTramitesStore, formatoEstado, ESTADOS_TERMINALES } from '@/modules/tramites';
 import { ref, computed, onMounted } from 'vue';
-import { useAuthStore } from '../stores/auth';
-import { useTramitesStore } from '../stores/tramites';
-import { useToastStore } from '../stores/toast';
-import { formatoEstado, ESTADOS_TERMINALES } from '../utils/estados';
-import AppShell from '../components/ui/AppShell.vue';
-import AppIcon from '../components/ui/AppIcon.vue';
-import StatCard from '../components/ui/StatCard.vue';
-import UiModal from '../components/ui/UiModal.vue';
+import { useAuthStore } from '@/modules/auth';
+import { useEstudianteStore } from '../stores/estudiante';
+import { useToastStore } from '@/core/stores/toast';
+import { AppShell } from '@/modules/layout';
+import AppIcon from '@/ui/AppIcon.vue';
+import StatCard from '@/ui/StatCard.vue';
+import UiModal from '@/ui/UiModal.vue';
 
 const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
+const estudianteStore = useEstudianteStore();
 const toastStore = useToastStore();
 
+// Formulario de perfil académico inicial.
 const perfil = ref({ codigo_universitario: '', plan_estudios: '', fecha_conclusion_plan: '', promedio_global: '' });
+// Control del modal de nueva solicitud.
 const mostrarFormularioTramite = ref(false);
+// Datos de la nueva solicitud (modalidad + documentos adjuntos).
 const nuevoTramite = ref({ id_modalidad: '', documentos: [] });
-const enviando = ref(false);
-const archivoCertificado = ref(null);
-const archivoCarta = ref(null);
+const enviando = ref(false);          // true mientras se envía la solicitud.
+const archivoCertificado = ref(null); // Archivo PDF del certificado de notas.
+const archivoCarta = ref(null);       // Archivo PDF de la carta de solicitud.
 const cargandoTramite = computed(() => tramitesStore.cargandoTramite);
 
+// Modalidad seleccionada en el formulario (para mostrar sus requisitos).
 const modalidadSeleccionada = computed(() => {
     return tramitesStore.modalidades.find((m) => m.id_modalidad == nuevoTramite.value.id_modalidad) || null;
 });
 
+// true si el trámite activo ya alcanzó un estado terminal.
 const tramiteTerminado = computed(() => ESTADOS_TERMINALES.includes(tramitesStore.tramiteActivo?.estado_actual));
 
+// Permite iniciar una nueva solicitud solo si no hay trámite activo o ya terminó.
 const mostrarInicioSolicitud = computed(() => !tramitesStore.tramiteActivo || tramiteTerminado.value);
 
+// Carga inicial: perfil, modalidades disponibles y trámite activo.
 onMounted(async () => {
-    await tramitesStore.cargarPerfil(true);
+    await estudianteStore.cargarPerfil(true);
     await tramitesStore.cargarModalidades();
     await tramitesStore.cargarTramiteActivo();
 });
 
+/** Guarda el perfil académico vía POST /api/estudiante/perfil y avisa el resultado. */
 const guardarPerfil = async () => {
     try {
-        await tramitesStore.guardarPerfil(perfil.value);
+        await estudianteStore.guardarPerfil(perfil.value);
         toastStore.success('Perfil guardado correctamente.');
     } catch (error) {
         toastStore.error('Error al guardar: ' + (error.response?.data?.message || 'Verifique los datos'));
     }
 };
 
+/**
+ * Captura un archivo seleccionado y lo asocia al tipo de documento en la lista
+ * de documentos de la nueva solicitud.
+ *
+ * @param {Event} event Evento `change` del input file.
+ * @param {string} tipo Tipo de documento ('certificado_notas' | 'carta_solicitud').
+ */
 const handleFileUpload = (event, tipo) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -225,10 +244,16 @@ const handleFileUpload = (event, tipo) => {
     }
 };
 
+/**
+ * Envía una nueva solicitud de titulación como FormData multipart a
+ * POST /api/tramites. Verifica que exista el perfil del estudiante y muestra
+ * toasts según el resultado.
+ */
 const enviarSolicitud = async () => {
-    if (!tramitesStore.perfilEstudiante?.id_estudiante) {
-        await tramitesStore.cargarPerfil(true);
-        if (!tramitesStore.perfilEstudiante?.id_estudiante) {
+    // Reintenta cargar el perfil por si se creó en otra sesión.
+    if (!estudianteStore.perfilEstudiante?.id_estudiante) {
+        await estudianteStore.cargarPerfil(true);
+        if (!estudianteStore.perfilEstudiante?.id_estudiante) {
             toastStore.warning('Debe completar su perfil de estudiante primero.');
             return;
         }
@@ -238,6 +263,7 @@ const enviarSolicitud = async () => {
     const formData = new FormData();
     formData.append('id_modalidad', nuevoTramite.value.id_modalidad);
 
+    // Adjunta cada documento como documentos[i][archivo] y documentos[i][tipo].
     nuevoTramite.value.documentos.forEach((doc, index) => {
         formData.append(`documentos[${index}][archivo]`, doc.archivo);
         formData.append(`documentos[${index}][tipo]`, doc.tipo);
@@ -247,6 +273,7 @@ const enviarSolicitud = async () => {
         await tramitesStore.iniciarTramite(formData);
         toastStore.success('Solicitud enviada correctamente. Espere la revisión de Kardex.');
         mostrarFormularioTramite.value = false;
+        // Limpia el formulario y los archivos seleccionados.
         nuevoTramite.value = { id_modalidad: '', documentos: [] };
         archivoCertificado.value = null;
         archivoCarta.value = null;

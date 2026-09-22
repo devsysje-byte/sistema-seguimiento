@@ -34,3 +34,12 @@ Thumbs.db
 .env.*
 *.sqlite
 *.sqlite-journal
+
+# === PLANTILLAS DE ENTORNO (versionables: NO contienen secretos) ===
+# Re-incluye los archivos `.env.*.example` que los patrones anteriores ignoraron.
+# Los archivos reales `.env`, `.env.development` y `.env.production` SÍ se mantienen
+# ignorados: solo se versionan las plantillas seguras.
+!.env.example
+!.env.*.example
+!**/.env.example
+!**/.env.*.example

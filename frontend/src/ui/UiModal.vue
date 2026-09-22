@@ -16,6 +16,9 @@
 </template>
 
 <script setup>
+// Modal genérico reutilizable.
+// Aparece con fondo oscurecido al hacer `v-model` true, muestra un título con
+// botón de cierre y el contenido del slot.
 import AppIcon from './AppIcon.vue';
 
 const props = defineProps({
@@ -23,8 +26,10 @@ const props = defineProps({
   maxWidth: { type: String, default: '480px' },
 });
 
+// Prop 'v-model' que controla la visibilidad del modal.
 const open = defineModel({ type: Boolean, default: false });
 
+/** Cierra el modal (poniendo el v-model a false). */
 const close = () => {
   open.value = false;
 };

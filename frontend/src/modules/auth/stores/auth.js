@@ -1,19 +1,36 @@
 import { defineStore } from 'pinia';
-import api from '../services/api';
+import { authService } from '../services/auth';
 
+/**
+ * Store de autenticación.
+ *
+ * Gestiona la sesión del usuario (datos y token) manteniéndolos sincronizados
+ * con localStorage, e implementa el ingreso y cierre de sesión contra la API.
+ */
 export const useAuthStore = defineStore('auth', {
+    // Estado inicial: restaura la sesión desde localStorage si existía.
     state: () => ({
         user: JSON.parse(localStorage.getItem('user')) || null,
         token: localStorage.getItem('token') || null,
     }),
     getters: {
+        // true si el usuario autenticado tiene rol admin.
         isAdmin: (state) => state.user?.rol === 'admin',
+        // true mientras exista token almacenado (sesión considerada activa).
         isAuthenticated: (state) => !!state.token,
     },
     actions: {
+        /**
+         * Inicia sesión con email y contraseña contra POST /api/login.
+         *
+         * @param {string} email    Correo del usuario.
+         * @param {string} password Contraseña sin cifrar.
+         * @returns {Promise<boolean|string>} `true` si el ingreso fue exitoso; en
+         *          caso contrario, el mensaje de error devuelto por la API.
+         */
         async login(email, password) {
             try {
-                const { data } = await api.post('/login', { email, password });
+                const { data } = await authService.login(email, password);
                 this.token = data.access_token;
                 this.user = data.user;
                 localStorage.setItem('token', this.token);
@@ -23,8 +40,14 @@ export const useAuthStore = defineStore('auth', {
                 return error.response?.data?.message || 'Error al iniciar sesión';
             }
         },
+        /**
+         * Cierra la sesión: invalida el token en la API y limpia el estado y
+         * localStorage (incluido el perfil de estudiante en caché).
+         *
+         * @returns {Promise<void>}
+         */
         async logout() {
-            try { await api.post('/logout'); } catch(e){}
+            try { await authService.logout(); } catch(e){}
             this.token = null; this.user = null;
             localStorage.removeItem('token');
             localStorage.removeItem('user');

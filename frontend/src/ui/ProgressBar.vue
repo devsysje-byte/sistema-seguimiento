@@ -9,10 +9,13 @@
 </template>
 
 <script setup>
+// Barra de progreso simple.
+// Muestra una barra redondeada cuyo ancho equivale a `value` (contenido entre
+// 0 y 100) y acepta clases extra para personalizar el color.
 import { computed } from 'vue';
 
 const props = defineProps({
-  value: { type: Number, default: 0 },
+  value: { type: Number, default: 0 },                    // Porcentaje (0-100).
   barClass: { type: String, default: 'bg-gradient-to-r from-indigo-500 to-violet-500' },
 });
 </script>

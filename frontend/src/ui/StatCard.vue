@@ -15,6 +15,9 @@
 </template>
 
 <script setup>
+// Tarjeta de métrica (KPI).
+// Muestra un label, un valor grande, un sublabel opcional y un icono en un
+// bloque con degradado. El tono de color se define con el prop `tone`.
 import { computed } from 'vue';
 import AppIcon from './AppIcon.vue';
 
@@ -23,9 +26,10 @@ const props = defineProps({
   value: { type: [String, Number], required: true },
   sublabel: { type: String, default: '' },
   icon: { type: String, default: 'chart' },
-  tone: { type: String, default: 'indigo' },
+  tone: { type: String, default: 'indigo' }, // Clave en `tones`.
 });
 
+// Catálogo de tonos: clases del icono (degradado) y del "blob" decorativo.
 const tones = {
   indigo: { icon: 'from-indigo-500 to-indigo-600', blob: 'bg-indigo-400' },
   violet: { icon: 'from-violet-500 to-violet-600', blob: 'bg-violet-400' },
@@ -36,6 +40,7 @@ const tones = {
   rose: { icon: 'from-rose-500 to-rose-600', blob: 'bg-rose-400' },
 };
 
+// Clases resultantes del tono seleccionado (con respaldo a indigo).
 const iconTone = computed(() => tones[props.tone]?.icon || tones.indigo.icon);
 const blobTone = computed(() => tones[props.tone]?.blob || tones.indigo.blob);
 </script>

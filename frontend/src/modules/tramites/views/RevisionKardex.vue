@@ -87,7 +87,7 @@
 
                 <div class="mt-4 flex flex-wrap gap-1.5">
                   <a v-for="doc in tramite.documentos" :key="doc.id_documento"
-                     :href="`${baseStorageUrl}/${doc.ruta_archivo}`" target="_blank"
+                     :href="assetUrl(doc.ruta_archivo)" target="_blank"
                      class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 transition">
                     <AppIcon name="link" :size="13" />
                     {{ doc.tipo_documento }}
@@ -152,43 +152,52 @@
 </template>
 
 <script setup>
+// Vista de revisión de trámites para el personal académico (Kardex, Secretaría,
+// Dirección, Admin, Concejo y Docente).
+// Muestra métricas, estadísticas por modalidad y el listado filtrable de
+// solicitudes en proceso, permitiendo aprobar/rechazar la documentación inicial
+// y acceder a la gestión completa de cada trámite.
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '@/modules/auth';
 import { useTramitesStore } from '../stores/tramites';
-import { useToastStore } from '../stores/toast';
+import { useToastStore } from '@/core/stores/toast';
 import { progresoEstado } from '../utils/estados';
-import AppShell from '../components/ui/AppShell.vue';
-import AppIcon from '../components/ui/AppIcon.vue';
-import Avatar from '../components/ui/Avatar.vue';
-import EstadoBadge from '../components/ui/EstadoBadge.vue';
-import StatCard from '../components/ui/StatCard.vue';
-import EstadisticasModalidades from '../components/ui/EstadisticasModalidades.vue';
-import ProgressBar from '../components/ui/ProgressBar.vue';
-import EmptyState from '../components/ui/EmptyState.vue';
-import UiModal from '../components/ui/UiModal.vue';
+import { assetUrl } from '@/core/http/storage';
+import { AppShell } from '@/modules/layout';
+import AppIcon from '@/ui/AppIcon.vue';
+import Avatar from '@/ui/Avatar.vue';
+import EstadoBadge from '../components/EstadoBadge.vue';
+import StatCard from '@/ui/StatCard.vue';
+import EstadisticasModalidades from '../components/EstadisticasModalidades.vue';
+import ProgressBar from '@/ui/ProgressBar.vue';
+import EmptyState from '@/ui/EmptyState.vue';
+import UiModal from '@/ui/UiModal.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
 const toastStore = useToastStore();
+
+// Estado de la lista y de los modales de aprobación/rechazo.
 const cargando = ref(false);
-const buscar = ref('');
-const showRechazo = ref(false);
-const showAprobar = ref(false);
-const tramiteRechazo = ref(null);
-const tramiteAprobar = ref(null);
-const motivoRechazo = ref('');
-const aprobando = ref(false);
+const buscar = ref('');                 // Texto de búsqueda.
+const showRechazo = ref(false);         // Modal de rechazo.
+const showAprobar = ref(false);         // Modal de aprobación.
+const tramiteRechazo = ref(null);       // Trámite en el modal de rechazo.
+const tramiteAprobar = ref(null);       // Trámite en el modal de aprobación.
+const motivoRechazo = ref('');          // Motivo obligatorio para rechazar.
+const aprobando = ref(false);           // true mientras se aprueba.
 
-const baseStorageUrl = import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage';
-
+// El personal académico (todo excepto docente/estudiante) puede aprobar/rechazar.
 const esPersonal = computed(() => !['docente', 'estudiante'].includes(authStore.user?.rol));
 
+// Subconjuntos útiles para las tarjetas de métricas.
 const porRevisar = computed(() => tramitesStore.tramitesPendientes.filter((t) => t.estado_actual === 'solicitud_presentada'));
 const conTutor = computed(() => tramitesStore.tramitesPendientes.filter((t) => t.tutor));
 const sinTutor = computed(() => tramitesStore.tramitesPendientes.filter((t) => !t.tutor));
 
+// Filtra los trámites por estudiante, código, modalidad o estado.
 const filtrados = computed(() => {
   const q = buscar.value.toLowerCase().trim();
   if (!q) return tramitesStore.tramitesPendientes;
@@ -207,15 +216,18 @@ onMounted(async () => {
   cargando.value = false;
 });
 
+/** Navega a la gestión del trámite indicado. */
 const gestionar = (tramite) => {
   router.push({ name: 'GestionTramite', params: { id: tramite.id_tramite } });
 };
 
+/** Abre el modal de aprobación para el trámite indicado. */
 const abrirAprobar = (tramite) => {
   tramiteAprobar.value = tramite;
   showAprobar.value = true;
 };
 
+/** Aprueba la documentación inicial vía POST /api/tramites/{id}/revisar (accion=aprobar). */
 const aprobar = async (tramite) => {
   aprobando.value = true;
   try {
@@ -230,12 +242,14 @@ const aprobar = async (tramite) => {
   }
 };
 
+/** Abre el modal de rechazo limpio para el trámite indicado. */
 const abrirRechazo = (tramite) => {
   tramiteRechazo.value = tramite;
   motivoRechazo.value = '';
   showRechazo.value = true;
 };
 
+/** Rechaza la documentación inicial vía POST /api/tramites/{id}/revisar (accion=rechazar). */
 const rechazar = async (tramite) => {
   try {
     await tramitesStore.revisarTramite(tramite.id_tramite, 'rechazar', motivoRechazo.value);

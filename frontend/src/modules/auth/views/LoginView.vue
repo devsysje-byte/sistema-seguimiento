@@ -129,24 +129,33 @@
 </template>
 
 <script setup>
+// Vista de inicio de sesión.
+// Muestra un formulario de email/contraseña, controla el estado de carga
+// (`ingresando`) y presenta los errores de autenticación en un modal. Al
+// ingresar redirige según el rol del usuario autenticado.
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
-import AppIcon from '../components/ui/AppIcon.vue';
+import { homeForRol } from '../guards';
+import AppIcon from '@/ui/AppIcon.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
+
+// Campos del formulario y controles de UI.
 const email = ref('');
 const password = ref('');
-const showPassword = ref(false);
-const ingresando = ref(false);
-const showErrorModal = ref(false);
-const errorMessage = ref('');
+const showPassword = ref(false);   // Alterna visibilidad de la contraseña.
+const ingresando = ref(false);     // true mientras se procesa el login.
+const showErrorModal = ref(false); // Controla el modal de error.
+const errorMessage = ref('');      // Mensaje de error a mostrar.
 
+/** Cierra el modal de error de autenticación. */
 const closeErrorModal = () => {
   showErrorModal.value = false;
 };
 
+// Cierra el modal con la tecla Escape.
 const onKeydown = (event) => {
   if (event.key === 'Escape' && showErrorModal.value) {
     closeErrorModal();
@@ -156,11 +165,13 @@ const onKeydown = (event) => {
 onMounted(() => window.addEventListener('keydown', onKeydown));
 onUnmounted(() => window.removeEventListener('keydown', onKeydown));
 
+/** Abre el modal de error con el mensaje indicado. */
 const openErrorModal = (message) => {
   errorMessage.value = message;
   showErrorModal.value = true;
 };
 
+// Características destacadas mostradas en el panel lateral informativo.
 const features = [
   { title: 'Solicita tu modalidad de titulación en línea', icon: 'layers' },
   { title: 'Seguimiento transparente en línea de tiempo', icon: 'eye' },
@@ -168,25 +179,21 @@ const features = [
   { title: 'Historial completo de aprobaciones', icon: 'check-square' },
 ];
 
+/**
+ * Autentica con POST /api/login. Si el login es exitoso redirige según el rol;
+ * en caso de error muestra un modal con el mensaje devuelto por la API.
+ */
 const handleLogin = async () => {
   ingresando.value = true;
   try {
     const result = await authStore.login(email.value, password.value);
     if (result === true) {
-      const byRol = {
-        admin: '/admin',
-        estudiante: '/estudiante',
-        kardex: '/kardex',
-        secretaria: '/kardex',
-        direccion: '/kardex',
-        concejo: '/kardex',
-        docente: '/docente',
-      };
-      router.push(byRol[authStore.user?.rol] || '/estudiante');
+      router.push(homeForRol(authStore.user?.rol));
     } else {
       openErrorModal(result || 'Credenciales incorrectas.');
     }
   } catch (err) {
+    // Error de red / servidor no disponible.
     openErrorModal('No se pudo conectar con el servidor. Inténtalo de nuevo.');
   } finally {
     ingresando.value = false;

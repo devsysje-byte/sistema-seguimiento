@@ -236,37 +236,44 @@
 </template>
 
 <script setup>
+// Vista de administración de usuarios.
+// Muestra una matriz de actores con búsqueda y filtro por rol, permite crear,
+// editar (incluidos datos de estudiante) y dar de baja usuarios mediante la API.
 import { ref, computed, onMounted } from 'vue';
-import { useAuthStore } from '../stores/auth';
-import api from '../services/api';
-import { rolLabel, ROLE_LABELS } from '../utils/estados';
-import { useToastStore } from '../stores/toast';
-import AppShell from '../components/ui/AppShell.vue';
-import AppIcon from '../components/ui/AppIcon.vue';
-import Avatar from '../components/ui/Avatar.vue';
-import RoleBadge from '../components/ui/RoleBadge.vue';
-import StatCard from '../components/ui/StatCard.vue';
-import EstadisticasModalidades from '../components/ui/EstadisticasModalidades.vue';
-import UiModal from '../components/ui/UiModal.vue';
-import EmptyState from '../components/ui/EmptyState.vue';
+import { useAuthStore } from '@/modules/auth';
+import { usuariosService } from '../services/usuarios';
+import { rolLabel, ROLE_LABELS } from '@/core/roles';
+import { useToastStore } from '@/core/stores/toast';
+import { AppShell } from '@/modules/layout';
+import AppIcon from '@/ui/AppIcon.vue';
+import Avatar from '@/ui/Avatar.vue';
+import RoleBadge from '@/ui/RoleBadge.vue';
+import StatCard from '@/ui/StatCard.vue';
+import { EstadisticasModalidades } from '@/modules/tramites';
+import UiModal from '@/ui/UiModal.vue';
+import EmptyState from '@/ui/EmptyState.vue';
 
 const authStore = useAuthStore();
 const toastStore = useToastStore();
-const users = ref([]);
-const cargando = ref(false);
-const showModalCrear = ref(false);
-const showModalActualizar = ref(false);
-const buscar = ref('');
-const filtroRol = ref('');
-const roles = Object.keys(ROLE_LABELS);
-const usuarioSeleccionado = ref(null);
 
+// Estado de la matriz de usuarios y de la UI.
+const users = ref([]);              // Lista completa de usuarios activos.
+const cargando = ref(false);        // true mientras se cargan los usuarios.
+const showModalCrear = ref(false);  // Modal de alta de usuario.
+const showModalActualizar = ref(false);
+const buscar = ref('');             // Texto de búsqueda.
+const filtroRol = ref('');          // Filtro por rol.
+const roles = Object.keys(ROLE_LABELS);
+const usuarioSeleccionado = ref(null); // Fila seleccionada en la tabla.
+
+// Formularios de creación y edición de usuario.
 const nuevoUsuario = ref({ ci: '', nombres: '', apellidos: '', email: '', telefono: '', rol: 'estudiante', password: '' });
 const editarForm = ref({
   id_usuario: null, ci: '', nombres: '', apellidos: '', email: '', telefono: '', rol: 'estudiante',
   password: '', codigo_universitario: '', plan_estudios: '', fecha_conclusion_plan: '', promedio_global: '', estado_estudiante: 'activo',
 });
 
+/** Restablece el formulario de edición a sus valores vacíos por defecto. */
 const editarFormLimpiar = () => {
   editarForm.value = {
     id_usuario: null, ci: '', nombres: '', apellidos: '', email: '', telefono: '', rol: 'estudiante',
@@ -278,6 +285,7 @@ onMounted(() => {
   fetchUsers();
 });
 
+// Filtra los usuarios combinando el texto de búsqueda y el rol seleccionado.
 const usuariosFiltrados = computed(() => {
   const q = buscar.value.toLowerCase().trim();
   return users.value.filter((u) => {
@@ -290,12 +298,14 @@ const usuariosFiltrados = computed(() => {
   });
 });
 
+/** Cuenta cuántos usuarios tienen el rol indicado. */
 const porRol = (rol) => users.value.filter((u) => u.rol === rol).length;
 
+/** Carga la matriz de usuarios desde GET /api/usuarios. Maneja sesiones 401. */
 const fetchUsers = async () => {
   cargando.value = true;
   try {
-    const { data } = await api.get('/usuarios');
+    const { data } = await usuariosService.index();
     users.value = data;
   } catch (error) {
     console.error('Error al cargar la matriz de usuarios:', error);
@@ -308,10 +318,12 @@ const fetchUsers = async () => {
   }
 };
 
+/** Selecciona una fila de la tabla. */
 const seleccionarUsuario = (user) => {
   usuarioSeleccionado.value = user;
 };
 
+/** Prepara el formulario de edición con los datos del usuario (y su estudiante). */
 const editarUsuario = (user) => {
   usuarioSeleccionado.value = user;
   editarFormLimpiar();
@@ -327,15 +339,17 @@ const editarUsuario = (user) => {
   showModalActualizar.value = true;
 };
 
+/** Abre el modal de edición para el usuario seleccionado en la tabla. */
 const abrirActualizar = () => {
   if (usuarioSeleccionado.value) {
     editarUsuario(usuarioSeleccionado.value);
   }
 };
 
+/** Crea un usuario vía POST /api/usuarios y refresca la matriz. */
 const crearUsuario = async () => {
   try {
-    await api.post('/usuarios', nuevoUsuario.value);
+    await usuariosService.crear(nuevoUsuario.value);
     showModalCrear.value = false;
     toastStore.success(`Usuario ${nuevoUsuario.value.nombres} ${nuevoUsuario.value.apellidos} dado de alta correctamente.`);
     nuevoUsuario.value = { ci: '', nombres: '', apellidos: '', email: '', telefono: '', rol: 'estudiante', password: '' };
@@ -345,6 +359,7 @@ const crearUsuario = async () => {
   }
 };
 
+/** Actualiza un usuario (y su perfil de estudiante si aplica) vía PUT /api/usuarios/{id}. */
 const actualizarUsuario = async () => {
   try {
     const payload = {
@@ -355,8 +370,10 @@ const actualizarUsuario = async () => {
       telefono: editarForm.value.telefono,
       rol: editarForm.value.rol,
     };
+    // Solo se envía contraseña si el admin escribió una nueva.
     if (editarForm.value.password) payload.password = editarForm.value.password;
 
+    // Si el rol es estudiante, adjunta el perfil académico.
     if (payload.rol === 'estudiante') {
       payload.estudiante = {
         codigo_universitario: editarForm.value.codigo_universitario,
@@ -367,7 +384,7 @@ const actualizarUsuario = async () => {
       };
     }
 
-    await api.put(`/usuarios/${editarForm.value.id_usuario}`, payload);
+    await usuariosService.actualizar(editarForm.value.id_usuario, payload);
     showModalActualizar.value = false;
     toastStore.success(`Datos de ${editarForm.value.nombres} ${editarForm.value.apellidos} actualizados correctamente.`);
     await fetchUsers();
@@ -377,10 +394,11 @@ const actualizarUsuario = async () => {
   }
 };
 
+/** Da de baja lógica a un usuario con confirmación previa vía DELETE /api/usuarios/{id}. */
 const eliminarUsuario = async (user) => {
   if (!confirm(`¿Dar de baja a ${user.nombres} ${user.apellidos}? Esta acción deshabilita su acceso.`)) return;
   try {
-    await api.delete(`/usuarios/${user.id_usuario}`);
+    await usuariosService.eliminar(user.id_usuario);
     await fetchUsers();
   } catch (error) {
     toastStore.error('No se pudo dar de baja al usuario.');

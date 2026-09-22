@@ -1,5 +1,8 @@
 <script setup>
-import ToastContainer from './components/ui/ToastContainer.vue';
+// Componente raíz de la aplicación.
+// Renderiza la vista correspondiente a la ruta activa dentro de una transición
+// de entrada/salida y monta el contenedor global de toasts (notificaciones).
+import ToastContainer from '@/ui/ToastContainer.vue';
 </script>
 
 <template>

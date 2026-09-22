@@ -1,0 +1,17 @@
+<?php
+
+use App\Modules\Usuarios\Http\Controllers\UserController;
+use App\Support\Roles;
+
+// CRUD de usuarios: únicamente el rol admin.
+Route::middleware(['auth:sanctum', 'role:' . Roles::ADMIN])->group(function () {
+    Route::get('/usuarios', [UserController::class, 'index']);
+    Route::post('/usuarios', [UserController::class, 'store']);
+    Route::match(['put', 'patch'], '/usuarios/{id}', [UserController::class, 'update']);
+    Route::delete('/usuarios/{id}', [UserController::class, 'destroy']);
+});
+
+// Catálogo de docentes: roles de gestión (para asignación de tutores).
+Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION)])->group(function () {
+    Route::get('/usuarios/docentes', [UserController::class, 'docentes']);
+});

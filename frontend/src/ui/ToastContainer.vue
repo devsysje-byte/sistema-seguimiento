@@ -28,11 +28,15 @@
 </template>
 
 <script setup>
-import { useToastStore } from '../../stores/toast';
-import AppIcon from './AppIcon.vue';
+// Contenedor global de toasts.
+// Renderiza en la parte superior de la pantalla todas las notificaciones del
+// store de toasts, con animación de entrada/salida y barra de progreso de vida.
+import { useToastStore } from '@/core/stores/toast';
+import AppIcon from '@/ui/AppIcon.vue';
 
 const toastStore = useToastStore();
 
+// Clases Tailwind por tipo de toast (tarjeta, icono y barra de progreso).
 const toastClasses = {
   success: {
     card: 'bg-emerald-50 ring-emerald-200',
@@ -56,6 +60,7 @@ const toastClasses = {
   },
 };
 
+/** Devuelve el nombre del icono según el tipo de toast. */
 const iconFor = (type) => ({
   success: 'check-circle',
   error: 'x-circle',

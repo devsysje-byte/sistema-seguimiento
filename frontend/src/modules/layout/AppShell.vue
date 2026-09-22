@@ -76,13 +76,17 @@
 </template>
 
 <script setup>
+// Shell de layout principal de la aplicación (usado por todas las vistas).
+// Renderiza la barra lateral con el menú según el rol, el encabezado con el
+// usuario/notificaciones/logout y un <main> con <slot> para el contenido.
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useAuthStore } from '../../stores/auth';
-import AppIcon from './AppIcon.vue';
-import Avatar from './Avatar.vue';
-import NotificationBell from './NotificationBell.vue';
+import { useAuthStore } from '@/modules/auth';
+import AppIcon from '@/ui/AppIcon.vue';
+import Avatar from '@/ui/Avatar.vue';
+import { NotificationBell } from '@/modules/notificaciones';
 
+// Props: título y subtítulo mostrados en el encabezado.
 defineProps({
   title: { type: String, required: true },
   subtitle: { type: String, default: '' },
@@ -91,12 +95,14 @@ defineProps({
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
-const open = ref(false);
+const open = ref(false); // Controla el drawer del sidebar en móviles.
 
+// Bloquea el scroll del body mientras el drawer móvil está abierto.
 watch(open, (value) => {
   document.body.style.overflow = value ? 'hidden' : '';
 });
 
+// Ítems del menú configurados según el rol del usuario autenticado.
 const navItems = computed(() => {
   const rol = authStore.user?.rol;
   const items = [];
@@ -109,11 +115,13 @@ const navItems = computed(() => {
   return items;
 });
 
+/** Determina si una ruta está activa (para resaltar el ítem del menú). */
 const isActive = (to) => {
   if (to === '/kardex') return route.path.startsWith('/kardex') || route.path.startsWith('/tramites/');
   return route.path === to;
 };
 
+/** Cierra la sesión y redirige a la pantalla de login. */
 const logout = () => {
   authStore.logout();
   window.location.href = '/login';

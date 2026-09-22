@@ -114,24 +114,31 @@
 </template>
 
 <script setup>
+// Vista del panel del docente tutor.
+// Lista los trámites donde el docente autenticado es tutor, divididos en
+// "En Proceso" y "Finalizados", con resumen de carga académica y acceso a la
+// gestión de cada trámite.
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useTramitesStore } from '../stores/tramites';
 import { ESTADOS_TERMINALES, progresoEstado, formatoEstado } from '../utils/estados';
-import AppShell from '../components/ui/AppShell.vue';
-import AppIcon from '../components/ui/AppIcon.vue';
-import Avatar from '../components/ui/Avatar.vue';
-import EstadoBadge from '../components/ui/EstadoBadge.vue';
-import StatCard from '../components/ui/StatCard.vue';
-import ProgressBar from '../components/ui/ProgressBar.vue';
-import EmptyState from '../components/ui/EmptyState.vue';
+import { AppShell } from '@/modules/layout';
+import AppIcon from '@/ui/AppIcon.vue';
+import Avatar from '@/ui/Avatar.vue';
+import EstadoBadge from '../components/EstadoBadge.vue';
+import StatCard from '@/ui/StatCard.vue';
+import ProgressBar from '@/ui/ProgressBar.vue';
+import EmptyState from '@/ui/EmptyState.vue';
 
 const router = useRouter();
 const tramitesStore = useTramitesStore();
-const cargando = ref(false);
+const cargando = ref(false); // true mientras se cargan las tutorías.
 
+// Tutorías con estado no terminal (en curso).
 const activos = computed(() => tramitesStore.tutorias.filter((t) => !ESTADOS_TERMINALES.includes(t.estado_actual)));
+// Tutorías que alcanzaron un estado terminal (finalizadas).
 const finalizados = computed(() => tramitesStore.tutorias.filter((t) => ESTADOS_TERMINALES.includes(t.estado_actual)));
+// Promedio de avance de las tutorías activas (porcentaje).
 const promedioGlobal = computed(() => {
   if (!activos.value.length) return '—';
   const total = activos.value.reduce((acc, t) => acc + progresoEstado(t), 0);
@@ -140,16 +147,20 @@ const promedioGlobal = computed(() => {
 
 onMounted(recargar);
 
+/** Recarga las tutorías del docente desde la API (GET /api/tutorias). */
 async function recargar() {
   cargando.value = true;
   await tramitesStore.cargarTutorias();
   cargando.value = false;
 }
 
+/** Navega a la gestión del trámite indicado. */
 const gestionar = (tramite) => router.push({ name: 'GestionTramite', params: { id: tramite.id_tramite } });
 
+/** Porcentaje de avance de un trámite según su secuencia. */
 const porcentaje = (tramite) => progresoEstado(tramite);
 
+/** Formatea el último estado registrado con su fecha ('Nombre · dd/MM/yyyy'). */
 const fechaUltimo = (tramite) => {
   const estados = tramite.estados || [];
   const ultimo = estados[estados.length - 1];

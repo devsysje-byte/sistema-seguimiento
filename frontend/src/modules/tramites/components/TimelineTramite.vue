@@ -87,73 +87,88 @@
 </template>
 
 <script setup>
+// Línea de tiempo de un trámite académico.
+// Recibe un trámite completo (con secuencia, estado actual, estados históricos
+// y próximos estados) y renderiza el progreso, cada paso de la secuencia con
+// su historia (responsable, observaciones, fecha) y los próximos pasos.
 import { computed } from 'vue';
-import { formatoEstado, rolLabel, toneEstado, statusGlobal, progresoEstado } from '../utils/estados';
-import AppIcon from './ui/AppIcon.vue';
-import ProgressBar from './ui/ProgressBar.vue';
+import { rolLabel } from '@/core/roles';
+import { formatoEstado, toneEstado, statusGlobal, progresoEstado } from '../utils/estados';
+import AppIcon from '@/ui/AppIcon.vue';
+import ProgressBar from '@/ui/ProgressBar.vue';
 
 const props = defineProps({
-    tramite: { type: Object, required: true },
-    title: { type: String, default: 'Seguimiento de mi Titulación' },
+  tramite: { type: Object, required: true },
+  title: { type: String, default: 'Seguimiento de mi Titulación' },
 });
 
-const secuencia = computed(() => props.tramite.secuencia || []);
-const estadoActual = computed(() => props.tramite.estado_actual);
-const siguientes = computed(() => props.tramite.siguientes_estados || []);
-const historicos = computed(() => props.tramite.estados || []);
-const progreso = computed(() => progresoEstado(props.tramite));
-const tone = computed(() => toneEstado(estadoActual.value));
+// Datos derivados del trámite.
+const secuencia = computed(() => props.tramite.secuencia || []);        // Orden de estados posible.
+const estadoActual = computed(() => props.tramite.estado_actual);       // Estado en curso.
+const siguientes = computed(() => props.tramite.siguientes_estados || []); // Estados alcanzables.
+const historicos = computed(() => props.tramite.estados || []);         // Historial de transiciones.
+const progreso = computed(() => progresoEstado(props.tramite));         // % de avance.
+const tone = computed(() => toneEstado(estadoActual.value));            // Tono para la barra/badge.
 
+// Índice del estado actual dentro de la secuencia (-1 si no está).
 const currentIndex = computed(() => secuencia.value.indexOf(estadoActual.value));
 
+// Icono del badge de estado según el resultado del trámite.
 const statusIcon = computed(() => {
-    const actual = estadoActual.value;
-    if (actual === 'aprobado') return 'award';
-    if (['reprobado', 'rechazado', 'reprobado_ausencia'].includes(actual)) return 'x-circle';
-    return 'clock';
+  const actual = estadoActual.value;
+  if (actual === 'aprobado') return 'award';
+  if (['reprobado', 'rechazado', 'reprobado_ausencia'].includes(actual)) return 'x-circle';
+  return 'clock';
 });
 
+// Construye cada paso de la secuencia con su último registro histórico.
+// Marca el paso como 'actual' si coincide con el estado vigente y como
+// 'completado' si su índice es anterior al actual.
 const pasosConHistoria = computed(() => {
-    return secuencia.value.map((id) => {
-        const index = secuencia.value.indexOf(id);
-        const historial = historicos.value
-            .filter((h) => h.nombre_estado === id)
-            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-            .pop();
+  return secuencia.value.map((id) => {
+    const index = secuencia.value.indexOf(id);
+    const historial = historicos.value
+      .filter((h) => h.nombre_estado === id)
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      .pop();
 
-        return {
-            id,
-            index,
-            historial,
-            actual: id === estadoActual.value,
-            completado: currentIndex.value !== -1 && index < currentIndex.value,
-        };
-    });
+    return {
+      id,
+      index,
+      historial,
+      actual: id === estadoActual.value,
+      completado: currentIndex.value !== -1 && index < currentIndex.value,
+    };
+  });
 });
 
+// Clases del punto (dot) según el estado del paso.
 const dotClass = (paso) => {
-    if (paso.actual) return 'bg-white border-2 border-indigo-600';
-    if (paso.completado) return 'bg-emerald-500 border-emerald-500';
-    if (paso.id === 'rechazado') return 'bg-rose-100 border-rose-300';
-    return 'bg-white border-slate-300';
+  if (paso.actual) return 'bg-white border-2 border-indigo-600';
+  if (paso.completado) return 'bg-emerald-500 border-emerald-500';
+  if (paso.id === 'rechazado') return 'bg-rose-100 border-rose-300';
+  return 'bg-white border-slate-300';
 };
 
+// Clases de la tarjeta según el estado del paso.
 const cardClass = (paso) => {
-    if (paso.actual) return 'bg-indigo-50/70 ring-indigo-200 shadow-md';
-    if (paso.completado) return 'ring-emerald-200 bg-white';
-    return 'ring-slate-200 bg-white opacity-75';
+  if (paso.actual) return 'bg-indigo-50/70 ring-indigo-200 shadow-md';
+  if (paso.completado) return 'ring-emerald-200 bg-white';
+  return 'ring-slate-200 bg-white opacity-75';
 };
 
+// Clases del título según el estado del paso.
 const titleClass = (paso) => {
-    if (paso.actual) return 'text-indigo-700';
-    if (paso.completado) return 'text-emerald-700';
-    return 'text-slate-500';
+  if (paso.actual) return 'text-indigo-700';
+  if (paso.completado) return 'text-emerald-700';
+  return 'text-slate-500';
 };
 
+/** Formatea una fecha ISO en formato corto local (dd mm yyyy, hh:mm). */
 const fecha = (fechaISO) => {
-    if (!fechaISO) return '';
-    return new Date(fechaISO).toLocaleString('es-BO', {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+  if (!fechaISO) return '';
+  return new Date(fechaISO).toLocaleString('es-BO', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
 };
 </script>

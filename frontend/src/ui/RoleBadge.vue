@@ -9,8 +9,11 @@
 </template>
 
 <script setup>
+// Etiqueta de rol de usuario.
+// Muestra el nombre legible del rol (rolLabel) con su color (toneRol) e un
+// icono distinto para docentes. Fuente de datos: core/roles (transversal).
 import { computed } from 'vue';
-import { rolLabel, toneRol } from '../../utils/estados';
+import { rolLabel, toneRol } from '@/core/roles';
 import AppIcon from './AppIcon.vue';
 
 const props = defineProps({ rol: { type: String, required: true } });

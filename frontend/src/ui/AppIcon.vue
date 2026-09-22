@@ -13,13 +13,16 @@
 </template>
 
 <script setup>
+// Componente de iconos SVG (colección tipo Feather Icons).
+// Renderiza el path del icono solicitado por su nombre con el tamaño indicado.
 import { computed } from 'vue';
 
 const props = defineProps({
-  name: { type: String, required: true },
+  name: { type: String, required: true },   // Nombre del icono (clave en `paths`).
   size: { type: [Number, String], default: 24 },
 });
 
+// Catálogo de formas SVG (paths) disponibles por nombre.
 const paths = {
   graduation: '<path d="M21.42 10.92a1 1 0 0 0-.02-1.84L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.83l8.57 3.91a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 8 6 6 3 0 0 0 4-6v-3.5"/>',
   zap: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
@@ -73,5 +76,6 @@ const paths = {
   'alert-triangle': '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
 };
 
+// Referencia reactiva al catálogo (se usa en el template como `icons[name]`).
 const icons = computed(() => paths);
 </script>

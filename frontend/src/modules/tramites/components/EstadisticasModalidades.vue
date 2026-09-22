@@ -73,21 +73,27 @@
 </template>
 
 <script setup>
+// Tarjeta de estadísticas de graduación (solo para roles con acceso a datos).
+// Muestra totales de aprobados/reprobados y, por cada modalidad, una barra
+// apilada con el porcentaje correspondiente. Los datos provienen del store de
+// trámites (GET /api/estadisticas) y se cargan al montar el componente.
 import { ref, computed, onMounted } from 'vue';
-import { useAuthStore } from '../../stores/auth';
-import { useTramitesStore } from '../../stores/tramites';
-import AppIcon from './AppIcon.vue';
-import EmptyState from './EmptyState.vue';
+import { useAuthStore } from '@/modules/auth';
+import { useTramitesStore } from '../stores/tramites';
+import AppIcon from '@/ui/AppIcon.vue';
+import EmptyState from '@/ui/EmptyState.vue';
 
 const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
 
-const cargando = ref(false);
+const cargando = ref(false); // true mientras se cargan las estadísticas.
 
+// Solo los roles señalados pueden ver este bloque de estadísticas.
 const visible = computed(() => ['admin', 'kardex', 'secretaria', 'direccion'].includes(authStore.user?.rol));
 const totales = computed(() => tramitesStore.estadisticas?.totales || { aprobados: 0, reprobados: 0, total: 0 });
 const porModalidad = computed(() => tramitesStore.estadisticas?.porModalidad || []);
 
+/** Porcentaje redondeado de `valor` respecto al total (evita división por cero). */
 const porcentaje = (valor, total) => (total > 0 ? Math.round((valor / total) * 100) : 0);
 
 onMounted(async () => {

@@ -73,40 +73,56 @@
 </template>
 
 <script setup>
+// Campana de notificaciones.
+// Muestra un botón con contador de no leídas y un desplegable con la lista de
+// avisos. Actualiza la lista al abrir, al ganar foco de la ventana y cada 30 s
+// (5 s mientras esté abierto). Marca como leída la notificación al pulsarla y
+// navega a su enlace si lo tiene.
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useNotificacionesStore } from '../../stores/notificaciones';
-import AppIcon from './AppIcon.vue';
+import { useNotificacionesStore } from '../stores/notificaciones';
+import AppIcon from '@/ui/AppIcon.vue';
 
-const abierto = ref(false);
-const contenedor = ref(null);
+const abierto = ref(false);        // Controla el desplegable.
+const contenedor = ref(null);      // Ref al contenedor para detectar clics fuera.
 const router = useRouter();
 const store = useNotificacionesStore();
 
+// Contador mostrado en el badge ('99+' si supera 99, null si no hay pendientes).
 const contador = computed(() => {
     if (store.noLeidas === 0) return null;
     return store.noLeidas > 99 ? '99+' : store.noLeidas;
 });
 
+/** Alterna el desplegable y fuerza una recarga fresca de notificaciones al abrir. */
 const toggle = () => {
     abierto.value = !abierto.value;
     if (abierto.value) store.cargar(true);
 };
 
+/**
+ * Maneja el clic en una notificación: la marca como leída, cierra el
+ * desplegable y navega a su enlace si existe.
+ *
+ * @param {Object} n Notificación ({ id_notificacion, leida, enlace, ... }).
+ */
 const pulsarNotificacion = async (n) => {
     if (!n.leida) await store.marcarLeida(n.id_notificacion);
     abierto.value = false;
     if (n.enlace) router.push(n.enlace);
 };
 
+/** Marca todas las notificaciones como leídas. */
 const marcarTodas = async () => {
     await store.marcarTodasLeidas();
 };
 
+/** Cierra el desplegable cuando se hace clic fuera del contenedor. */
 const fuera = (event) => {
     if (contenedor.value && !contenedor.value.contains(event.target)) abierto.value = false;
 };
 
+/** Convierte una fecha ISO a texto relativo ('ahora', 'hace 5 min', ...). */
 const tiempoRelativo = (fechaIso) => {
     const fecha = new Date(fechaIso);
     if (Number.isNaN(fecha.getTime())) return '';
@@ -121,9 +137,10 @@ const tiempoRelativo = (fechaIso) => {
     return `hace ${dias} días`;
 };
 
-let intervalo = null;
-let intervaloAbierto = null;
+let intervalo = null;        // Refresco global cada 30 s.
+let intervaloAbierto = null; // Refresco acelerado (5 s) mientras el panel está abierto.
 
+/** Refresca las notificaciones al recuperar el foco de la ventana. */
 const refrescoEnFoco = () => store.cargar(true);
 
 onMounted(async () => {
@@ -140,6 +157,7 @@ onUnmounted(() => {
     window.removeEventListener('focus', refrescoEnFoco);
 });
 
+// Al abrir el panel: refresco acelerado; al cerrarlo se detiene.
 watch(abierto, (value) => {
     clearInterval(intervaloAbierto);
     if (value) {
