@@ -17,6 +17,7 @@ export const useTramitesStore = defineStore('tramites', {
     state: () => ({
         modalidades: [],                                                        // Modalidades activas disponibles.
         tramitesPendientes: [],                                                 // Solicitudes en proceso (Kardex/Dirección).
+        tramitesConcluidos: [],                                                  // Trámites que finalizaron su flujo.
         estadisticas: { totales: { aprobados: 0, reprobados: 0, total: 0 }, porModalidad: [] },
         tramiteActivo: null,                                                    // Trámite más reciente del estudiante.
         tutorias: [],                                                           // Trámites donde el docente es tutor.
@@ -90,6 +91,18 @@ export const useTramitesStore = defineStore('tramites', {
             const { data } = await tramitesService.pendientes();
             this.tramitesPendientes = data;
             this._ts.pendientes = Date.now();
+        },
+        /**
+         * Carga los trámites concluidos desde GET /api/tramites/concluidos.
+         *
+         * @param {boolean} [force=false] Si es true ignora la caché.
+         * @returns {Promise<void>}
+         */
+        async cargarConcluidos(force = false) {
+            if (!force && this._fresco('concluidos', 30000)) return this.tramitesConcluidos;
+            const { data } = await tramitesService.concluidos();
+            this.tramitesConcluidos = data;
+            this._ts.concluidos = Date.now();
         },
         /**
          * Carga las estadísticas de aprobados/reprobados por modalidad desde

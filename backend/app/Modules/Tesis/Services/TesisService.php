@@ -34,6 +34,9 @@ class TesisService
     /** Documento final presentado a la Comisión Revisora (y sus correcciones). */
     public const DOC_FINAL = 'documento_final';
 
+    /** Estados desde los que el estudiante puede solicitar (o re-solicitar) su fecha de defensa. */
+    private const ESTADOS_SOLICITUD_DEFENSA = ['suficiente', 'correcciones_90_dias', 'solicitud_fecha_defensa'];
+
     /** Estados terminales que permiten iniciar una nueva solicitud. */
     private const TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'];
 
@@ -54,14 +57,17 @@ class TesisService
     /**
      * El estudiante solicita una fecha para su defensa de tesis.
      *
-     * Valida que la solicitud sea suya, que sea de la modalidad de tesis y que el
-     * trámite esté en `solicitud_fecha_defensa` (perfil aprobado + comisión
-     * suficiente). Registra la petición en los hitos y notifica a los roles de
+     * Puede invocarse cuando la Comisión Revisora emitió el veredicto suficiente
+     * (`suficiente`), cuando el estudiante debe re-solicitar tras no aprobar la
+     * defensa (`correcciones_90_dias`) o cuando ya está esperando la programación
+     * de Kardex (`solicitud_fecha_defensa`). Desde `suficiente` y
+     * `correcciones_90_dias` la solicitud avanza formalmente al estado
+     * `solicitud_fecha_defensa`, registra el hito y notifica a los roles de
      * gestión vía evento de dominio para que programen la defensa.
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException Si no es su trámite.
      * @throws \Illuminate\Validation\ValidationException Si el trámite no es de
-     *                                                    tesis o no está en el estado esperado.
+     *                                                    tesis o no está en un estado habilitado.
      */
     public function solicitarFechaDefensa(int $id, User $user, ?string $fechaSugerida): array
     {
@@ -75,11 +81,27 @@ class TesisService
 
         $this->verificarEsTesis($tramite);
 
-        if ($tramite->estado_actual !== 'solicitud_fecha_defensa') {
+        if (! in_array($tramite->estado_actual, self::ESTADOS_SOLICITUD_DEFENSA, true)) {
             throw ValidationException::withMessages([
-                'estado' => 'Solo puede solicitar la fecha de defensa cuando la comisión revisora calificó su tesis como suficiente.',
+                'estado' => 'Solo puede solicitar la fecha de defensa cuando la Comisión Revisora calificó su tesis como suficiente o cuando debe volver a solicitarla tras una corrección.',
             ]);
         }
+
+        // Una solicitud ya registrada en espera de programación evita re-notificar.
+        $yaSolicitada = $tramite->estado_actual === 'solicitud_fecha_defensa'
+            && ! empty($tramite->hitos['fecha_defensa_solicitada']);
+
+        // Desde el veredicto o las correcciones se avanza a la espera de programación.
+        if ($tramite->estado_actual !== 'solicitud_fecha_defensa') {
+            $this->stateService->transicionar(
+                $tramite,
+                'solicitud_fecha_defensa',
+                'El estudiante solicitó una fecha para su defensa.',
+                $user->id_usuario
+            );
+        }
+
+        $tramite->refresh();
 
         $hoy = Carbon::now()->toDateString();
         $hitos = $tramite->hitos ?? [];
@@ -93,7 +115,9 @@ class TesisService
 
         $tramite->refresh()->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor');
 
-        event(new FechaDefensaSolicitada($tramite, $user, $fechaSugerida));
+        if (! $yaSolicitada) {
+            event(new FechaDefensaSolicitada($tramite, $user, $fechaSugerida));
+        }
 
         return $this->tramiteService->formatear($tramite);
     }
@@ -130,6 +154,30 @@ class TesisService
 
         if (! $estudiante) {
             throw new \DomainException('Debe completar su perfil de estudiante primero.');
+        }
+
+        $ultimo = Tramite::where('id_estudiante', $estudiante->id_estudiante)
+            ->where('id_modalidad', $modalidad->id_modalidad)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if ($ultimo) {
+            // Un estudiante ya aprobado no puede iniciar más solicitudes de trámite.
+            if ($ultimo->estado_actual === 'aprobado') {
+                throw new \DomainException('Su tesis de grado ya fue aprobada. No puede iniciar más solicitudes de trámite.');
+            }
+
+            // Tras reprobar, debe cumplir los plazos reglamentarios (90 días de
+            // corrección o el periodo máximo de 365 días) para optar nuevamente.
+            if (in_array($ultimo->estado_actual, ['reprobado', 'reprobado_ausencia'], true)
+                && ! $this->puedeReoptar($ultimo)) {
+                $proxima = $this->proximaReoptar($ultimo);
+
+                throw new \DomainException(
+                    'Debe esperar a que se cumplan los plazos reglamentarios para volver a presentar su solicitud'
+                    . ($proxima ? " (habilitado a partir del {$proxima})." : '.')
+                );
+            }
         }
 
         $activa = Tramite::where('id_estudiante', $estudiante->id_estudiante)
@@ -281,5 +329,68 @@ class TesisService
         event(new EstadoTramiteCambiado($tramite, $nuevoEstado, $observaciones));
 
         return $this->tramiteService->formatear($tramite);
+    }
+
+    /**
+     * Indica si el estudiante ya puede volver a presentar una solicitud de tesis
+     * tras ser reprobado: cuando venció el plazo de correcciones (90 días) o el
+     * plazo máximo de presentación (365 días / 3-12 meses).
+     */
+    private function puedeReoptar(Tramite $tramite): bool
+    {
+        $hoy = Carbon::now()->startOfDay();
+
+        foreach ($this->fechasReoptar($tramite) as $fecha) {
+            if ($hoy->gte(Carbon::parse($fecha))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Fecha (YYYY-MM-DD) desde la cual el estudiante quedará habilitado a volver
+     * a presentar su solicitud de tesis, o null si ya está habilitado.
+     */
+    private function proximaReoptar(Tramite $tramite): ?string
+    {
+        $hoy = Carbon::now()->startOfDay();
+        $pendientes = array_filter(
+            $this->fechasReoptar($tramite),
+            fn (string $fecha) => $hoy->lt(Carbon::parse($fecha))
+        );
+
+        if (empty($pendientes)) {
+            return null;
+        }
+
+        return min($pendientes);
+    }
+
+    /**
+     * Fechas límite que habilitan la re-opción de modalidad tras un reprobado:
+     * el cierre del plazo de correcciones (90 días) y el cierre del plazo máximo
+     * de presentación (365 días). Se leen de los hitos con fallback a partir de
+     * la fecha de reprobación.
+     *
+     * @return array<int, string>
+     */
+    private function fechasReoptar(Tramite $tramite): array
+    {
+        $hitos = $tramite->hitos ?? [];
+        $reprobado = isset($hitos['reprobado'])
+            ? Carbon::parse($hitos['reprobado'])->startOfDay()
+            : null;
+
+        $limiteCorreccion = $hitos['limite_correccion'] ?? ($reprobado
+            ? $reprobado->copy()->addDays((int) config('tesis.dias_correccion'))->toDateString()
+            : null);
+
+        $limitePresentacion = $hitos['limite_presentacion'] ?? ($reprobado
+            ? $reprobado->copy()->addDays((int) config('tesis.dias_remodalidad'))->toDateString()
+            : null);
+
+        return array_values(array_filter([$limiteCorreccion, $limitePresentacion]));
     }
 }

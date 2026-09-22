@@ -69,6 +69,15 @@ class TramiteService
             throw new \DomainException('Debe completar su perfil de estudiante primero');
         }
 
+        // Un estudiante que ya aprobó una modalidad no puede iniciar más trámites.
+        $aprobada = Tramite::where('id_estudiante', $estudiante->id_estudiante)
+            ->where('estado_actual', 'aprobado')
+            ->exists();
+
+        if ($aprobada) {
+            throw new \DomainException('Ya aprobó su modalidad de titulación. No puede iniciar más solicitudes de trámite.');
+        }
+
         $tramite = DB::transaction(function () use ($estudiante, $user, $validated) {
             $tramite = Tramite::create([
                 'id_estudiante' => $estudiante->id_estudiante,
@@ -113,6 +122,18 @@ class TramiteService
         return Tramite::with(['estudiante.user', 'modalidad', 'documentos', 'tutor'])
             ->whereNotIn('estado_actual', ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'])
             ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    /**
+     * Trámites que ya finalizaron su flujo (concluidos: aprobado, reprobado,
+     * rechazado o reprobado por ausencia), ordenados por su cierre.
+     */
+    public function concluidos(): Collection
+    {
+        return Tramite::with(['estudiante.user', 'modalidad', 'documentos', 'tutor'])
+            ->whereIn('estado_actual', ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'])
+            ->orderBy('updated_at', 'desc')
             ->get();
     }
 

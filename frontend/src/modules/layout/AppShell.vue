@@ -108,7 +108,8 @@ const navItems = computed(() => {
   const items = [];
   if (rol === 'admin') items.push({ to: '/admin', label: 'Usuarios', icon: 'users' });
   if (['kardex', 'secretaria', 'direccion', 'concejo', 'admin'].includes(rol)) {
-    items.push({ to: '/kardex', label: 'Trámites', icon: 'folder' });
+    items.push({ to: '/kardex', label: 'Trámites en Proceso', icon: 'folder' });
+    items.push({ to: '/kardex/concluidos', label: 'Trámites Concluidos', icon: 'folder' });
   }
   if (rol === 'docente') items.push({ to: '/docente', label: 'Mis Tutorías', icon: 'book' });
   if (rol === 'estudiante') items.push({ to: '/estudiante', label: 'Mi Trámite', icon: 'graduation' });
@@ -118,7 +119,7 @@ const navItems = computed(() => {
 
 /** Determina si una ruta está activa (para resaltar el ítem del menú). */
 const isActive = (to) => {
-  if (to === '/kardex') return route.path.startsWith('/kardex') || route.path.startsWith('/tramites/');
+  if (to === '/kardex') return route.path === '/kardex' || route.path.startsWith('/tramites/');
   return route.path === to;
 };
 

@@ -66,6 +66,52 @@
               {{ fecha(paso.historial.created_at) }}
             </span>
           </div>
+
+          <!-- Asignación de tutor integrada en el flujo (solo gestión): la
+               secretaria presiona el paso "tutor_asignado" y en ese momento se
+               despliega el selector para asignar al tutor. El cambio del tutor
+               ya asignado se hace desde el panel "Tutor Asignado" (arriba). -->
+          <div
+            v-if="paso.id === 'tutor_asignado' && asignarTutorEnFlujo && enProceso"
+            class="mt-3 pt-3 border-t border-slate-200"
+          >
+            <p v-if="tramite.tutor" class="flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+              <AppIcon name="user-check" :size="15" />
+              {{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}
+              <span class="ml-auto text-xs font-medium text-slate-400 normal-case">Cambiar desde el panel “Tutor Asignado”</span>
+            </p>
+
+            <button
+              v-else
+              class="w-full flex items-center justify-between gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-stone-600 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 transition"
+              @click="asignacionAbierta = !asignacionAbierta"
+            >
+              <span class="inline-flex items-center gap-1.5">
+                <AppIcon name="user" :size="15" />
+                Asignar tutor en este paso
+              </span>
+              <AppIcon
+                name="chevron-down"
+                :size="15"
+                class="transition-transform"
+                :class="asignacionAbierta ? 'rotate-180' : ''"
+              />
+            </button>
+
+            <div v-if="asignacionAbierta && !tramite.tutor" class="mt-2 flex flex-col sm:flex-row gap-2">
+              <select v-model="tutorSeleccionado" class="input flex-1 min-w-0 text-sm" :disabled="asignandoTutor">
+                <option value="" disabled>Seleccione un docente tutor...</option>
+                <option v-for="doc in docentes" :key="doc.id_usuario" :value="doc.id_usuario">
+                  {{ doc.nombres }} {{ doc.apellidos }}
+                </option>
+              </select>
+              <button class="btn-primary w-full sm:w-auto shrink-0" :disabled="asignandoTutor || !tutorSeleccionado" @click="asignarTutor">
+                <AppIcon v-if="asignandoTutor" name="loader" :size="14" class="animate-spin" />
+                <AppIcon v-else name="check" :size="14" />
+                {{ tramite.tutor ? 'Cambiar' : 'Asignar' }}
+              </button>
+            </div>
+          </div>
         </div>
       </li>
     </ol>
@@ -91,16 +137,26 @@
 // Recibe un trámite completo (con secuencia, estado actual, estados históricos
 // y próximos estados) y renderiza el progreso, cada paso de la secuencia con
 // su historia (responsable, observaciones, fecha) y los próximos pasos.
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { rolLabel } from '@/core/roles';
-import { formatoEstado, toneEstado, statusGlobal, progresoEstado } from '../utils/estados';
+import { ESTADOS_TERMINALES, formatoEstado, toneEstado, statusGlobal, progresoEstado } from '../utils/estados';
 import AppIcon from '@/ui/AppIcon.vue';
 import ProgressBar from '@/ui/ProgressBar.vue';
 
 const props = defineProps({
   tramite: { type: Object, required: true },
   title: { type: String, default: 'Seguimiento de mi Titulación' },
+  asignarTutorEnFlujo: { type: Boolean, default: false },
+  docentes: { type: Array, default: () => [] },
+  asignandoTutor: { type: Boolean, default: false },
 });
+const emit = defineEmits(['asignar-tutor']);
+
+// Docente elegido en el selector de tutor integrado en el flujo.
+const tutorSeleccionado = ref('');
+
+// true cuando el panel de asignación del paso "tutor_asignado" está desplegado.
+const asignacionAbierta = ref(false);
 
 // Datos derivados del trámite.
 const secuencia = computed(() => props.tramite.secuencia || []);        // Orden de estados posible.
@@ -112,6 +168,9 @@ const tone = computed(() => toneEstado(estadoActual.value));            // Tono 
 
 // Índice del estado actual dentro de la secuencia (-1 si no está).
 const currentIndex = computed(() => secuencia.value.indexOf(estadoActual.value));
+
+// true mientras el trámite no haya concluido (permite asignar tutor).
+const enProceso = computed(() => !ESTADOS_TERMINALES.includes(estadoActual.value));
 
 // Icono del badge de estado según el resultado del trámite.
 const statusIcon = computed(() => {
@@ -125,7 +184,7 @@ const statusIcon = computed(() => {
 // Marca el paso como 'actual' si coincide con el estado vigente y como
 // 'completado' si su índice es anterior al actual.
 const pasosConHistoria = computed(() => {
-  return secuencia.value.map((id) => {
+  const pasos = secuencia.value.map((id) => {
     const index = secuencia.value.indexOf(id);
     const historial = historicos.value
       .filter((h) => h.nombre_estado === id)
@@ -140,6 +199,29 @@ const pasosConHistoria = computed(() => {
       completado: currentIndex.value !== -1 && index < currentIndex.value,
     };
   });
+
+  // Modalidades sin el paso "tutor_asignado" en su flujo (no son Tesis): se
+  // agrega el paso de forma sintética antes de los estados terminales para que
+  // la gestión pueda asignar tutor desde la línea de tiempo.
+  if (
+    props.asignarTutorEnFlujo
+    && !props.tramite.tutor
+    && enProceso.value
+    && !secuencia.value.includes('tutor_asignado')
+  ) {
+    const idxTerminal = pasos.findIndex((p) => ESTADOS_TERMINALES.includes(p.id));
+    const sintetico = {
+      id: 'tutor_asignado',
+      index: idxTerminal === -1 ? pasos.length : idxTerminal,
+      historial: null,
+      actual: false,
+      completado: false,
+    };
+    if (idxTerminal === -1) pasos.push(sintetico);
+    else pasos.splice(idxTerminal, 0, sintetico);
+  }
+
+  return pasos;
 });
 
 // Clases del punto (dot) según el estado del paso.
@@ -170,5 +252,12 @@ const fecha = (fechaISO) => {
   return new Date(fechaISO).toLocaleString('es-BO', {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
   });
+};
+
+/** Emite el docente seleccionado para que la gestión lo asigne como tutor. */
+const asignarTutor = () => {
+  if (!tutorSeleccionado.value) return;
+  emit('asignar-tutor', tutorSeleccionado.value);
+  tutorSeleccionado.value = '';
 };
 </script>

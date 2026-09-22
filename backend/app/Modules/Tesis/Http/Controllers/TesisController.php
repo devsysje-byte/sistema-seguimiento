@@ -114,6 +114,7 @@ class TesisController extends Controller
         return response()->json([
             'plazo_presentacion_meses' => config('tesis.plazo_presentacion_meses'),
             'dias_correccion' => config('tesis.dias_correccion'),
+            'dias_remodalidad' => config('tesis.dias_remodalidad'),
             'tipos_documento' => config('tesis.tipos_documento'),
             'estado_reenvio' => $this->tesisService->estadoReenvio(),
         ]);

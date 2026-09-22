@@ -57,6 +57,14 @@ class TramiteController extends Controller
     }
 
     /**
+     * GET /api/tramites/concluidos (roles de gestión)
+     */
+    public function concluidos(): JsonResponse
+    {
+        return response()->json($this->tramiteService->concluidos());
+    }
+
+    /**
      * GET /api/tramites/estadisticas (roles de gestión)
      */
     public function estadisticas(): JsonResponse

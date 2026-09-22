@@ -16,6 +16,7 @@ Route::middleware('auth:sanctum')->group(function () {
 // Paneles de gestión (roles de gestión).
 Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION)])->group(function () {
     Route::get('/tramites/pendientes', [TramiteController::class, 'pendientes']);
+    Route::get('/tramites/concluidos', [TramiteController::class, 'concluidos']);
     Route::get('/tramites/estadisticas', [TramiteController::class, 'estadisticas']);
     Route::post('/tramites/{id}/revisar', [TramiteController::class, 'revisar']);
     Route::post('/tramites/{id}/asignar-tutor', [TramiteController::class, 'asignarTutor']);

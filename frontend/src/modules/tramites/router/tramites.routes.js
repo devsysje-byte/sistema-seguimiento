@@ -24,6 +24,15 @@ export default [
         meta: { requiresAuth: true, roles: ROLES_TRAMITES }
     },
     {
+        // Panel de trámites que finalizaron su flujo. Reutiliza la vista de
+        // revisión con la pestaña "concluidos" forzada mediante prop.
+        path: '/kardex/concluidos',
+        name: 'RevisionKardexConcluidos',
+        component: () => import('@/modules/tramites/views/RevisionKardex.vue'),
+        props: { soloConcluidos: true },
+        meta: { requiresAuth: true, roles: ROLES_TRAMITES }
+    },
+    {
         path: '/tramites/:id/gestion',
         name: 'GestionTramite',
         component: () => import('@/modules/tramites/views/GestionTramite.vue'),

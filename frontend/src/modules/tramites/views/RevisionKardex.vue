@@ -1,7 +1,7 @@
 <template>
-  <AppShell title="Trámites de Titulación" subtitle="Revisión y gestión de solicitudes en proceso">
+  <AppShell title="Trámites de Titulación" :subtitle="subtituloVista">
     <div id="seccion-estadisticas" class="scroll-mt-28">
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div v-if="!soloConcluidos" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Trámites en Proceso" :value="tramitesStore.tramitesPendientes.length" icon="folder" tone="amber" />
         <StatCard label="Documentos por Revisar" :value="porRevisar.length" icon="inbox" tone="orange" sublabel="Estado: solicitud presentada" />
         <StatCard label="Con Tutor Asignado" :value="conTutor.length" icon="user-check" tone="rose" />
@@ -14,15 +14,15 @@
     <div id="seccion-busqueda" class="scroll-mt-28 card overflow-hidden mb-6">
           <div class="flex flex-wrap items-center gap-3 p-5 border-b border-stone-100">
             <div>
-              <h2 class="text-lg font-bold text-stone-900">Solicitudes en Proceso</h2>
-              <p class="text-sm text-stone-500">Busca por estudiante, código, modalidad o estado.</p>
+              <h2 class="text-lg font-bold text-stone-900">{{ tab === 'concluidos' ? 'Trámites Concluidos' : 'Solicitudes en Proceso' }}</h2>
+              <p class="text-sm text-stone-500">{{ subtituloVista }}</p>
             </div>
             <div class="ml-auto w-full md:w-auto">
               <div class="relative md:w-64">
                 <span class="absolute inset-y-0 left-3 flex items-center text-stone-400">
                   <AppIcon name="search" :size="17" />
                 </span>
-                <input v-model="buscar" class="input pl-9 md:w-64" placeholder="Buscar trámite..." />
+                <input v-model="buscar" class="input pl-9 md:w-64" :placeholder="tab === 'pendientes' ? 'Buscar trámite...' : 'Buscar trámite concluido...'" />
               </div>
             </div>
           </div>
@@ -32,11 +32,11 @@
           </div>
           <div v-else-if="filtrados.length === 0" class="p-6">
             <EmptyState
-              icon="folder"
-              title="Sin trámites para mostrar"
-              :message="tramitesStore.tramitesPendientes.length === 0 ? 'No hay solicitudes pendientes de revisión.' : 'Ningún trámite coincide con la búsqueda.'"
+              :icon="estadoVacio.icon"
+              :title="estadoVacio.title"
+              :message="estadoVacio.message"
             >
-              <button v-if="tramitesStore.tramitesPendientes.length" class="btn-ghost" @click="buscar = ''">Limpiar búsqueda</button>
+              <button v-if="estadoVacio.hayRegistros && buscar" class="btn-ghost" @click="buscar = ''">Limpiar búsqueda</button>
             </EmptyState>
           </div>
         </div>
@@ -190,6 +190,13 @@ const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
 const toastStore = useToastStore();
 
+// Cuando `soloConcluidos` es true (ruta /kardex/concluidos) la vista muestra
+// únicamente los trámites que finalizaron su flujo; en caso contrario lista
+// las solicitudes en proceso.
+const props = defineProps({
+  soloConcluidos: { type: Boolean, default: false },
+});
+
 // Estado de la lista y de los modales de aprobación/rechazo.
 const cargando = ref(false);
 const buscar = ref('');                 // Texto de búsqueda.
@@ -200,21 +207,36 @@ const tramiteAprobar = ref(null);       // Trámite en el modal de aprobación.
 const motivoRechazo = ref('');          // Motivo obligatorio para rechazar.
 const aprobando = ref(false);           // true mientras se aprueba.
 
+// Lista mostrada según la prop: 'pendientes' (default) o 'concluidos'.
+const tab = computed(() => (props.soloConcluidos ? 'concluidos' : 'pendientes'));
+
 // La gestión académica (Kardex, Secretaría, Dirección y Admin) es quien valida
 // la documentación inicial (aprobación/rechazo). El Concejo y el Docente solo
 // consultan.
 const esGestion = computed(() => perteneceRol(authStore.user?.rol, ROLES_GESTION));
+
+// Encabezado de la vista según la lista visible.
+const subtituloVista = computed(() =>
+  tab.value === 'concluidos'
+    ? 'Historial de trámites que finalizaron su flujo'
+    : 'Revisión y gestión de solicitudes en proceso'
+);
 
 // Subconjuntos útiles para las tarjetas de métricas.
 const porRevisar = computed(() => tramitesStore.tramitesPendientes.filter((t) => t.estado_actual === 'solicitud_presentada'));
 const conTutor = computed(() => tramitesStore.tramitesPendientes.filter((t) => t.tutor));
 const sinTutor = computed(() => tramitesStore.tramitesPendientes.filter((t) => !t.tutor));
 
+// Lista base según la pestaña visible (pendientes o concluidos).
+const listaActual = computed(() =>
+  tab.value === 'concluidos' ? tramitesStore.tramitesConcluidos : tramitesStore.tramitesPendientes
+);
+
 // Filtra los trámites por estudiante, código, modalidad o estado.
 const filtrados = computed(() => {
   const q = buscar.value.toLowerCase().trim();
-  if (!q) return tramitesStore.tramitesPendientes;
-  return tramitesStore.tramitesPendientes.filter((t) => {
+  if (!q) return listaActual.value;
+  return listaActual.value.filter((t) => {
     const estudiante = `${t.estudiante.user.nombres} ${t.estudiante.user.apellidos}`.toLowerCase();
     return estudiante.includes(q)
       || t.estudiante.codigo_universitario.toLowerCase().includes(q)
@@ -223,16 +245,39 @@ const filtrados = computed(() => {
   });
 });
 
-onMounted(async () => {
+// Estado vacío según la pestaña visible (mensaje distinto si hay filtro).
+const estadoVacio = computed(() => {
+  const esConcluidos = tab.value === 'concluidos';
+  return {
+    icon: esConcluidos ? 'check-circle' : 'folder',
+    title: esConcluidos ? 'Sin trámites concluidos' : 'Sin trámites para mostrar',
+    message: buscar.value
+      ? 'Ningún trámite coincide con la búsqueda.'
+      : esConcluidos
+        ? 'No hay trámites que hayan finalizado su flujo todavía.'
+        : 'No hay solicitudes pendientes de revisión.',
+    hayRegistros: esConcluidos ? tramitesStore.tramitesConcluidos.length : tramitesStore.tramitesPendientes.length,
+  };
+});
+
+// Carga la lista de la pestaña indicada y la muestra.
+const cargarTab = async (pestana) => {
+  const esConcluidos = pestana === 'concluidos';
   cargando.value = true;
   try {
-    await tramitesStore.cargarPendientes();
+    if (esConcluidos) await tramitesStore.cargarConcluidos();
+    else await tramitesStore.cargarPendientes();
   } catch (error) {
     toastStore.error('No se pudieron cargar los trámites: ' + (error.response?.data?.message || 'Error del servidor'));
-    tramitesStore.tramitesPendientes = [];
+    if (esConcluidos) tramitesStore.tramitesConcluidos = [];
+    else tramitesStore.tramitesPendientes = [];
   } finally {
     cargando.value = false;
   }
+};
+
+onMounted(async () => {
+  await cargarTab(tab.value);
 });
 
 /** Navega a la gestión del trámite indicado. */

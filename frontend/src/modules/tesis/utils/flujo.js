@@ -24,16 +24,86 @@ export const DESCRIPCION_ESTADO = {
   investigacion_en_desarrollo: 'Periodo de investigación y desarrollo del documento final dentro del plazo establecido.',
   documento_final_presentado: 'Presentaste el documento final. Pasa a la revisión de la Comisión Revisora.',
   comision_revisora: 'La Comisión Revisora está evaluando tu documento final.',
-  suficiente: 'La Comisión Revisora calificó tu documento como suficiente. Solicita tu fecha de defensa.',
+  suficiente: 'Tu tesis fue aprobada por la Comisión Revisora. Solicita tu fecha de defensa.',
   insuficiente: 'La Comisión Revisora calificó tu documento como insuficiente. Revisa tu trabajo, corrige las observaciones y vuelve a presentarlo a la Comisión Revisora.',
   solicitud_fecha_defensa: 'Tu tesis fue aprobada por la Comisión Revisora. Solicita tu fecha de defensa; Kardex la programará.',
   defensa_programada: 'Tu fecha de defensa está programada. Prepárate para la sustentación.',
   defensa_en_curso: 'Tu defensa está en curso. La Comisión evaluará el resultado.',
-  correcciones_90_dias: 'Debes realizar las correcciones indicadas dentro del plazo establecido (90 días).',
+  correcciones_90_dias: 'Tu defensa no fue aprobada en esta oportunidad. Cuentas con 90 días para corregir y volver a solicitar una fecha de defensa.',
   aprobado: '¡Felicitaciones! Tu tesis de grado fue aprobada.',
   reprobado: 'Tu tesis no fue aprobada. Consulta las alternativas disponibles.',
   rechazado: 'Tu solicitud fue rechazada definitivamente. Consulta las alternativas disponibles.',
 };
+
+// Estados desde los que el estudiante puede solicitar (o re-solicitar) su fecha
+// de defensa de tesis.
+export const ESTADOS_SOLICITAR_DEFENSA = ['suficiente', 'correcciones_90_dias', 'solicitud_fecha_defensa'];
+
+/**
+ * Indica si el estudiante puede solicitar (o re-solicitar) su fecha de defensa
+ * en el estado actual de la tesis.
+ *
+ * @param {string} estado Estado interno del trámite.
+ * @returns {boolean} true si el botón "Solicitar Fecha de Defensa" debe estar
+ *                    disponible.
+ */
+export function puedeSolicitarFechaDefensa(estado) {
+  return ESTADOS_SOLICITAR_DEFENSA.includes(estado);
+}
+
+/**
+ * Regla de re-opción de modalidad tras una reprobación: el estudiante vuelve a
+ * quedar habilitado cuando venció el plazo de correcciones (90 días) o el plazo
+ * máximo de presentación (365 días). El backend es la fuente de verdad; aquí se
+ * replica para informar al estudiante cuándo podrá volver a solicitar.
+ *
+ * @param {Object|null} tramite Trámite con `hitos`.
+ * @param {{diasCorreccion?:number, diasRemodalidad?:number}} [cfg] Plazos del módulo.
+ * @returns {{puede:boolean, fechaHabilitacion:string|null}} true si ya puede
+ *          volver a presentar su solicitud, con la fecha de habilitación.
+ */
+export function reoptarInfo(tramite, cfg = {}) {
+  const diasCorreccion = cfg.diasCorreccion || 90;
+  const diasRemodalidad = cfg.diasRemodalidad || 365;
+
+  if (!tramite) return { puede: true, fechaHabilitacion: null };
+
+  const hitos = tramite.hitos || {};
+
+  // Misma regla que el backend: vence el plazo de correcciones (90 días) o el
+  // plazo máximo de presentación (365 días). Fecha límite con fallback desde la
+  // fecha de reprobación.
+  let limiteCorreccion = hitos.limite_correccion;
+  let limitePresentacion = hitos.limite_presentacion;
+
+  if (hitos.reprobado) {
+    const reprobado = new Date(hitos.reprobado + 'T00:00:00');
+    if (!limiteCorreccion) {
+      limiteCorreccion = new Date(reprobado.getTime() + diasCorreccion * 86400000).toISOString().slice(0, 10);
+    }
+    if (!limitePresentacion) {
+      limitePresentacion = new Date(reprobado.getTime() + diasRemodalidad * 86400000).toISOString().slice(0, 10);
+    }
+  }
+
+  const candidatas = [];
+  const agregar = (iso) => {
+    if (iso) candidatas.push(new Date(iso + 'T00:00:00'));
+  };
+  agregar(limiteCorreccion);
+  agregar(limitePresentacion);
+
+  if (!candidatas.length) return { puede: false, fechaHabilitacion: null };
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const minima = new Date(Math.min(...candidatas.map((f) => f.getTime())));
+
+  return {
+    puede: hoy >= minima,
+    fechaHabilitacion: minima.toISOString().slice(0, 10),
+  };
+}
 
 /**
  * Devuelve la fase a la que pertenece un estado del flujo de tesis.
@@ -71,10 +141,10 @@ export function countdownDe(tramite) {
 
   if (estado === 'correcciones_90_dias' && hitos.limite_correccion) {
     return {
-      titulo: 'Plazo de correcciones',
+      titulo: 'Plazo para volver a solicitar la defensa',
       fechaInicio: hitos.correcciones_90_dias || null,
       fechaLimite: hitos.limite_correccion,
-      descripcion: 'Tienes este plazo para corregir y reenviar tu documento.',
+      descripcion: 'Tienes este plazo para corregir tu trabajo y volver a solicitar una fecha de defensa. Si vence, tu tesis quedará reprobada.',
     };
   }
 

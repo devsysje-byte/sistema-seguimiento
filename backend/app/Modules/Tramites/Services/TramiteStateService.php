@@ -62,7 +62,9 @@ class TramiteStateService
             'solicitud_fecha_defensa' => ['defensa_programada'],
             'defensa_programada' => ['defensa_en_curso'],
             'defensa_en_curso' => ['aprobado', 'correcciones_90_dias'],
-            'correcciones_90_dias' => ['defensa_en_curso', 'reprobado'],
+            // Tras reprobar la defensa, el estudiante tiene 90 días para corregir
+            // y volver a solicitar una fecha; si no, la gestión lo pasa a `reprobado`.
+            'correcciones_90_dias' => ['solicitud_fecha_defensa', 'reprobado'],
         ],
         'Trabajo Dirigido' => [
             'solicitud_presentada' => ['convenio_verificado', 'rechazado'],

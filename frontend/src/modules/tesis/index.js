@@ -9,7 +9,7 @@
 import routes from './router/tesis.routes';
 
 export { useTesisStore } from './stores/tesis';
-export { FASES_TESIS, DESCRIPCION_ESTADO, faseDe, countdownDe } from './utils/flujo';
+export { FASES_TESIS, DESCRIPCION_ESTADO, faseDe, countdownDe, puedeSolicitarFechaDefensa, reoptarInfo } from './utils/flujo';
 
 export default {
     nombre: 'tesis',

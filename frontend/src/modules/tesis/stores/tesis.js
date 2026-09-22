@@ -13,6 +13,7 @@ export const useTesisStore = defineStore('tesis', {
         config: {
             plazo_presentacion_meses: 12,
             dias_correccion: 90,
+            dias_remodalidad: 365,
             tipos_documento: {},
             estado_reenvio: 'pendiente_concejo_universitario',
         },

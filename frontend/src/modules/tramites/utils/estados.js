@@ -113,6 +113,10 @@ export function toneEstado(estado) {
  * @returns {number} Porcentaje 0-100.
  */
 export function progresoEstado(tramite) {
+  // Los estados terminales cierran el flujo: aunque el estado no esté en la
+  // secuencia de la modalidad (ej. "rechazado"), el trámite ya concluyó
+  // y el avance es del 100%.
+  if (ESTADOS_TERMINALES.includes(tramite?.estado_actual)) return 100;
   const idx = (tramite?.secuencia || []).indexOf(tramite?.estado_actual);
   if (idx === -1 || !tramite?.secuencia?.length) return 0;
   return Math.min(Math.round(((idx + 1) / tramite.secuencia.length) * 100), 100);

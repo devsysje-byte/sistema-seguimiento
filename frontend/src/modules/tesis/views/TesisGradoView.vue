@@ -29,74 +29,118 @@
       <!-- SIN TESIS ACTIVA: fase de solicitud (3 documentos obligatorios) -->
       <!-- ============================================================== -->
       <div v-if="!tesisActiva" class="space-y-6">
-        <div v-if="ultimaTesisTerminada" class="rounded-xl bg-orange-50 ring-1 ring-orange-200 p-4 flex items-start gap-3 text-orange-800">
-          <AppIcon name="check-circle" :size="20" class="mt-0.5 shrink-0" />
-          <p class="text-sm font-medium">
-            Tu último trámite de tesis finalizó con estado
-            <strong>{{ formatoEstado(ultimaTesisTerminada.estado_actual) }}</strong>.
-            Puedes iniciar una nueva solicitud cuando lo necesites.
+        <!-- Flujo que siguió el trámite hasta su resultado -->
+        <TesisHistorial v-if="ultimaTesisTerminada" :tramite="ultimaTesisTerminada" />
+
+        <!-- Tesis aprobada: panel terminal, ya no puede iniciar más trámites -->
+        <div v-if="tesisAprobada" class="rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 p-6 sm:p-8 text-center">
+          <div class="mx-auto w-16 h-16 rounded-2xl bg-emerald-100 ring-1 ring-emerald-200 flex items-center justify-center text-emerald-600 mb-4">
+            <AppIcon name="award" :size="34" />
+          </div>
+          <h2 class="text-2xl font-extrabold text-emerald-700">¡FELICIDADES! APROBADO</h2>
+          <p class="mt-2 text-sm font-medium text-emerald-800 max-w-md mx-auto">
+            Tu tesis de grado fue aprobada. Has culminado tu modalidad de titulación y
+            ya no puedes realizar más solicitudes de trámite.
+          </p>
+          <p v-if="ultimaTesisTerminada" class="mt-1 text-xs text-emerald-600">
+            Sustentación
+            <template v-if="ultimaTesisTerminada.hitos?.fecha_defensa">
+              aprobada el {{ formatoFechaLarga(ultimaTesisTerminada.hitos.fecha_defensa) }}.
+            </template>
+            <template v-else>
+              aprobada.
+            </template>
           </p>
         </div>
 
-        <div class="card overflow-hidden">
-          <div class="h-2 bg-gradient-to-r from-amber-500 to-orange-600"></div>
-          <div class="p-6 sm:p-8">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-              <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
-                  <AppIcon name="graduation" :size="28" />
-                </div>
-                <div>
-                  <h2 class="text-lg font-extrabold text-stone-900">Solicitud de Tesis de Grado</h2>
-                  <p class="text-sm text-stone-500">Presenta tu solicitud con los 3 documentos obligatorios en PDF.</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Resumen de fases del flujo -->
-            <div class="mt-6 grid sm:grid-cols-5 gap-2">
-              <div v-for="fase in FASES_TESIS" :key="fase.id"
-                   class="rounded-xl px-3 py-3 ring-1 ring-stone-200 bg-stone-50 text-center">
-                <AppIcon :name="fase.icon" :size="18" class="mx-auto text-amber-600 mb-1" />
-                <p class="text-[11px] font-bold text-stone-700 uppercase tracking-wide">{{ fase.label }}</p>
-              </div>
-            </div>
-
-            <form @submit.prevent="enviarSolicitud" class="mt-7 grid sm:grid-cols-2 gap-5">
-              <div v-for="(ruta, tipo) in tesisStore.config.tipos_documento" :key="tipo">
-                <label class="label">{{ ruta }} (PDF) · obligatorio</label>
-                <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivos[tipo] ? 'border-amber-300 bg-amber-50' : 'border-stone-300 bg-stone-50 hover:border-amber-400']">
-                  <span class="flex items-center gap-2 text-sm min-w-0" :class="archivos[tipo] ? 'text-amber-700' : 'text-stone-500'">
-                    <AppIcon v-if="archivos[tipo]" name="check-circle" :size="18" class="text-emerald-500 shrink-0" />
-                    <AppIcon v-else name="file-text" :size="18" class="shrink-0" />
-                    <span class="truncate">{{ archivos[tipo]?.name || 'Selecciona el archivo...' }}</span>
-                  </span>
-                  <input type="file" accept=".pdf" class="hidden" @change="handleArchivo($event, tipo)">
-                  <span class="btn-ghost !py-2 pointer-events-none">
-                    <AppIcon name="plus" :size="15" />
-                    Subir
-                  </span>
-                </label>
-              </div>
-
-              <div class="sm:col-span-2 flex items-center justify-between gap-3 pt-2">
-                <p v-if="faltantes.length" class="text-xs text-stone-500 inline-flex items-center gap-1.5">
-                  <AppIcon name="info" :size="14" />
-                  Faltan subir: {{ faltantes.join(', ') }}
-                </p>
-                <p v-else class="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1.5">
-                  <AppIcon name="check" :size="14" />
-                  Documentación completa para enviar.
-                </p>
-                <button type="submit" class="btn-primary px-6 py-2.5 shrink-0" :disabled="tesisStore.enviando || faltantes.length > 0">
-                  <AppIcon v-if="tesisStore.enviando" name="loader" :size="15" class="animate-spin" />
-                  <AppIcon v-else name="send" :size="15" />
-                  {{ tesisStore.enviando ? 'Enviando...' : 'Enviar Solicitud' }}
-                </button>
-              </div>
-            </form>
+        <template v-else>
+          <!-- Tesis reprobada: informa cuándo podrá re-optar por una modalidad -->
+          <div v-if="tesisReprobada" class="rounded-xl bg-rose-50 ring-1 ring-rose-200 p-4 flex items-start gap-3 text-rose-800">
+            <AppIcon name="x-circle" :size="20" class="mt-0.5 shrink-0" />
+            <p class="text-sm font-medium">
+              Tu tesis de grado finalizó en estado
+              <strong>{{ formatoEstado(ultimaTesisTerminada.estado_actual) }}</strong>.
+              <template v-if="reoptar.puede">
+                Ya puedes volver a presentar tu solicitud para optar por una modalidad.
+              </template>
+              <template v-else>
+                Podrás volver a presentar tu solicitud a partir del
+                <strong>{{ formatoFechaLarga(reoptar.fechaHabilitacion) }}</strong>
+                (plazos de corrección de 90 días y máximo de 365 días).
+              </template>
+            </p>
           </div>
-        </div>
+
+          <div v-else-if="ultimaTesisTerminada" class="rounded-xl bg-orange-50 ring-1 ring-orange-200 p-4 flex items-start gap-3 text-orange-800">
+            <AppIcon name="check-circle" :size="20" class="mt-0.5 shrink-0" />
+            <p class="text-sm font-medium">
+              Tu último trámite de tesis finalizó con estado
+              <strong>{{ formatoEstado(ultimaTesisTerminada.estado_actual) }}</strong>.
+              Puedes iniciar una nueva solicitud cuando lo necesites.
+            </p>
+          </div>
+
+          <!-- Solicitud de nueva tesis (3 documentos obligatorios) -->
+          <div v-if="puedeIniciarNueva" class="card overflow-hidden">
+            <div class="h-2 bg-gradient-to-r from-amber-500 to-orange-600"></div>
+            <div class="p-6 sm:p-8">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                  <div class="w-14 h-14 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
+                    <AppIcon name="graduation" :size="28" />
+                  </div>
+                  <div>
+                    <h2 class="text-lg font-extrabold text-stone-900">Solicitud de Tesis de Grado</h2>
+                    <p class="text-sm text-stone-500">Presenta tu solicitud con los 3 documentos obligatorios en PDF.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Resumen de fases del flujo -->
+              <div class="mt-6 grid sm:grid-cols-5 gap-2">
+                <div v-for="fase in FASES_TESIS" :key="fase.id"
+                     class="rounded-xl px-3 py-3 ring-1 ring-stone-200 bg-stone-50 text-center">
+                  <AppIcon :name="fase.icon" :size="18" class="mx-auto text-amber-600 mb-1" />
+                  <p class="text-[11px] font-bold text-stone-700 uppercase tracking-wide">{{ fase.label }}</p>
+                </div>
+              </div>
+
+              <form @submit.prevent="enviarSolicitud" class="mt-7 grid sm:grid-cols-2 gap-5">
+                <div v-for="(ruta, tipo) in tesisStore.config.tipos_documento" :key="tipo">
+                  <label class="label">{{ ruta }} (PDF) · obligatorio</label>
+                  <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivos[tipo] ? 'border-amber-300 bg-amber-50' : 'border-stone-300 bg-stone-50 hover:border-amber-400']">
+                    <span class="flex items-center gap-2 text-sm min-w-0" :class="archivos[tipo] ? 'text-amber-700' : 'text-stone-500'">
+                      <AppIcon v-if="archivos[tipo]" name="check-circle" :size="18" class="text-emerald-500 shrink-0" />
+                      <AppIcon v-else name="file-text" :size="18" class="shrink-0" />
+                      <span class="truncate">{{ archivos[tipo]?.name || 'Selecciona el archivo...' }}</span>
+                    </span>
+                    <input type="file" accept=".pdf" class="hidden" @change="handleArchivo($event, tipo)">
+                    <span class="btn-ghost !py-2 pointer-events-none">
+                      <AppIcon name="plus" :size="15" />
+                      Subir
+                    </span>
+                  </label>
+                </div>
+
+                <div class="sm:col-span-2 flex items-center justify-between gap-3 pt-2">
+                  <p v-if="faltantes.length" class="text-xs text-stone-500 inline-flex items-center gap-1.5">
+                    <AppIcon name="info" :size="14" />
+                    Faltan subir: {{ faltantes.join(', ') }}
+                  </p>
+                  <p v-else class="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1.5">
+                    <AppIcon name="check" :size="14" />
+                    Documentación completa para enviar.
+                  </p>
+                  <button type="submit" class="btn-primary px-6 py-2.5 shrink-0" :disabled="tesisStore.enviando || faltantes.length > 0">
+                    <AppIcon v-if="tesisStore.enviando" name="loader" :size="15" class="animate-spin" />
+                    <AppIcon v-else name="send" :size="15" />
+                    {{ tesisStore.enviando ? 'Enviando...' : 'Enviar Solicitud' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- ============================================================== -->
@@ -132,6 +176,9 @@
           </div>
         </div>
 
+        <!-- Flujo seguido por el trámite hasta su estado actual -->
+        <TesisHistorial :tramite="tramite" />
+
         <!-- Alerta de perfil rechazado + reenvío -->
         <div v-if="tramite.estado_actual === 'perfil_rechazado'"
              class="rounded-xl bg-rose-50 ring-1 ring-rose-200 p-5 flex items-start gap-3 text-rose-800">
@@ -160,25 +207,59 @@
           </div>
         </div>
 
+        <!-- Veredicto de la Comisión Revisora: trabajo aprobado -->
+        <div v-if="tramite.estado_actual === 'suficiente'"
+             class="rounded-2xl bg-emerald-50/80 ring-1 ring-emerald-200 p-5 flex items-start gap-3 text-emerald-800">
+          <AppIcon name="check-circle" :size="22" class="mt-0.5 shrink-0" />
+          <div class="flex-1">
+            <h4 class="font-bold text-emerald-900">¡Trabajo Aprobado!</h4>
+            <p class="text-sm mt-1">
+              La Comisión Revisora calificó tu tesis como suficiente. Ya puedes solicitar
+              la fecha de tu defensa; Kardex o Secretaría la programará.
+            </p>
+          </div>
+        </div>
+
+        <!-- Defensa no aprobada: plazo de 90 días para volver a solicitar -->
+        <div v-if="tramite.estado_actual === 'correcciones_90_dias'"
+             class="rounded-2xl bg-rose-50/80 ring-1 ring-rose-200 p-5 flex items-start gap-3 text-rose-800">
+          <AppIcon name="alert-triangle" :size="22" class="mt-0.5 shrink-0" />
+          <div class="flex-1">
+            <h4 class="font-bold text-rose-900">Tu defensa no fue aprobada</h4>
+            <p class="text-sm mt-1">
+              Tienes <strong>90 días</strong> para corregir tu trabajo y volver a solicitar una
+              fecha de defensa. Si no lo haces dentro del plazo, tu tesis quedará reprobada.
+            </p>
+          </div>
+        </div>
+
         <!-- Countdown del periodo de presentación / correcciones -->
         <CountdownTesis v-if="countdownCfg" v-bind="countdownCfg" />
 
-        <!-- Solicitud de fecha de defensa (quien la solicita es el estudiante) -->
-        <div v-if="tramite.estado_actual === 'solicitud_fecha_defensa'"
+        <!-- Solicitud de fecha de defensa (la solicita el estudiante a Kardex/Secretaría) -->
+        <div v-if="puedeSolicitarFechaDefensa(tramite.estado_actual)"
              class="rounded-2xl ring-1 p-5"
-             :class="fechaDefensaSolicitada ? 'bg-emerald-50/70 ring-emerald-200' : 'bg-amber-50/70 ring-amber-200'">
+             :class="necesitaSolicitar ? 'bg-amber-50/70 ring-amber-200' : 'bg-emerald-50/70 ring-emerald-200'">
           <div class="flex items-start gap-3">
             <span class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center ring-1"
-                  :class="fechaDefensaSolicitada ? 'bg-emerald-100 text-emerald-600 ring-emerald-200' : 'bg-amber-100 text-amber-600 ring-amber-200'">
+                  :class="necesitaSolicitar ? 'bg-amber-100 text-amber-600 ring-amber-200' : 'bg-emerald-100 text-emerald-600 ring-emerald-200'">
               <AppIcon name="calendar" :size="22" />
             </span>
             <div class="flex-1 min-w-0">
               <h4 class="font-bold text-stone-900">Solicitud de fecha de defensa</h4>
-              <template v-if="!fechaDefensaSolicitada">
-                <p class="text-sm text-stone-600 mt-1">
-                  Tu tesis fue calificada como suficiente por la Comisión Revisora.
-                  Solicita una fecha para tu defensa; Kardex la programará.
-                </p>
+              <template v-if="necesitaSolicitar">
+                <template v-if="tramite.estado_actual === 'correcciones_90_dias'">
+                  <p class="text-sm text-stone-600 mt-1">
+                    Vuelve a solicitar una fecha para tu defensa después de corregir tu trabajo.
+                    Kardex o Secretaría la programará.
+                  </p>
+                </template>
+                <template v-else>
+                  <p class="text-sm text-stone-600 mt-1">
+                    Tu tesis fue calificada como suficiente por la Comisión Revisora.
+                    Solicita una fecha para tu defensa; Kardex o Secretaría la programará.
+                  </p>
+                </template>
                 <form @submit.prevent="enviarSolicitudFecha" class="mt-3 flex flex-wrap items-end gap-2">
                   <div class="w-full sm:w-auto">
                     <label class="label">Fecha sugerida (opcional)</label>
@@ -193,9 +274,9 @@
               </template>
               <template v-else>
                 <p class="text-sm text-stone-600 mt-1">
-                  Tu solicitud fue enviada a Kardex,
+                  Tu solicitud fue enviada a Kardex o Secretaría,
                   <span class="font-semibold text-emerald-700">
-                    {{ tramite.hitos?.fecha_defensa_sugerida ? 'con fecha sugerida: ' + formatoFechaLarga(tramite.hitos.fecha_defensa_sugerida) + '.' : 'quien te programará una fecha de defensa.' }}
+                    {{ tramite.hitos?.fecha_defensa_sugerida ? 'con fecha sugerida: ' + formatoFechaLarga(tramite.hitos.fecha_defensa_sugerida) + '.' : 'quienes te programarán una fecha de defensa.' }}
                   </span>
                 </p>
                 <p class="text-xs text-stone-500 mt-1.5">Solicitada el {{ formatoFechaLarga(tramite.hitos.fecha_defensa_solicitada) }}. Aguarda la programación de tu defensa.</p>
@@ -339,8 +420,9 @@ import { AppShell } from '@/modules/layout';
 import AppIcon from '@/ui/AppIcon.vue';
 import UiModal from '@/ui/UiModal.vue';
 import CountdownTesis from '../components/CountdownTesis.vue';
+import TesisHistorial from '../components/TesisHistorial.vue';
 import { useTesisStore } from '../stores/tesis';
-import { FASES_TESIS, DESCRIPCION_ESTADO, faseDe, countdownDe } from '../utils/flujo';
+import { FASES_TESIS, DESCRIPCION_ESTADO, faseDe, countdownDe, puedeSolicitarFechaDefensa, reoptarInfo } from '../utils/flujo';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -373,11 +455,32 @@ const tesisActiva = computed(() => esTesis.value && !tesisTerminada.value);
 // Último trámite de tesis que terminó (para mostrar su resultado al iniciar otra).
 const ultimaTesisTerminada = computed(() => (tesisTerminada.value ? tramite.value : null));
 
+// Resultado terminal: aprobada no permite más trámites; reprobada aplica la
+// regla de re-opción de modalidad (90 días de corrección / 365 días máximos).
+const tesisAprobada = computed(() => tesisTerminada.value && tramite.value?.estado_actual === 'aprobado');
+const tesisReprobada = computed(() =>
+  tesisTerminada.value && ['reprobado', 'reprobado_ausencia'].includes(tramite.value?.estado_actual)
+);
+const reoptar = computed(() => reoptarInfo(tramite.value, {
+  diasCorreccion: tesisStore.config.dias_correccion,
+  diasRemodalidad: tesisStore.config.dias_remodalidad,
+}));
+const puedeIniciarNueva = computed(() => !tesisAprobada.value && (!tesisReprobada.value || reoptar.value.puede));
+
 const descripcionEstado = computed(() => DESCRIPCION_ESTADO[tramite.value?.estado_actual]);
 const countdownCfg = computed(() => countdownDe(tramite.value));
 
 // true cuando el estudiante ya envió su solicitud de fecha de defensa a Kardex.
 const fechaDefensaSolicitada = computed(() => Boolean(tramite.value?.hitos?.fecha_defensa_solicitada));
+
+// true cuando el estudiante debe mostrar el formulario de solicitud de fecha:
+// aún no la envió o debe volver a solicitarla tras las correcciones de 90 días.
+const necesitaSolicitar = computed(() => {
+  const estado = tramite.value?.estado_actual;
+  if (estado === 'suficiente' || estado === 'correcciones_90_dias') return true;
+  if (estado === 'solicitud_fecha_defensa') return !fechaDefensaSolicitada.value;
+  return false;
+});
 
 // Fecha mínima seleccionable para la fecha sugerida (hoy).
 const hoyISO = computed(() => new Date().toISOString().slice(0, 10));
@@ -491,7 +594,7 @@ async function enviarSolicitudFecha() {
     );
     tramitesStore.tramiteActivo = data;
     fechaSugerida.value = '';
-    toastStore.success('Solicitud de fecha de defensa enviada. Kardex la programará.');
+    toastStore.success('Solicitud de fecha de defensa enviada. Kardex o Secretaría la programará.');
   } catch (error) {
     toastStore.error('Error al solicitar: ' + (error.response?.data?.message || 'Verifique los datos'));
   }

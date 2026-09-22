@@ -94,7 +94,31 @@
         </router-link>
 
         <template v-if="mostrarInicioSolicitud">
-          <div v-if="tramiteTerminado" class="rounded-xl bg-orange-50 ring-1 ring-orange-200 p-4 flex items-start gap-3 text-orange-800">
+          <!-- Tesis aprobada: no permite iniciar nuevas solicitudes -->
+          <div v-if="terminalAprobada" class="rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 p-5 flex items-start gap-3 text-emerald-800">
+            <AppIcon name="award" :size="22" class="mt-0.5 shrink-0" />
+            <p class="text-sm font-medium">
+              <strong>¡FELICIDADES APROBADO!</strong> Tu tesis de grado fue aprobada
+              y ya no puedes realizar más solicitudes de trámite.
+            </p>
+          </div>
+
+          <!-- Tesis reprobada: informa la re-opción de modalidad -->
+          <div v-else-if="terminalReprobada" class="rounded-xl bg-rose-50 ring-1 ring-rose-200 p-4 flex items-start gap-3 text-rose-800">
+            <AppIcon name="x-circle" :size="20" class="mt-0.5 shrink-0" />
+            <p class="text-sm font-medium">
+              Tu tesis de grado no fue aprobada.
+              <template v-if="reoptar.puede">
+                Ya puedes volver a presentar tu solicitud para optar por una modalidad.
+              </template>
+              <template v-else>
+                Podrás volver a presentar tu solicitud a partir del
+                <strong>{{ formatoFechaLarga(reoptar.fechaHabilitacion) }}</strong>.
+              </template>
+            </p>
+          </div>
+
+          <div v-else-if="tramiteTerminado" class="rounded-xl bg-orange-50 ring-1 ring-orange-200 p-4 flex items-start gap-3 text-orange-800">
             <AppIcon name="check-circle" :size="20" class="mt-0.5 shrink-0" />
             <p class="text-sm font-medium">
               Tu último trámite finalizó con estado
@@ -133,6 +157,7 @@
 // en caso contrario despliega las estadísticas de su perfil y la línea de tiempo
 // de su trámite activo (o el acceso al módulo dedicado de Tesis de Grado).
 import { TimelineTramite, useTramitesStore, formatoEstado, ESTADOS_TERMINALES } from '@/modules/tramites';
+import { useTesisStore, reoptarInfo } from '@/modules/tesis';
 import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '@/modules/auth';
 import { useEstudianteStore } from '../stores/estudiante';
@@ -144,6 +169,7 @@ import StatCard from '@/ui/StatCard.vue';
 const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
 const estudianteStore = useEstudianteStore();
+const tesisStore = useTesisStore();
 const toastStore = useToastStore();
 
 // Formulario de perfil académico inicial.
@@ -152,6 +178,21 @@ const cargandoTramite = computed(() => tramitesStore.cargandoTramite);
 
 // true si el trámite activo ya alcanzó un estado terminal.
 const tramiteTerminado = computed(() => ESTADOS_TERMINALES.includes(tramitesStore.tramiteActivo?.estado_actual));
+
+// Resultados terminales de la tesis: aprobada bloquea nuevos trámites; reprobada
+// habilita la re-opción de modalidad según los plazos reglamentarios.
+const terminalAprobada = computed(() =>
+  tramitesStore.tramiteActivo?.modalidad?.nombre === 'Tesis de Grado'
+  && tramitesStore.tramiteActivo?.estado_actual === 'aprobado'
+);
+const terminalReprobada = computed(() =>
+  tramitesStore.tramiteActivo?.modalidad?.nombre === 'Tesis de Grado'
+  && ['reprobado', 'reprobado_ausencia'].includes(tramitesStore.tramiteActivo?.estado_actual)
+);
+const reoptar = computed(() => reoptarInfo(tramitesStore.tramiteActivo, {
+  diasCorreccion: tesisStore.config.dias_correccion,
+  diasRemodalidad: tesisStore.config.dias_remodalidad,
+}));
 
 // true si el trámite activo es de la modalidad Tesis de Grado: en ese caso el
 // portal no duplica la línea de tiempo (la muestra el módulo dedicado), solo
@@ -176,4 +217,12 @@ const guardarPerfil = async () => {
         toastStore.error('Error al guardar: ' + (error.response?.data?.message || 'Verifique los datos'));
     }
 };
+
+/** Formatea una fecha (YYYY-MM-DD) en formato largo en español. */
+function formatoFechaLarga(iso) {
+    if (!iso) return '—';
+    return new Date(iso + 'T00:00:00').toLocaleDateString('es-BO', {
+        day: 'numeric', month: 'long', year: 'numeric',
+    });
+}
 </script>

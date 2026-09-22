@@ -25,6 +25,10 @@ export const tramitesService = {
     pendientes() {
         return http.get('/tramites/pendientes');
     },
+    /** Lista los trámites concluidos (finalizaron su flujo). */
+    concluidos() {
+        return http.get('/tramites/concluidos');
+    },
     /** Estadísticas de aprobados/reprobados por modalidad. */
     estadisticas() {
         return http.get('/tramites/estadisticas');

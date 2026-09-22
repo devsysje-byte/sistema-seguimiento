@@ -88,8 +88,8 @@
           </div>
           <div v-else class="text-sm text-orange-500 font-medium">No hay tutor asignado todavía.</div>
 
-          <div v-if="esGestion" class="mt-4 pt-4 border-t border-stone-100">
-            <label class="label">Cambiar / Asignar tutor</label>
+          <div v-if="esGestion && tramite.tutor" class="mt-4 pt-4 border-t border-stone-100">
+            <label class="label">Actualizar / Cambiar tutor</label>
             <div class="flex flex-col sm:flex-row gap-2">
               <select v-model="tutorSeleccionado" class="input flex-1 min-w-0">
                 <option value="" disabled>Seleccione un docente tutor...</option>
@@ -100,9 +100,16 @@
               <button class="btn-primary w-full sm:w-auto shrink-0" :disabled="asignando || !tutorSeleccionado" @click="asignarTutor">
                 <AppIcon v-if="asignando" name="loader" :size="15" class="animate-spin" />
                 <AppIcon v-else name="check" :size="15" />
-                Asignar
+                Cambiar
               </button>
             </div>
+          </div>
+          <div v-else-if="esGestion && !tramite.tutor" class="mt-4 pt-4 border-t border-stone-100">
+            <p class="text-sm text-stone-500">
+              La asignación del tutor se realiza desde el paso
+              <span class="font-semibold text-stone-700">“Tutor Asignado”</span>
+              de la línea de tiempo.
+            </p>
           </div>
         </div>
 
@@ -129,7 +136,14 @@
       <div class="lg:col-span-2 card overflow-hidden">
         <div class="h-2 bg-gradient-to-r from-amber-500 to-orange-600"></div>
         <div class="p-6 sm:p-8">
-          <TimelineTramite :tramite="tramite" :title="esDocente ? 'Seguimiento de la Tutoría' : 'Historial de Seguimiento'" />
+          <TimelineTramite
+            :tramite="tramite"
+            :title="esDocente ? 'Seguimiento de la Tutoría' : 'Historial de Seguimiento'"
+            :asignar-tutor-en-flujo="esGestion"
+            :docentes="tramitesStore.docentes"
+            :asignando-tutor="asignando"
+            @asignar-tutor="asignarTutor"
+          />
         </div>
       </div>
 
@@ -333,11 +347,12 @@ const volver = () => {
 };
 
 /** Asigna el tutor seleccionado al trámite vía POST /api/tramites/{id}/asignar-tutor. */
-const asignarTutor = async () => {
-  if (!tutorSeleccionado.value) return toastStore.warning('Seleccione un docente');
+const asignarTutor = async (idTutor = null) => {
+  const id = idTutor || tutorSeleccionado.value;
+  if (!id) return toastStore.warning('Seleccione un docente');
   asignando.value = true;
   try {
-    tramite.value = await tramitesStore.asignarTutor(tramite.value.id_tramite, tutorSeleccionado.value);
+    tramite.value = await tramitesStore.asignarTutor(tramite.value.id_tramite, id);
     tutorSeleccionado.value = '';
     toastStore.success('Tutor asignado correctamente.');
   } catch (error) {
