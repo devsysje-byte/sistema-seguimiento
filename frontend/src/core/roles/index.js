@@ -17,6 +17,23 @@ export const ROLE_LABELS = {
   concejo: 'Concejo',
 };
 
+// Roles de gestión académica: validan la documentación inicial de un trámite.
+export const ROLES_GESTION = ['admin', 'kardex', 'secretaria', 'direccion'];
+
+// Roles de gestión + concejo: avanzan trámites por el flujo de estados.
+export const ROLES_GESTION_CONCEJO = [...ROLES_GESTION, 'concejo'];
+
+/**
+ * Comprueba si un rol pertenece a un grupo de roles del sistema.
+ *
+ * @param {string} rol Rol interno del usuario.
+ * @param {string[]} lista Grupos como `ROLES_GESTION` o `ROLES_GESTION_CONCEJO`.
+ * @returns {boolean} true si el rol está incluido en la lista.
+ */
+export function perteneceRol(rol, lista) {
+  return lista.includes(rol);
+}
+
 // Colores (clases Tailwind) para la insignia de cada rol.
 export const ROLE_TONES = {
   admin: 'bg-rose-50 text-rose-700 border-rose-200',

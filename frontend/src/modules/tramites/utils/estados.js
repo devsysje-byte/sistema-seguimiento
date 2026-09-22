@@ -12,7 +12,7 @@ export const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprob
 // Estados considerados de éxito/aprobación con tono verde.
 export const ESTADOS_OK = [
   'aprobado',
-  'documentacion_ok',
+  'suficiente',
   'perfil_aprobado',
   'tema_aprobado',
   'monografia_aprobada',
@@ -25,8 +25,31 @@ export const ESTADOS_ERROR = [
   'reprobado',
   'reprobado_ausencia',
   'perfil_rechazado',
+  'insuficiente',
   'monografia_rechazada',
 ];
+
+// Etiquetas legibles de los tipos de documentos de un trámite. Cubre la
+// documentación oficial de todas las modalidades; con fallback al tipo crudo.
+export const ETIQUETAS_DOCUMENTO = {
+  nota_solicitud: 'Nota de Solicitud',
+  certificado_notas: 'Certificado de Notas',
+  carta_solicitud: 'Carta de Solicitud',
+  perfil_tesis: 'Perfil de Tesis de Grado',
+};
+
+/**
+ * Convierte el tipo interno de un documento a una etiqueta legible.
+ *
+ * @param {string} tipo Tipo interno (ej. "perfil_tesis").
+ * @returns {string} Etiqueta legible (con fallback formateado).
+ */
+export function etiquetaDocumento(tipo) {
+  return ETIQUETAS_DOCUMENTO[tipo]
+    || String(tipo || '')
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (l) => l.toUpperCase());
+}
 
 /**
  * Convierte un nombre de estado a texto legible (ej. "solicitud_presentada"
@@ -50,6 +73,14 @@ export function formatoEstado(nombre) {
  *          para fondo suave, sólido, barra de progreso e indicador puntual.
  */
 export function toneEstado(estado) {
+  if (estado === 'correcciones_90_dias') {
+    return {
+      soft: 'bg-amber-50 text-amber-700 border-amber-200',
+      solid: 'bg-amber-500',
+      bar: 'bg-amber-500',
+      dot: 'bg-amber-500',
+    };
+  }
   if (ESTADOS_OK.includes(estado)) {
     return {
       soft: 'bg-emerald-50 text-emerald-700 border-emerald-200',

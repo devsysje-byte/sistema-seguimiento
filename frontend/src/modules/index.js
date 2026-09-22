@@ -14,6 +14,7 @@ import authModule from './auth';
 import layoutModule from './layout';
 import estudiantesModule from './estudiantes';
 import notificacionesModule from './notificaciones';
+import tesisModule from './tesis';
 import tramitesModule from './tramites';
 import usuariosModule from './usuarios';
 
@@ -22,6 +23,7 @@ export const modules = [
     layoutModule,
     estudiantesModule,
     notificacionesModule,
+    tesisModule,
     tramitesModule,
     usuariosModule,
 ];

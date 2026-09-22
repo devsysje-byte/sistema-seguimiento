@@ -14,7 +14,16 @@ class Tramite extends Model
 {
     protected $primaryKey = 'id_tramite';
     protected $table = 'tramites';
-    protected $fillable = ['id_estudiante', 'id_modalidad', 'id_tutor', 'estado_actual', 'observaciones'];
+    protected $fillable = ['id_estudiante', 'id_modalidad', 'id_tutor', 'estado_actual', 'observaciones', 'hitos'];
+
+    /**
+     * Atributos con conversión de tipos.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'hitos' => 'array',
+    ];
 
     /**
      * Relación inversa con el estudiante solicitante del trámite.

@@ -67,6 +67,16 @@
                   <EstadoBadge :estado="tramite.estado_actual" />
                 </div>
 
+                <div v-if="tramite.estado_actual === 'solicitud_fecha_defensa' && tramite.hitos?.fecha_defensa_solicitada"
+                     class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 ring-1 ring-orange-200 text-orange-700 text-xs font-semibold">
+                  <AppIcon name="calendar" :size="13" />
+                  Solicitud de fecha de defensa pendiente de programar
+                </div>
+                <div v-else-if="tramite.estado_actual === 'solicitud_fecha_defensa'" class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-stone-50 ring-1 ring-stone-200 text-stone-500 text-xs font-semibold">
+                  <AppIcon name="calendar" :size="13" />
+                  El estudiante puede solicitar su fecha de defensa
+                </div>
+
                 <div class="mt-4 space-y-1.5 text-sm">
                   <div class="flex items-center gap-2 text-stone-600">
                     <AppIcon name="user-check" :size="14" class="text-stone-400 shrink-0" />
@@ -90,17 +100,17 @@
                      :href="assetUrl(doc.ruta_archivo)" target="_blank"
                      class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 transition">
                     <AppIcon name="link" :size="13" />
-                    {{ doc.tipo_documento }}
+                    {{ etiquetaDocumento(doc.tipo_documento) }}
                   </a>
                 </div>
 
                 <div class="mt-4 pt-4 border-t border-stone-100 flex flex-wrap gap-2">
-                  <button v-if="esPersonal && tramite.estado_actual === 'solicitud_presentada'"
+                  <button v-if="esGestion && tramite.estado_actual === 'solicitud_presentada'"
                           class="btn-primary flex-1 py-2.5" @click="abrirAprobar(tramite)">
                     <AppIcon name="check" :size="15" />
                     Aprobar
                   </button>
-                  <button v-if="esPersonal && tramite.estado_actual === 'solicitud_presentada'"
+                  <button v-if="esGestion && tramite.estado_actual === 'solicitud_presentada'"
                           class="btn-rose flex-1 py-2.5" @click="abrirRechazo(tramite)">
                     <AppIcon name="x" :size="15" />
                     Rechazar
@@ -162,8 +172,9 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/modules/auth';
 import { useTramitesStore } from '../stores/tramites';
 import { useToastStore } from '@/core/stores/toast';
-import { progresoEstado } from '../utils/estados';
+import { progresoEstado, etiquetaDocumento } from '../utils/estados';
 import { assetUrl } from '@/core/http/storage';
+import { ROLES_GESTION, perteneceRol } from '@/core/roles';
 import { AppShell } from '@/modules/layout';
 import AppIcon from '@/ui/AppIcon.vue';
 import Avatar from '@/ui/Avatar.vue';
@@ -189,8 +200,10 @@ const tramiteAprobar = ref(null);       // Trámite en el modal de aprobación.
 const motivoRechazo = ref('');          // Motivo obligatorio para rechazar.
 const aprobando = ref(false);           // true mientras se aprueba.
 
-// El personal académico (todo excepto docente/estudiante) puede aprobar/rechazar.
-const esPersonal = computed(() => !['docente', 'estudiante'].includes(authStore.user?.rol));
+// La gestión académica (Kardex, Secretaría, Dirección y Admin) es quien valida
+// la documentación inicial (aprobación/rechazo). El Concejo y el Docente solo
+// consultan.
+const esGestion = computed(() => perteneceRol(authStore.user?.rol, ROLES_GESTION));
 
 // Subconjuntos útiles para las tarjetas de métricas.
 const porRevisar = computed(() => tramitesStore.tramitesPendientes.filter((t) => t.estado_actual === 'solicitud_presentada'));
@@ -212,8 +225,14 @@ const filtrados = computed(() => {
 
 onMounted(async () => {
   cargando.value = true;
-  await tramitesStore.cargarPendientes();
-  cargando.value = false;
+  try {
+    await tramitesStore.cargarPendientes();
+  } catch (error) {
+    toastStore.error('No se pudieron cargar los trámites: ' + (error.response?.data?.message || 'Error del servidor'));
+    tramitesStore.tramitesPendientes = [];
+  } finally {
+    cargando.value = false;
+  }
 });
 
 /** Navega a la gestión del trámite indicado. */

@@ -64,12 +64,34 @@
       </div>
 
       <div v-else class="space-y-6">
-        <div v-if="tramitesStore.tramiteActivo" class="card overflow-hidden">
+        <div v-if="tramitesStore.tramiteActivo && !esTesisActivo" class="card overflow-hidden">
           <div class="h-2 bg-gradient-to-r from-amber-500 to-orange-600"></div>
           <div class="p-6 sm:p-8">
             <TimelineTramite :tramite="tramitesStore.tramiteActivo" title="Seguimiento de mi Titulación" />
           </div>
         </div>
+
+        <router-link v-else-if="tramitesStore.tramiteActivo && esTesisActivo" to="/estudiante/tesis" class="card overflow-hidden relative block group">
+          <div class="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-amber-500 to-rose-500"></div>
+          <div class="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="w-14 h-14 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600 group-hover:scale-105 transition">
+                <AppIcon name="graduation" :size="28" />
+              </div>
+              <div>
+                <h2 class="text-lg font-extrabold text-stone-900">Tesis de Grado · En Curso</h2>
+                <p class="text-sm text-stone-500">
+                  Estado:
+                  <span class="font-semibold text-amber-700">{{ formatoEstado(tramitesStore.tramiteActivo.estado_actual) }}</span>
+                </p>
+              </div>
+            </div>
+            <span class="btn-warm px-5 py-2.5">
+              <AppIcon name="arrow-left" :size="15" class="rotate-180" />
+              Continuar en el Módulo
+            </span>
+          </div>
+        </router-link>
 
         <template v-if="mostrarInicioSolicitud">
           <div v-if="tramiteTerminado" class="rounded-xl bg-orange-50 ring-1 ring-orange-200 p-4 flex items-start gap-3 text-orange-800">
@@ -77,99 +99,39 @@
             <p class="text-sm font-medium">
               Tu último trámite finalizó con estado
               <strong>{{ formatoEstado(tramitesStore.tramiteActivo.estado_actual) }}</strong>.
-              Puedes iniciar una nueva solicitud de titulación cuando lo necesites.
+              Puedes iniciar una nueva tesis de grado cuando lo necesites.
             </p>
           </div>
 
-          <div class="card overflow-hidden relative">
-            <div class="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-orange-400 to-amber-400"></div>
+          <router-link to="/estudiante/tesis" class="card overflow-hidden relative block group">
+            <div class="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-amber-500 to-rose-500"></div>
             <div class="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
+                <div class="w-14 h-14 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600 group-hover:scale-105 transition">
                   <AppIcon name="graduation" :size="28" />
                 </div>
                 <div>
-                  <h2 class="text-lg font-extrabold text-stone-900">Iniciar Modalidad de Titulación</h2>
-                  <p class="text-sm text-stone-500">Selecciona la modalidad y sube los documentos en PDF.</p>
+                  <h2 class="text-lg font-extrabold text-stone-900">Tesis de Grado</h2>
+                  <p class="text-sm text-stone-500">Módulo dedicado: solicitud con 3 documentos, seguimiento del Consejo, plazo de presentación y defensa.</p>
                 </div>
               </div>
-              <button class="btn-warm px-6 py-3" @click="mostrarFormularioTramite = true">
-                <AppIcon name="plus" :size="17" />
-                Nueva Solicitud de Graduación
-              </button>
+              <span class="btn-warm px-5 py-2.5">
+                <AppIcon name="arrow-left" :size="15" class="rotate-180" />
+                Ingresar al Módulo
+              </span>
             </div>
-          </div>
+          </router-link>
         </template>
       </div>
     </template>
-
-    <UiModal v-model="mostrarFormularioTramite" title="Nueva Solicitud de Titulación" max-width="560px">
-      <form @submit.prevent="enviarSolicitud" class="space-y-5">
-        <div>
-          <label class="label">Modalidad</label>
-          <select v-model="nuevoTramite.id_modalidad" class="input" required>
-            <option value="" disabled>Seleccione una modalidad</option>
-            <option v-for="mod in tramitesStore.modalidades" :key="mod.id_modalidad" :value="mod.id_modalidad">
-              {{ mod.nombre }}
-            </option>
-          </select>
-          <div v-if="modalidadSeleccionada" class="mt-3 rounded-xl bg-orange-50 ring-1 ring-orange-200 p-3.5 text-sm text-orange-800">
-            <p class="font-bold mb-1 inline-flex items-center gap-1.5">
-              <AppIcon name="info" :size="15" />
-              Requisitos
-            </p>
-            <p class="mt-0.5">{{ modalidadSeleccionada.requisitos_minimos || 'Sin requisitos registrados.' }}</p>
-          </div>
-        </div>
-
-        <div>
-          <label class="label">Certificado de Conclusión de Estudios (PDF)</label>
-          <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoCertificado ? 'border-amber-300 bg-amber-50' : 'border-stone-300 bg-stone-50 hover:border-amber-400']">
-            <span class="flex items-center gap-2 text-sm" :class="archivoCertificado ? 'text-amber-700' : 'text-stone-500'">
-              <AppIcon name="file-text" :size="18" />
-              <span class="truncate max-w-[260px]">{{ archivoCertificado?.name || 'Selecciona el archivo...' }}</span>
-            </span>
-            <input type="file" accept=".pdf" class="hidden" @change="handleFileUpload($event, 'certificado_notas')" required>
-            <span class="btn-ghost !py-2 pointer-events-none">
-              <AppIcon name="plus" :size="15" />
-              Subir
-            </span>
-          </label>
-        </div>
-
-        <div>
-          <label class="label">Carta de Solicitud (PDF)</label>
-          <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoCarta ? 'border-amber-300 bg-amber-50' : 'border-stone-300 bg-stone-50 hover:border-amber-400']">
-            <span class="flex items-center gap-2 text-sm" :class="archivoCarta ? 'text-amber-700' : 'text-stone-500'">
-              <AppIcon name="file-text" :size="18" />
-              <span class="truncate max-w-[260px]">{{ archivoCarta?.name || 'Selecciona el archivo...' }}</span>
-            </span>
-            <input type="file" accept=".pdf" class="hidden" @change="handleFileUpload($event, 'carta_solicitud')" required>
-            <span class="btn-ghost !py-2 pointer-events-none">
-              <AppIcon name="plus" :size="15" />
-              Subir
-            </span>
-          </label>
-        </div>
-
-        <div class="flex justify-end gap-2 pt-1">
-          <button type="button" class="btn-ghost px-4 py-2.5" @click="mostrarFormularioTramite = false">Cancelar</button>
-          <button type="submit" class="btn-primary px-5 py-2.5" :disabled="enviando">
-            <AppIcon v-if="enviando" name="loader" :size="15" class="animate-spin" />
-            <AppIcon v-else name="send" :size="15" />
-            {{ enviando ? 'Enviando...' : 'Enviar Solicitud' }}
-          </button>
-        </div>
-      </form>
-    </UiModal>
   </AppShell>
 </template>
 
 <script setup>
 // Vista del portal del estudiante.
 // Si el estudiante no tiene perfil completo muestra el formulario para crearlo;
-// en caso contrario despliega las estadísticas de su perfil, la línea de tiempo
-// de su trámite activo y un modal para iniciar una nueva solicitud de titulación.
+// en caso contrario despliega las estadísticas de su perfil y la línea de tiempo
+// de su trámite activo (o el acceso al módulo dedicado de Tesis de Grado).
 import { TimelineTramite, useTramitesStore, formatoEstado, ESTADOS_TERMINALES } from '@/modules/tramites';
 import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '@/modules/auth';
@@ -178,7 +140,6 @@ import { useToastStore } from '@/core/stores/toast';
 import { AppShell } from '@/modules/layout';
 import AppIcon from '@/ui/AppIcon.vue';
 import StatCard from '@/ui/StatCard.vue';
-import UiModal from '@/ui/UiModal.vue';
 
 const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
@@ -187,30 +148,22 @@ const toastStore = useToastStore();
 
 // Formulario de perfil académico inicial.
 const perfil = ref({ codigo_universitario: '', plan_estudios: '', fecha_conclusion_plan: '', promedio_global: '' });
-// Control del modal de nueva solicitud.
-const mostrarFormularioTramite = ref(false);
-// Datos de la nueva solicitud (modalidad + documentos adjuntos).
-const nuevoTramite = ref({ id_modalidad: '', documentos: [] });
-const enviando = ref(false);          // true mientras se envía la solicitud.
-const archivoCertificado = ref(null); // Archivo PDF del certificado de notas.
-const archivoCarta = ref(null);       // Archivo PDF de la carta de solicitud.
 const cargandoTramite = computed(() => tramitesStore.cargandoTramite);
-
-// Modalidad seleccionada en el formulario (para mostrar sus requisitos).
-const modalidadSeleccionada = computed(() => {
-    return tramitesStore.modalidades.find((m) => m.id_modalidad == nuevoTramite.value.id_modalidad) || null;
-});
 
 // true si el trámite activo ya alcanzó un estado terminal.
 const tramiteTerminado = computed(() => ESTADOS_TERMINALES.includes(tramitesStore.tramiteActivo?.estado_actual));
 
+// true si el trámite activo es de la modalidad Tesis de Grado: en ese caso el
+// portal no duplica la línea de tiempo (la muestra el módulo dedicado), solo
+// el resumen/estado con acceso al módulo.
+const esTesisActivo = computed(() => tramitesStore.tramiteActivo?.modalidad?.nombre === 'Tesis de Grado');
+
 // Permite iniciar una nueva solicitud solo si no hay trámite activo o ya terminó.
 const mostrarInicioSolicitud = computed(() => !tramitesStore.tramiteActivo || tramiteTerminado.value);
 
-// Carga inicial: perfil, modalidades disponibles y trámite activo.
+// Carga inicial: perfil y trámite activo.
 onMounted(async () => {
     await estudianteStore.cargarPerfil(true);
-    await tramitesStore.cargarModalidades();
     await tramitesStore.cargarTramiteActivo();
 });
 
@@ -221,66 +174,6 @@ const guardarPerfil = async () => {
         toastStore.success('Perfil guardado correctamente.');
     } catch (error) {
         toastStore.error('Error al guardar: ' + (error.response?.data?.message || 'Verifique los datos'));
-    }
-};
-
-/**
- * Captura un archivo seleccionado y lo asocia al tipo de documento en la lista
- * de documentos de la nueva solicitud.
- *
- * @param {Event} event Evento `change` del input file.
- * @param {string} tipo Tipo de documento ('certificado_notas' | 'carta_solicitud').
- */
-const handleFileUpload = (event, tipo) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (tipo === 'certificado_notas') archivoCertificado.value = file;
-    if (tipo === 'carta_solicitud') archivoCarta.value = file;
-    const index = nuevoTramite.value.documentos.findIndex((d) => d.tipo === tipo);
-    if (index !== -1) {
-        nuevoTramite.value.documentos[index].archivo = file;
-    } else {
-        nuevoTramite.value.documentos.push({ tipo, archivo: file });
-    }
-};
-
-/**
- * Envía una nueva solicitud de titulación como FormData multipart a
- * POST /api/tramites. Verifica que exista el perfil del estudiante y muestra
- * toasts según el resultado.
- */
-const enviarSolicitud = async () => {
-    // Reintenta cargar el perfil por si se creó en otra sesión.
-    if (!estudianteStore.perfilEstudiante?.id_estudiante) {
-        await estudianteStore.cargarPerfil(true);
-        if (!estudianteStore.perfilEstudiante?.id_estudiante) {
-            toastStore.warning('Debe completar su perfil de estudiante primero.');
-            return;
-        }
-    }
-
-    enviando.value = true;
-    const formData = new FormData();
-    formData.append('id_modalidad', nuevoTramite.value.id_modalidad);
-
-    // Adjunta cada documento como documentos[i][archivo] y documentos[i][tipo].
-    nuevoTramite.value.documentos.forEach((doc, index) => {
-        formData.append(`documentos[${index}][archivo]`, doc.archivo);
-        formData.append(`documentos[${index}][tipo]`, doc.tipo);
-    });
-
-    try {
-        await tramitesStore.iniciarTramite(formData);
-        toastStore.success('Solicitud enviada correctamente. Espere la revisión de Kardex.');
-        mostrarFormularioTramite.value = false;
-        // Limpia el formulario y los archivos seleccionados.
-        nuevoTramite.value = { id_modalidad: '', documentos: [] };
-        archivoCertificado.value = null;
-        archivoCarta.value = null;
-    } catch (error) {
-        toastStore.error('Error al enviar: ' + (error.response?.data?.message || 'Verifique los datos'));
-    } finally {
-        enviando.value = false;
     }
 };
 </script>

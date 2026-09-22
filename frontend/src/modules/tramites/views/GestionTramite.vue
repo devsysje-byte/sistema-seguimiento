@@ -88,7 +88,7 @@
           </div>
           <div v-else class="text-sm text-orange-500 font-medium">No hay tutor asignado todavía.</div>
 
-          <div v-if="esPersonal" class="mt-4 pt-4 border-t border-stone-100">
+          <div v-if="esGestion" class="mt-4 pt-4 border-t border-stone-100">
             <label class="label">Cambiar / Asignar tutor</label>
             <div class="flex flex-col sm:flex-row gap-2">
               <select v-model="tutorSeleccionado" class="input flex-1 min-w-0">
@@ -118,7 +118,7 @@
                :href="assetUrl(doc.ruta_archivo)" target="_blank"
                class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 transition">
               <AppIcon name="link" :size="16" />
-              {{ doc.tipo_documento }}
+              {{ etiquetaDocumento(doc.tipo_documento) }}
               <span class="ml-auto text-xs text-stone-400">{{ new Date(doc.created_at).toLocaleDateString('es-BO') }}</span>
             </a>
           </div>
@@ -133,8 +133,68 @@
         </div>
       </div>
 
-      <div v-if="esPersonal" class="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div v-if="tramite.estado_actual === 'solicitud_presentada'" class="card p-6">
+      <div v-if="esGestion || esConcejoGestion" class="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Programación de la fecha de defensa de TESIS: llega la solicitud del estudiante -->
+        <div v-if="esGestion && tramite.estado_actual === 'solicitud_fecha_defensa' && esTesis" class="card p-6">
+          <h3 class="font-bold text-stone-800 mb-2 inline-flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-orange-50 ring-1 ring-orange-200 flex items-center justify-center text-orange-600">
+              <AppIcon name="calendar" :size="17" />
+            </span>
+            Programación de la Fecha de Defensa
+          </h3>
+          <p class="text-sm text-stone-500 mb-4">
+            El estudiante solicitó una fecha para su defensa. Requiere que se le programe una fecha.
+          </p>
+          <div v-if="tramite.hitos?.fecha_defensa_sugerida"
+               class="rounded-xl bg-amber-50 ring-1 ring-amber-200 p-3.5 text-sm text-amber-800 mb-4">
+            <p class="font-bold mb-0.5">Fecha sugerida por el estudiante</p>
+            <p class="font-semibold">{{ formatoFechaLarga(tramite.hitos.fecha_defensa_sugerida) }}</p>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input v-model="fechaDefensa" type="date" :min="hoyISO" class="input flex-1 min-w-0" />
+            <button class="btn-primary w-full sm:w-auto shrink-0" :disabled="programandoFecha || !fechaDefensa" @click="programarFechaDefensa">
+              <AppIcon v-if="programandoFecha" name="loader" :size="15" class="animate-spin" />
+              <AppIcon v-else name="calendar-check" :size="15" />
+              {{ programandoFecha ? 'Programando...' : 'Programar Fecha' }}
+            </button>
+          </div>
+          <p class="text-xs text-stone-400 mt-2">Al programar la fecha, el trámite pasa a "Defensa programada" y el estudiante la verá en su seguimiento.</p>
+        </div>
+
+        <!-- Validación de la solicitud de TESIS: 3 documentos obligatorios -->
+        <div v-if="esGestion && tramite.estado_actual === 'solicitud_presentada' && esTesis" class="card p-6">
+          <h3 class="font-bold text-stone-800 mb-2 inline-flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-orange-50 ring-1 ring-orange-200 flex items-center justify-center text-orange-600">
+              <AppIcon name="graduation" :size="17" />
+            </span>
+            Validación de Solicitud de Tesis
+          </h3>
+          <p class="text-sm text-stone-500 mb-4">Verifica los 3 documentos obligatorios. Aprobar envía la solicitud al Consejo Universitario.</p>
+          <ul class="space-y-2 mb-4">
+            <li v-for="doc in tramite.documentos" :key="doc.id_documento"
+                class="flex items-center gap-2.5 text-sm">
+              <AppIcon name="check-circle" :size="16" class="text-emerald-500 shrink-0" />
+              <a :href="assetUrl(doc.ruta_archivo)" target="_blank" class="font-semibold text-amber-700 hover:text-amber-800 hover:underline">
+                {{ etiquetaDocumento(doc.tipo_documento) }}
+              </a>
+              <span class="ml-auto text-xs text-stone-400">{{ new Date(doc.created_at).toLocaleDateString('es-BO') }}</span>
+            </li>
+          </ul>
+          <textarea v-model="observacionesRev" rows="3" class="input resize-none mb-3" placeholder="Observaciones (obligatorio para rechazar)"></textarea>
+          <div class="flex gap-2">
+            <button class="btn-primary flex-1" @click="revisar('aprobar')">
+              <AppIcon name="check" :size="15" />
+              Aprobar y Enviar al Consejo
+            </button>
+            <button class="btn-rose flex-1" @click="revisar('rechazar')">
+              <AppIcon name="x" :size="15" />
+              Rechazar
+            </button>
+          </div>
+        </div>
+
+        <!-- Validación inicial genérica (resto de modalidades) -->
+        <div v-else-if="esGestion && tramite.estado_actual === 'solicitud_presentada'" class="card p-6">
           <h3 class="font-bold text-stone-800 mb-2 inline-flex items-center gap-2">
             <span class="w-8 h-8 rounded-lg bg-orange-50 ring-1 ring-orange-200 flex items-center justify-center text-orange-600">
               <AppIcon name="inbox" :size="17" />
@@ -183,7 +243,7 @@
 
       <div v-else class="lg:col-span-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 p-4 flex items-start gap-3 text-amber-800 text-sm">
         <AppIcon name="info" :size="18" class="mt-0.5 shrink-0" />
-        Estás viendo el seguimiento de la tutoría en modo lectura. Las acciones de revisión las realizan Kardex y Dirección.
+        Estás viendo el seguimiento en modo lectura. Las validaciones de la solicitud las realizan Kardex, Secretaría y Dirección.
       </div>
     </div>
   </AppShell>
@@ -192,17 +252,18 @@
 <script setup>
 // Vista de gestión de un trámite concreto.
 // Muestra los datos del postulante, modalidad, tutor, documentos y la línea de
-// tiempo. El personal académico puede asignar tutor, aprobar/rechazar la
-// documentación inicial y ejecutar transiciones de estado; el docente solo ve
-// en modo lectura la tutoría.
+// tiempo. La gestión académica (Kardex, Secretaría, Dirección, Admin) valida la
+// documentación inicial (con sección dedicada para Tesis), asigna tutor y
+// ejecuta transiciones; el Concejo solo avanza estados; el docente ve en modo
+// lectura la tutoría.
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { tramitesService } from '../services/tramites';
 import { useAuthStore } from '@/modules/auth';
 import { useTramitesStore } from '../stores/tramites';
 import { useToastStore } from '@/core/stores/toast';
-import { rolLabel } from '@/core/roles';
-import { formatoEstado } from '../utils/estados';
+import { rolLabel, ROLES_GESTION, ROLES_GESTION_CONCEJO, perteneceRol } from '@/core/roles';
+import { formatoEstado, etiquetaDocumento } from '../utils/estados';
 import { assetUrl } from '@/core/http/storage';
 import { AppShell } from '@/modules/layout';
 import AppIcon from '@/ui/AppIcon.vue';
@@ -226,10 +287,20 @@ const observaciones = ref('');          // Observaciones para transicionar.
 const observacionesRev = ref('');       // Observaciones para aprobar/rechazar.
 const tutorSeleccionado = ref('');      // Docente elegido como tutor.
 const asignando = ref(false);           // true mientras se asigna tutor.
+const fechaDefensa = ref('');           // Fecha de defensa a programar (YYYY-MM-DD).
+const programandoFecha = ref(false);    // true mientras se programa la fecha.
 
-// Rol del usuario: docente (solo lectura) o personal académico (acciones).
+// Fecha mínima seleccionable (hoy).
+const hoyISO = new Date().toISOString().slice(0, 10);
+
+// Grupos de rol del usuario: gestión valida la documentación inicial; gestión +
+// concejo solo avanza por la máquina de estados; el docente ve solo lectura.
 const esDocente = computed(() => authStore.user?.rol === 'docente');
-const esPersonal = computed(() => !esDocente.value && authStore.user?.rol !== 'estudiante');
+const esGestion = computed(() => perteneceRol(authStore.user?.rol, ROLES_GESTION));
+const esConcejoGestion = computed(() => perteneceRol(authStore.user?.rol, ROLES_GESTION_CONCEJO));
+
+// true si la modalidad del trámite es Tesis de Grado (validación con 3 documentos).
+const esTesis = computed(() => tramite.value?.modalidad?.nombre === 'Tesis de Grado');
 
 /** Carga el detalle del trámite desde GET /api/tramites/{id}. */
 const cargarTramite = async () => {
@@ -247,8 +318,8 @@ const cargarTramite = async () => {
 };
 
 onMounted(async () => {
-  // El personal académico también carga el catálogo de docentes para el selector de tutor.
-  if (esPersonal.value) {
+  // La gestión también carga el catálogo de docentes para el selector de tutor.
+  if (esGestion.value) {
     await tramitesStore.cargarDocentes();
   }
   await cargarTramite();
@@ -266,8 +337,7 @@ const asignarTutor = async () => {
   if (!tutorSeleccionado.value) return toastStore.warning('Seleccione un docente');
   asignando.value = true;
   try {
-    const { data } = await tramitesStore.asignarTutor(tramite.value.id_tramite, tutorSeleccionado.value);
-    tramite.value = data;
+    tramite.value = await tramitesStore.asignarTutor(tramite.value.id_tramite, tutorSeleccionado.value);
     tutorSeleccionado.value = '';
     toastStore.success('Tutor asignado correctamente.');
   } catch (error) {
@@ -277,7 +347,17 @@ const asignarTutor = async () => {
   }
 };
 
-/** Ejecuta una transición al estado seleccionado vía POST /api/tramites/{id}/transicionar. */
+/** Formatea una fecha (YYYY-MM-DD) en formato largo en español. */
+const formatoFechaLarga = (iso) => {
+  if (!iso) return '—';
+  return new Date(iso + 'T00:00:00').toLocaleDateString('es-BO', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+};
+
+/**
+ * Ejecuta una transición al estado seleccionado vía POST /api/tramites/{id}/transicionar.
+ */
 const ejecutarTransicion = async () => {
   if (!nuevoEstado.value) return toastStore.warning('Seleccione un estado');
   ejecutando.value = true;
@@ -292,6 +372,30 @@ const ejecutarTransicion = async () => {
     toastStore.error('Error: ' + (error.response?.data?.message || 'Transición no permitida'));
   } finally {
     ejecutando.value = false;
+  }
+};
+
+/**
+ * Programa la fecha de defensa: avanza el trámite a `defensa_programada`
+ * pasando la fecha en observaciones para que el backend calcule el hito.
+ */
+const programarFechaDefensa = async () => {
+  if (!fechaDefensa.value) return toastStore.warning('Seleccione la fecha de defensa');
+  programandoFecha.value = true;
+  try {
+    const { data } = await tramitesService.transicionar(
+      tramite.value.id_tramite,
+      'defensa_programada',
+      fechaDefensa.value
+    );
+    tramite.value = data;
+    siguientesEstados.value = data.siguientes_estados || [];
+    fechaDefensa.value = '';
+    toastStore.success('Fecha de defensa programada correctamente.');
+  } catch (error) {
+    toastStore.error('Error: ' + (error.response?.data?.message || 'No se pudo programar la fecha'));
+  } finally {
+    programandoFecha.value = false;
   }
 };
 

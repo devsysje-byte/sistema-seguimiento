@@ -1,0 +1,285 @@
+<?php
+
+namespace App\Modules\Tesis\Services;
+
+use App\Models\DocumentoAdjunto;
+use App\Models\Modalidad;
+use App\Models\Tramite;
+use App\Models\User;
+use App\Modules\Tesis\Events\FechaDefensaSolicitada;
+use App\Modules\Tramites\Events\EstadoTramiteCambiado;
+use App\Modules\Tramites\Services\TramiteService;
+use App\Modules\Tramites\Services\TramiteStateService;
+use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * Casos de uso del lado del ESTUDIANTE en el Módulo de Tesis de Grado.
+ *
+ * Encapsula el flujo oficial del estudiante independiente del resto de
+ * modalidades: presentación de la solicitud con los 3 documentos obligatorios
+ * y reenvío del perfil tras su rechazo. Reutiliza el motor genérico de trámites
+ * (TramiteService/TramiteStateService) sin modificar su contrato.
+ */
+class TesisService
+{
+    private const MODALIDAD = 'Tesis de Grado';
+
+    /** Documentos oficiales de la fase de solicitud. */
+    public const DOC_PERFIL = 'perfil_tesis';
+
+    /** Documento final presentado a la Comisión Revisora (y sus correcciones). */
+    public const DOC_FINAL = 'documento_final';
+
+    /** Estados terminales que permiten iniciar una nueva solicitud. */
+    private const TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'];
+
+    public function __construct(
+        private readonly TramiteService $tramiteService,
+        private readonly TramiteStateService $stateService,
+    ) {
+    }
+
+    /**
+     * Estado al que vuelve un perfil corregido y reenviado.
+     */
+    public function estadoReenvio(): string
+    {
+        return 'pendiente_concejo_universitario';
+    }
+
+    /**
+     * El estudiante solicita una fecha para su defensa de tesis.
+     *
+     * Valida que la solicitud sea suya, que sea de la modalidad de tesis y que el
+     * trámite esté en `solicitud_fecha_defensa` (perfil aprobado + comisión
+     * suficiente). Registra la petición en los hitos y notifica a los roles de
+     * gestión vía evento de dominio para que programen la defensa.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si no es su trámite.
+     * @throws \Illuminate\Validation\ValidationException Si el trámite no es de
+     *                                                    tesis o no está en el estado esperado.
+     */
+    public function solicitarFechaDefensa(int $id, User $user, ?string $fechaSugerida): array
+    {
+        $tramite = Tramite::with('modalidad')->findOrFail($id);
+
+        $esSuyo = $user->estudiante && $tramite->id_estudiante === $user->estudiante->id_estudiante;
+
+        if (! $esSuyo) {
+            throw new AuthorizationException('No autorizado');
+        }
+
+        $this->verificarEsTesis($tramite);
+
+        if ($tramite->estado_actual !== 'solicitud_fecha_defensa') {
+            throw ValidationException::withMessages([
+                'estado' => 'Solo puede solicitar la fecha de defensa cuando la comisión revisora calificó su tesis como suficiente.',
+            ]);
+        }
+
+        $hoy = Carbon::now()->toDateString();
+        $hitos = $tramite->hitos ?? [];
+        $hitos['fecha_defensa_solicitada'] = $hoy;
+
+        if ($fechaSugerida) {
+            $hitos['fecha_defensa_sugerida'] = $fechaSugerida;
+        }
+
+        $tramite->update(['hitos' => $hitos]);
+
+        $tramite->refresh()->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor');
+
+        event(new FechaDefensaSolicitada($tramite, $user, $fechaSugerida));
+
+        return $this->tramiteService->formatear($tramite);
+    }
+
+    /**
+     * Asegura que el trámite pertenezca a la modalidad Tesis de Grado.
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    private function verificarEsTesis(Tramite $tramite): void
+    {
+        if (($tramite->modalidad->nombre ?? null) !== self::MODALIDAD) {
+            throw ValidationException::withMessages([
+                'modalidad' => 'Este trámite no corresponde a la modalidad de Tesis de Grado.',
+            ]);
+        }
+    }
+
+    /**
+     * Crea la solicitud de Tesis de Grado con los 3 documentos obligatorios.
+     *
+     * @throws \DomainException Si la modalidad Tesis no está configurada o el
+     *                          estudiante ya tiene una tesis en curso.
+     */
+    public function crearSolicitud(array $validated, User $user): Tramite
+    {
+        $modalidad = Modalidad::where('nombre', self::MODALIDAD)->where('activo', true)->first();
+
+        if (! $modalidad) {
+            throw new \DomainException('La modalidad ' . self::MODALIDAD . ' no está configurada en el sistema.');
+        }
+
+        $estudiante = $user->estudiante;
+
+        if (! $estudiante) {
+            throw new \DomainException('Debe completar su perfil de estudiante primero.');
+        }
+
+        $activa = Tramite::where('id_estudiante', $estudiante->id_estudiante)
+            ->where('id_modalidad', $modalidad->id_modalidad)
+            ->whereNotIn('estado_actual', self::TERMINALES)
+            ->exists();
+
+        if ($activa) {
+            throw new \DomainException('Ya tiene una tesis de grado en curso. Avanza desde el seguimiento de su trámite.');
+        }
+
+        return $this->tramiteService->crear(
+            [
+                'id_modalidad' => (int) $modalidad->id_modalidad,
+                'documentos' => collect($validated['documentos'] ?? [])->values()->all(),
+            ],
+            $user
+        );
+    }
+
+    /**
+     * Reenvía el perfil corregido después de un rechazo del Consejo.
+     *
+     * Registra el nuevo documento (si se subió), vuelve la solicitud a
+     * evaluación del Consejo y dispara el evento de dominio para notificar.
+     *
+     * @return array Trámite formateado para el seguimiento del estudiante.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si no es su trámite.
+     * @throws \Illuminate\Validation\ValidationException Si el trámite no es de
+     *                                                    tesis o no está rechazado.
+     */
+    public function reenviar(int $id, User $user, ?UploadedFile $perfil, ?string $observaciones): array
+    {
+        $tramite = Tramite::with('modalidad')->findOrFail($id);
+
+        $esSuyo = $user->estudiante && $tramite->id_estudiante === $user->estudiante->id_estudiante;
+
+        if (! $esSuyo) {
+            throw new AuthorizationException('No autorizado');
+        }
+
+        $this->verificarEsTesis($tramite);
+
+        if ($tramite->estado_actual !== 'perfil_rechazado') {
+            throw ValidationException::withMessages([
+                'estado' => 'Solo puede reenviar el perfil cuando el Consejo Universitario lo rechazó.',
+            ]);
+        }
+
+        $nuevoEstado = $this->estadoReenvio();
+
+        DB::transaction(function () use ($tramite, $user, $perfil, $observaciones, $nuevoEstado) {
+            if ($perfil) {
+                $ruta = $perfil->store('documentos_tramites', 'public');
+
+                DocumentoAdjunto::create([
+                    'id_tramite' => $tramite->id_tramite,
+                    'id_usuario_subio' => $user->id_usuario,
+                    'tipo_documento' => self::DOC_PERFIL,
+                    'nombre_archivo' => $perfil->getClientOriginalName(),
+                    'ruta_archivo' => $ruta,
+                    'tamanio_kb' => round($perfil->getSize() / 1024, 2),
+                ]);
+            }
+
+            $this->stateService->transicionar(
+                $tramite,
+                $nuevoEstado,
+                $observaciones ?? 'Perfil corregido y reenviado por el estudiante.',
+                $user->id_usuario
+            );
+        });
+
+        $tramite->refresh()->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor');
+
+        event(new EstadoTramiteCambiado($tramite, $nuevoEstado, $observaciones));
+
+        return $this->tramiteService->formatear($tramite);
+    }
+
+    /**
+     * Estado al que vuelve un documento final corregido tras calificación
+     * insuficiente de la Comisión Revisora.
+     */
+    public function estadoReenvioDocumento(): string
+    {
+        return 'comision_revisora';
+    }
+
+    /**
+     * Reenvía el documento final corregido después de una calificación
+     * insuficiente de la Comisión Revisora.
+     *
+     * Registra el nuevo documento (si se subió) y devuelve el trámite a la
+     * Comisión Revisora para una nueva evaluación.
+     *
+     * @return array Trámite formateado para el seguimiento del estudiante.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si no es su trámite.
+     * @throws \Illuminate\Validation\ValidationException Si el trámite no es de
+     *                                                    tesis o no está calificado
+     *                                                    como insuficiente.
+     */
+    public function reenviarDocumentoFinal(int $id, User $user, ?UploadedFile $documento, ?string $observaciones): array
+    {
+        $tramite = Tramite::with('modalidad')->findOrFail($id);
+
+        $esSuyo = $user->estudiante && $tramite->id_estudiante === $user->estudiante->id_estudiante;
+
+        if (! $esSuyo) {
+            throw new AuthorizationException('No autorizado');
+        }
+
+        $this->verificarEsTesis($tramite);
+
+        if ($tramite->estado_actual !== 'insuficiente') {
+            throw ValidationException::withMessages([
+                'estado' => 'Solo puede reenviar su documento cuando la Comisión Revisora lo calificó como insuficiente.',
+            ]);
+        }
+
+        $nuevoEstado = $this->estadoReenvioDocumento();
+
+        DB::transaction(function () use ($tramite, $user, $documento, $observaciones, $nuevoEstado) {
+            if ($documento) {
+                $ruta = $documento->store('documentos_tramites', 'public');
+
+                DocumentoAdjunto::create([
+                    'id_tramite' => $tramite->id_tramite,
+                    'id_usuario_subio' => $user->id_usuario,
+                    'tipo_documento' => self::DOC_FINAL,
+                    'nombre_archivo' => $documento->getClientOriginalName(),
+                    'ruta_archivo' => $ruta,
+                    'tamanio_kb' => round($documento->getSize() / 1024, 2),
+                ]);
+            }
+
+            $this->stateService->transicionar(
+                $tramite,
+                $nuevoEstado,
+                $observaciones ?? 'Documento final corregido y reenviado por el estudiante.',
+                $user->id_usuario
+            );
+        });
+
+        $tramite->refresh()->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor');
+
+        event(new EstadoTramiteCambiado($tramite, $nuevoEstado, $observaciones));
+
+        return $this->tramiteService->formatear($tramite);
+    }
+}

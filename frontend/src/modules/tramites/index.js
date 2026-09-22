@@ -10,6 +10,7 @@ import routes from './router/tramites.routes';
 export { useTramitesStore } from './stores/tramites';
 export { default as TimelineTramite } from './components/TimelineTramite.vue';
 export { default as EstadisticasModalidades } from './components/EstadisticasModalidades.vue';
+export { default as EstadoBadge } from './components/EstadoBadge.vue';
 export * from './utils/estados';
 
 export default {

@@ -1,4 +1,7 @@
 // Roles con acceso al panel de revisión y gestión de trámites.
+// El tablero de revisión (/kardex) es de la gestión académica, pero también lo
+// consulta el concejo para evaluar perfiles; la gestión individual
+// (/tramites/:id/gestion) suma concejo (avanza estados) y docente (tutoría).
 const ROLES_TRAMITES = ['kardex', 'secretaria', 'direccion', 'admin', 'concejo', 'docente'];
 
 /**

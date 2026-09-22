@@ -8,9 +8,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/modalidades', [ModalidadController::class, 'index']);
     Route::get('/estudiante/tramite-activo', [TramiteController::class, 'tramiteActivo']);
     Route::post('/tramites', [TramiteController::class, 'store']);
-    Route::get('/tramites/{id}', [TramiteController::class, 'show']);
 });
 
+// Rutas estáticas del prefijo /tramites. IMPORTANTE: se declaran ANTES de
+// /tramites/{id} para que el comodín no capture "pendientes"/"estadisticas"
+// (provocaría TypeError en show(int $id) → HTTP 500).
 // Paneles de gestión (roles de gestión).
 Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION)])->group(function () {
     Route::get('/tramites/pendientes', [TramiteController::class, 'pendientes']);
@@ -27,4 +29,10 @@ Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION_CONCEJO
 // Panel del docente tutor.
 Route::middleware(['auth:sanctum', 'role:' . Roles::DOCENTE])->group(function () {
     Route::get('/tutorias', [TramiteController::class, 'tutorias']);
+});
+
+// Detalle individual de un trámite (se registra al final para no opacar las
+// rutas estáticas /tramites/pendientes y /tramites/estadisticas).
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/tramites/{id}', [TramiteController::class, 'show']);
 });

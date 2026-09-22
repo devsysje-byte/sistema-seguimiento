@@ -112,6 +112,7 @@ const navItems = computed(() => {
   }
   if (rol === 'docente') items.push({ to: '/docente', label: 'Mis Tutorías', icon: 'book' });
   if (rol === 'estudiante') items.push({ to: '/estudiante', label: 'Mi Trámite', icon: 'graduation' });
+  if (rol === 'estudiante') items.push({ to: '/estudiante/tesis', label: 'Tesis de Grado', icon: 'clipboard' });
   return items;
 });
 

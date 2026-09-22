@@ -21,8 +21,14 @@ class TramiteStateService
      * Mapa de transiciones permitidas por modalidad de titulación.
      *
      * Cada modalidad define su flujo como `estado_actual => [estados siguientes]`.
-     * El estado `rechazado` solo se alcanza por el flujo de revisión inicial
-     * (`solicitud_presentada => rechazado`), no como avance normal.
+     * El estado `rechazado` solo se alcanza por flujos de evaluación (revisión
+     * inicial o rechazo definitivo del perfil), no como avance normal.
+     *
+     * Tesis de Grado sigue el flujo oficial del estudiante: solicitud con 3
+     * archivos, evaluación del Consejo Universitario, reenvío del perfil
+     * rechazado, tutor asignado, investigación con plazo de presentación
+     * (3-12 meses), comisión revisora (suficiente/insuficiente), solicitud de
+     * fecha de defensa, defensa y 90 días de corrección si no la aprueba.
      *
      * @var array<string, array<string, array<int, string>>>
      */
@@ -38,21 +44,25 @@ class TramiteStateService
             'acta_registrada' => ['aprobado', 'reprobado'],
         ],
         'Tesis de Grado' => [
-            'solicitud_presentada' => ['tema_aprobado', 'rechazado'],
-            'tema_aprobado' => ['perfil_presentado'],
-            'perfil_presentado' => ['perfil_en_evaluacion'],
-            'perfil_en_evaluacion' => ['perfil_aprobado', 'perfil_rechazado'],
-            'perfil_aprobado' => ['investigacion_en_desarrollo'],
+            // 1. Fase de solicitud.
+            'solicitud_presentada' => ['pendiente_concejo_universitario', 'rechazado'],
+            // 2. Evaluación del perfil por el Consejo Universitario.
+            'pendiente_concejo_universitario' => ['perfil_aprobado', 'perfil_rechazado'],
+            'perfil_rechazado' => ['pendiente_concejo_universitario', 'rechazado'],
+            // 3. Tutor asignado e investigación en desarrollo (plazo configurable).
+            'perfil_aprobado' => ['tutor_asignado'],
+            'tutor_asignado' => ['investigacion_en_desarrollo'],
             'investigacion_en_desarrollo' => ['documento_final_presentado'],
-            'documento_final_presentado' => ['conformidad_tutor'],
-            'conformidad_tutor' => ['tribunal_designado'],
-            'tribunal_designado' => ['documento_en_evaluacion'],
-            'documento_en_evaluacion' => ['complementaciones_en_curso', 'aprobado_resolucion'],
-            'complementaciones_en_curso' => ['documento_en_evaluacion'],
-            'aprobado_resolucion' => ['fecha_defensa_programada'],
-            'fecha_defensa_programada' => ['defensa_en_curso'],
-            'defensa_en_curso' => ['deliberacion_defensa'],
-            'deliberacion_defensa' => ['aprobado', 'ampliacion_defensa', 'reprobado'],
+            // 4. Comisión revisora del documento final.
+            'documento_final_presentado' => ['comision_revisora'],
+            'comision_revisora' => ['suficiente', 'insuficiente'],
+            'insuficiente' => ['comision_revisora'],
+            // 5. Fase final / defensa.
+            'suficiente' => ['solicitud_fecha_defensa'],
+            'solicitud_fecha_defensa' => ['defensa_programada'],
+            'defensa_programada' => ['defensa_en_curso'],
+            'defensa_en_curso' => ['aprobado', 'correcciones_90_dias'],
+            'correcciones_90_dias' => ['defensa_en_curso', 'reprobado'],
         ],
         'Trabajo Dirigido' => [
             'solicitud_presentada' => ['convenio_verificado', 'rechazado'],
