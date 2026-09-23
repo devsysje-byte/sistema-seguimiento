@@ -16,9 +16,7 @@ use Illuminate\Http\Request;
  */
 class AuthController extends Controller
 {
-    public function __construct(private readonly AuthService $authService)
-    {
-    }
+    public function __construct(private readonly AuthService $authService) {}
 
     /**
      * POST /api/login
@@ -27,7 +25,7 @@ class AuthController extends Controller
     {
         $data = $request->validated();
 
-        return response()->json($this->authService->login($data['email'], $data['password']));
+        return response()->json($this->authService->login($data['username'], $data['password']));
     }
 
     /**
@@ -45,6 +43,6 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        return response()->json($request->user());
+        return response()->json($request->user()->loadMissing('estudiante'));
     }
 }

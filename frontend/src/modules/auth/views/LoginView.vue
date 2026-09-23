@@ -69,8 +69,8 @@
 
           <form @submit.prevent="handleLogin" class="mt-6 space-y-4">
             <div>
-              <label class="label" for="email">Email</label>
-              <input id="email" v-model="email" type="email" class="input" placeholder="tucorreo@upea.bo" required>
+              <label class="label" for="username">Usuario</label>
+              <input id="username" v-model="username" type="text" class="input" placeholder="p. ej. anabel_2273515" autocomplete="username" required>
             </div>
 
             <div>
@@ -143,7 +143,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 
 // Campos del formulario y controles de UI.
-const email = ref('');
+const username = ref('');
 const password = ref('');
 const showPassword = ref(false);   // Alterna visibilidad de la contraseña.
 const ingresando = ref(false);     // true mientras se procesa el login.
@@ -186,7 +186,7 @@ const features = [
 const handleLogin = async () => {
   ingresando.value = true;
   try {
-    const result = await authStore.login(email.value, password.value);
+    const result = await authStore.login(username.value, password.value);
     if (result === true) {
       router.push(homeForRol(authStore.user?.rol));
     } else {

@@ -3,6 +3,7 @@
 namespace App\Modules\Usuarios\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Usuarios\Http\Requests\AltaEstudianteRequest;
 use App\Modules\Usuarios\Http\Requests\StoreUserRequest;
 use App\Modules\Usuarios\Http\Requests\UpdateUserRequest;
 use App\Modules\Usuarios\Services\UserService;
@@ -18,9 +19,7 @@ use Illuminate\Http\Request;
  */
 class UserController extends Controller
 {
-    public function __construct(private readonly UserService $userService)
-    {
-    }
+    public function __construct(private readonly UserService $userService) {}
 
     /**
      * GET /api/usuarios (solo admin) — paginado.
@@ -46,6 +45,19 @@ class UserController extends Controller
         $usuario = $this->userService->crear($request->validated());
 
         return response()->json($usuario, 201);
+    }
+
+    /**
+     * POST /api/usuarios/alta (solo admin) — CREAR USUARIO.
+     *
+     * El administrador solo válida la cuenta: aporta el identificador (CI o
+     * registro universitario) y el sistema genera las credenciales de acceso.
+     */
+    public function alta(AltaEstudianteRequest $request): JsonResponse
+    {
+        return response()->json(
+            $this->userService->altaEstudiante($request->validated('identificador'))
+        );
     }
 
     /**

@@ -23,9 +23,15 @@ class NotificarTramiteRevisado
             return;
         }
 
+        $cuentaEstudiante = $estudiante->user;
+
+        if (! $cuentaEstudiante) {
+            return;
+        }
+
         if ($event->accion === 'aprobar') {
             NotificacionService::paraUsuario(
-                $estudiante->id_usuario,
+                $cuentaEstudiante->id_usuario,
                 'cambio_estado',
                 'Su documentación fue aprobada',
                 'Su solicitud de modalidad fue aprobada y continúa en evaluación.',
@@ -36,7 +42,7 @@ class NotificarTramiteRevisado
         }
 
         NotificacionService::paraUsuario(
-            $estudiante->id_usuario,
+            $cuentaEstudiante->id_usuario,
             'cambio_estado',
             'Su solicitud fue rechazada',
             $event->observaciones ?? 'La documentación presentada fue rechazada.',

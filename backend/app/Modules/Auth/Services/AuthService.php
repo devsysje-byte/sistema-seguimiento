@@ -17,16 +17,18 @@ use Illuminate\Support\Facades\Hash;
 class AuthService
 {
     /**
-     * Autentica al usuario con correo y contraseña.
+     * Autentica al usuario con username y contraseña.
      *
      * Lanza AuthenticationException (401) si las credenciales son incorrectas
-     * y AuthorizationException (403) si la cuenta está deshabilitada.
+     * y AuthorizationException (403) si la cuenta está deshabilitada. El perfil
+     * aislado del estudiante (si el usuario es estudiante) se carga en la
+     * respuesta para que el cliente lo use directamente.
      *
      * @return array{access_token: string, token_type: string, user: User}
      */
-    public function login(string $email, string $password): array
+    public function login(string $username, string $password): array
     {
-        $user = User::where('email', $email)->first();
+        $user = User::where('username', $username)->first();
 
         if (! $user || ! Hash::check($password, $user->password)) {
             throw new AuthenticationException('Credenciales incorrectas');
@@ -41,7 +43,7 @@ class AuthService
         return [
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user,
+            'user' => $user->loadMissing('estudiante'),
         ];
     }
 

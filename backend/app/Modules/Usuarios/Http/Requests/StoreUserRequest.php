@@ -7,6 +7,10 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Validación de creación de usuarios.
+ *
+ * El `username` es el identificador de ingreso al sistema; para estudiantes se
+ * autogenera (ver CredencialesEstudiante), para el resto de los roles lo
+ * asigna el administrador aquí.
  */
 class StoreUserRequest extends FormRequest
 {
@@ -26,8 +30,9 @@ class StoreUserRequest extends FormRequest
             'ci' => ['required', 'string', 'unique:users,ci'],
             'nombres' => ['required', 'string'],
             'apellidos' => ['required', 'string'],
-            'email' => ['required', 'email', 'unique:users,email'],
+            'email' => ['nullable', 'email', 'unique:users,email'],
             'telefono' => ['nullable', 'string'],
+            'username' => ['required', 'string', 'unique:users,username'],
             'rol' => ['required', "in:{$roles}"],
             'password' => ['required', 'string', 'min:6'],
         ];

@@ -36,7 +36,7 @@
         <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
           <div class="rounded-xl bg-stone-50 p-3">
             <dt class="text-xs text-stone-400 font-semibold uppercase">Código</dt>
-            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.codigo_universitario }}</dd>
+            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.registro_universitario }}</dd>
           </div>
           <div class="rounded-xl bg-stone-50 p-3">
             <dt class="text-xs text-stone-400 font-semibold uppercase">Promedio</dt>
@@ -107,7 +107,7 @@
           <div v-else-if="esGestion && !tramite.tutor" class="mt-4 pt-4 border-t border-stone-100">
             <p class="text-sm text-stone-500">
               La asignación del tutor se realiza desde el paso
-              <span class="font-semibold text-stone-700">“Tutor Asignado”</span>
+              <span class="font-semibold text-stone-700">â€œTutor Asignadoâ€</span>
               de la línea de tiempo.
             </p>
           </div>
@@ -247,7 +247,7 @@
             <input v-model="observaciones" class="input" placeholder="Observaciones (opcional)">
             <p v-if="bloqueadoInvestSinTutor" class="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 rounded-xl px-3 py-2.5">
               <AppIcon name="user-plus" :size="15" class="shrink-0" />
-              Asigne el tutor desde el paso “Tutor Asignado” de la línea de tiempo antes de pasar a Investigación en Desarrollo.
+              Asigne el tutor desde el paso â€œTutor Asignadoâ€ de la línea de tiempo antes de pasar a Investigación en Desarrollo.
             </p>
             <button class="btn-primary w-full" :disabled="ejecutando || !nuevoEstado || bloqueadoInvestSinTutor" @click="ejecutarTransicion">
               <AppIcon v-if="ejecutando" name="loader" :size="15" class="animate-spin" />
@@ -372,7 +372,7 @@ const asignarTutor = async (idTutor = null) => {
 
 /** Formatea una fecha (YYYY-MM-DD) en formato largo en español. */
 const formatoFechaLarga = (iso) => {
-  if (!iso) return '—';
+  if (!iso) return 'â€”';
   return new Date(iso + 'T00:00:00').toLocaleDateString('es-BO', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });

@@ -4,13 +4,15 @@ namespace App\Modules\Estudiantes\Http\Requests;
 
 use App\Support\Roles;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
- * Validación del registro/actualización del perfil de estudiante.
+ * Validación de la auto-actualización del perfil académico del estudiante.
  *
- * La autorización se resuelve aquí: solo el rol `estudiante` puede registrar
- * su propio perfil.
+ * Con el rediseño, el estudiante SOLO mantiene sus campos académicos
+ * (`plan_estudios`, `fecha_conclusion_plan`, `promedio_global`). Los datos
+ * personales e institucionales los registra el administrador al crear el
+ * perfil aislado (ver StoreEstudianteRequest). Autorización resuelta aquí:
+ * solamente el rol `estudiante`.
  */
 class PerfilEstudianteRequest extends FormRequest
 {
@@ -24,15 +26,7 @@ class PerfilEstudianteRequest extends FormRequest
      */
     public function rules(): array
     {
-        $usuario = $this->user();
-
         return [
-            'codigo_universitario' => [
-                'required',
-                'string',
-                Rule::unique('estudiantes', 'codigo_universitario')
-                    ->ignore($usuario?->estudiante?->id_estudiante, 'id_estudiante'),
-            ],
             'plan_estudios' => ['required', 'string'],
             'fecha_conclusion_plan' => ['required', 'date'],
             'promedio_global' => ['required', 'numeric', 'between:0,100'],
@@ -42,7 +36,7 @@ class PerfilEstudianteRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'authorize' => 'Solo estudiantes pueden registrar este perfil',
+            'authorize' => 'Solo estudiantes pueden actualizar su perfil académico',
         ];
     }
 }

@@ -59,7 +59,7 @@
                           {{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}
                         </p>
                         <p class="text-xs text-stone-400">
-                          Cod: {{ tramite.estudiante.codigo_universitario }} · Promedio: {{ tramite.estudiante.promedio_global }}
+                          Cod: {{ tramite.estudiante.registro_universitario }} · Promedio: {{ tramite.estudiante.promedio_global }}
                         </p>
                       </div>
                     </div>
@@ -239,7 +239,7 @@ const filtrados = computed(() => {
   return listaActual.value.filter((t) => {
     const estudiante = `${t.estudiante.user.nombres} ${t.estudiante.user.apellidos}`.toLowerCase();
     return estudiante.includes(q)
-      || t.estudiante.codigo_universitario.toLowerCase().includes(q)
+      || t.estudiante.registro_universitario.toLowerCase().includes(q)
       || t.modalidad.nombre.toLowerCase().includes(q)
       || t.estado_actual.toLowerCase().includes(q);
   });

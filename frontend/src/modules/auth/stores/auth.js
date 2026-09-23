@@ -21,16 +21,16 @@ export const useAuthStore = defineStore('auth', {
     },
     actions: {
         /**
-         * Inicia sesión con email y contraseña contra POST /api/login.
+         * Inicia sesión con username y contraseña contra POST /api/login.
          *
-         * @param {string} email    Correo del usuario.
+         * @param {string} username Usuario de acceso (autogenerado en estudiantes).
          * @param {string} password Contraseña sin cifrar.
          * @returns {Promise<boolean|string>} `true` si el ingreso fue exitoso; en
          *          caso contrario, el mensaje de error devuelto por la API.
          */
-        async login(email, password) {
+        async login(username, password) {
             try {
-                const { data } = await authService.login(email, password);
+                const { data } = await authService.login(username, password);
                 this.token = data.access_token;
                 this.user = data.user;
                 localStorage.setItem('token', this.token);

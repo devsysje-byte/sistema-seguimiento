@@ -2,7 +2,6 @@
 
 namespace App\Modules\Notificaciones\Listeners;
 
-use App\Models\Tramite;
 use App\Modules\Notificaciones\Services\NotificacionService;
 use App\Modules\Tramites\Events\EstadoTramiteCambiado;
 
@@ -21,15 +20,16 @@ class NotificarEstadoCambiado
         $event->tramite->loadMissing('estudiante.user', 'modalidad');
 
         $estudiante = $event->tramite->estudiante;
+        $cuentaEstudiante = $estudiante?->user;
 
-        if ($estudiante) {
+        if ($estudiante && $cuentaEstudiante) {
             $mensaje = ($event->tramite->modalidad->nombre ?? null) === 'Tesis de Grado'
                 ? static::mensajeTesis($event->nuevoEstado)
                 : null;
 
             if ($mensaje) {
                 NotificacionService::paraUsuario(
-                    $estudiante->id_usuario,
+                    $cuentaEstudiante->id_usuario,
                     $mensaje['tipo'],
                     $mensaje['titulo'],
                     $mensaje['mensaje'],
@@ -37,7 +37,7 @@ class NotificarEstadoCambiado
                 );
             } else {
                 NotificacionService::paraUsuario(
-                    $estudiante->id_usuario,
+                    $cuentaEstudiante->id_usuario,
                     'cambio_estado',
                     'Actualización en su trámite',
                     "Su trámite de {$event->tramite->modalidad->nombre} avanzó al estado: {$event->nuevoEstado}.",
@@ -46,12 +46,12 @@ class NotificarEstadoCambiado
             }
         }
 
-        if ($event->tramite->id_tutor && $estudiante?->user) {
+        if ($event->tramite->id_tutor && $estudiante) {
             NotificacionService::paraUsuario(
                 $event->tramite->id_tutor,
                 'cambio_estado',
                 'Actualización en su tutoría',
-                "El trámite del estudiante {$estudiante->user->nombres} {$estudiante->user->apellidos} avanzó al estado: {$event->nuevoEstado}.",
+                "El trámite del estudiante {$estudiante->nombres} {$estudiante->apellidos} avanzó al estado: {$event->nuevoEstado}.",
                 '/docente'
             );
         }

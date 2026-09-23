@@ -6,8 +6,11 @@ use App\Support\Roles;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validación de actualización de usuarios (incluye el perfil de estudiante
- * anidado que el panel de administración envía junto al usuario).
+ * Validación de actualización de usuarios.
+ *
+ * Ya no se sincroniza el perfil de estudiante desde el panel de usuarios: el
+ * perfil aislado se gestiona administrativamente en el módulo de estudiantes y
+ * los campos académicos los mantiene el propio estudiante.
  */
 class UpdateUserRequest extends FormRequest
 {
@@ -28,16 +31,11 @@ class UpdateUserRequest extends FormRequest
             'ci' => ['required', 'string', "unique:users,ci,{$usuarioId},id_usuario"],
             'nombres' => ['required', 'string'],
             'apellidos' => ['required', 'string'],
-            'email' => ['required', 'email', "unique:users,email,{$usuarioId},id_usuario"],
+            'email' => ['nullable', 'email', "unique:users,email,{$usuarioId},id_usuario"],
             'telefono' => ['nullable', 'string'],
+            'username' => ['required', 'string', "unique:users,username,{$usuarioId},id_usuario"],
             'rol' => ['required', "in:{$roles}"],
             'password' => ['nullable', 'string', 'min:6'],
-
-            'estudiante.codigo_universitario' => ['nullable', 'string'],
-            'estudiante.plan_estudios' => ['nullable', 'string'],
-            'estudiante.fecha_conclusion_plan' => ['nullable', 'date'],
-            'estudiante.promedio_global' => ['nullable', 'numeric', 'between:0,100'],
-            'estudiante.estado' => ['nullable', 'in:activo,inactivo'],
         ];
     }
 }

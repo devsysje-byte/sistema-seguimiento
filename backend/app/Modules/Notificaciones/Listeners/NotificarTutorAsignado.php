@@ -22,7 +22,7 @@ class NotificarTutorAsignado
             $event->tutor->id_usuario,
             'asignacion_tutor',
             'Tutoría asignada',
-            "Le asignaron la tutoría del trámite de {$estudiante->user->nombres} {$estudiante->user->apellidos} ({$event->tramite->modalidad->nombre}).",
+            "Le asignaron la tutoría del trámite de {$estudiante->nombres} {$estudiante->apellidos} ({$event->tramite->modalidad->nombre}).",
             '/docente'
         );
     }

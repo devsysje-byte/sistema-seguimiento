@@ -5,9 +5,9 @@ import http from '@/core/http/client';
  * API (login/logout/me) para mantenerlos fuera de los componentes.
  */
 export const authService = {
-    /** Inicia sesión con email/contraseña y devuelve el token + usuario. */
-    login(email, password) {
-        return http.post('/login', { email, password });
+    /** Inicia sesión con username/contraseña y devuelve el token + usuario. */
+    login(username, password) {
+        return http.post('/login', { username, password });
     },
     /** Invalida el token de la sesión actual. */
     logout() {

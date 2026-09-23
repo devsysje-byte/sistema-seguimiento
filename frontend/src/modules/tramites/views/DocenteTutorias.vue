@@ -56,7 +56,7 @@
             <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500">
               <span class="inline-flex items-center gap-1">
                 <AppIcon name="file-text" :size="12" />
-                Cod: {{ tramite.estudiante.codigo_universitario }}
+                Cod: {{ tramite.estudiante.registro_universitario }}
               </span>
               <span class="inline-flex items-center gap-1">
                 <AppIcon name="chart" :size="12" />
@@ -140,7 +140,7 @@ const activos = computed(() => tramitesStore.tutorias.filter((t) => !ESTADOS_TER
 const finalizados = computed(() => tramitesStore.tutorias.filter((t) => ESTADOS_TERMINALES.includes(t.estado_actual)));
 // Promedio de avance de las tutorías activas (porcentaje).
 const promedioGlobal = computed(() => {
-  if (!activos.value.length) return '—';
+  if (!activos.value.length) return 'â€”';
   const total = activos.value.reduce((acc, t) => acc + progresoEstado(t), 0);
   return total / activos.value.length + '%';
 });

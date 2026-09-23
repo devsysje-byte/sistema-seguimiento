@@ -48,9 +48,10 @@ export const useEstudianteStore = defineStore('estudiante', {
             return this.perfilEstudiante;
         },
         /**
-         * Guarda (crea o actualiza) el perfil de estudiante vía POST /api/estudiante/perfil.
+         * Guarda los campos académicos del estudiante vía PUT /api/estudiante/perfil.
          *
-         * @param {Object} datos Datos validados del perfil (código, plan, promedio, fecha).
+         * @param {Object} datos Datos validados (plan de estudios, fecha de
+         *                       conclusión y promedio global).
          * @returns {Promise<Object>} Perfil devuelto por la API.
          */
         async guardarPerfil(datos) {

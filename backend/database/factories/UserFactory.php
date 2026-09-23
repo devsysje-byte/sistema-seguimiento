@@ -33,6 +33,7 @@ class UserFactory extends Factory
             'apellidos' => $apellidos,
             'email' => fake()->unique()->safeEmail(),
             'telefono' => fake()->phoneNumber(),
+            'username' => strtolower($nombres).'_'.fake()->unique()->numerify('########'),
             'rol' => 'estudiante',
             'password' => static::$password ??= Hash::make('password'),
             'activo' => true,

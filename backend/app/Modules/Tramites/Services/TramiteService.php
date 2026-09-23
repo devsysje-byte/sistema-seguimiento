@@ -44,7 +44,7 @@ class TramiteService extends BasePaginadoService
     /** Eager-loads del detalle con proyección de columnas (ni contraseñas ni sobrantes). */
     private const DETALLE_CARGAS = [
         'modalidad:id_modalidad,nombre,descripcion,requisitos_minimos',
-        'estudiante:id_estudiante,id_usuario,codigo_universitario,plan_estudios,fecha_conclusion_plan,promedio_global',
+        'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,plan_estudios,fecha_conclusion_plan,promedio_global',
         'estudiante.user:id_usuario,nombres,apellidos,email,rol',
         'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,ruta_archivo,tamanio_kb,created_at',
         'estados:id_estado,id_tramite,nombre_estado,descripcion,observaciones,id_usuario_responsable,created_at',
@@ -55,7 +55,7 @@ class TramiteService extends BasePaginadoService
     /** Eager-loads mínimos de los listados (tablero de revisión). */
     private const LISTA_CARGAS = [
         'modalidad:id_modalidad,nombre',
-        'estudiante:id_estudiante,id_usuario,codigo_universitario,promedio_global',
+        'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,promedio_global',
         'estudiante.user:id_usuario,nombres,apellidos',
         'tutor:id_usuario,nombres,apellidos',
         'documentos:id_documento,id_tramite,tipo_documento,ruta_archivo',
@@ -64,8 +64,7 @@ class TramiteService extends BasePaginadoService
     public function __construct(
         private readonly TramiteStateService $stateService,
         private readonly DocumentoAdjuntoService $documentos,
-    ) {
-    }
+    ) {}
 
     /**
      * Trámite activo (más reciente) del estudiante autenticado.
@@ -190,14 +189,15 @@ class TramiteService extends BasePaginadoService
             ->with(self::LISTA_CARGAS);
 
         if ($q !== null && trim($q) !== '') {
-            $like = '%' . mb_strtolower(trim($q)) . '%';
+            $like = '%'.mb_strtolower(trim($q)).'%';
 
             $query->where(function (Builder $sub) use ($like) {
                 $sub->orWhereRaw('LOWER(tramites.estado_actual) LIKE ?', [$like])
                     ->orWhereHas('modalidad', fn (Builder $m) => $m->whereRaw('LOWER(modalidades.nombre) LIKE ?', [$like]))
                     ->orWhereHas('estudiante', fn (Builder $e) => $e
-                        ->whereRaw('LOWER(estudiantes.codigo_universitario) LIKE ?', [$like])
-                        ->orWhereHas('user', fn (Builder $u) => $u->whereRaw('LOWER(CONCAT(users.nombres, " ", users.apellidos)) LIKE ?', [$like])));
+                        ->whereRaw('LOWER(estudiantes.nombres) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(estudiantes.apellidos) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(estudiantes.registro_universitario) LIKE ?', [$like]));
             });
         }
 
@@ -217,7 +217,7 @@ class TramiteService extends BasePaginadoService
             ->select(['modalidades.id_modalidad', 'modalidades.nombre'])
             ->selectRaw("SUM(CASE WHEN tramites.estado_actual = 'aprobado' THEN 1 ELSE 0 END) AS aprobados")
             ->selectRaw("SUM(CASE WHEN tramites.estado_actual IN ('rechazado', 'reprobado', 'reprobado_ausencia') THEN 1 ELSE 0 END) AS reprobados")
-            ->selectRaw("COUNT(tramites.id_tramite) AS total")
+            ->selectRaw('COUNT(tramites.id_tramite) AS total')
             ->groupBy(['modalidades.id_modalidad', 'modalidades.nombre'])
             ->orderBy('modalidades.nombre')
             ->get()

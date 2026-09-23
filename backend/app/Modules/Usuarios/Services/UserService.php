@@ -2,25 +2,35 @@
 
 namespace App\Modules\Usuarios\Services;
 
+use App\Models\Estudiante;
 use App\Models\User;
 use App\Support\BasePaginadoService;
+use App\Support\CredencialesEstudiante;
 use App\Support\Roles;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Casos de uso de gestión de usuarios.
  *
- * Centraliza el CRUD de usuarios (alta, consulta, actualización y baja lógica)
- * y el listado de docentes. La autorización por rol se resuelve en las rutas
- * vía el middleware `role`, por lo que el servicio asume permiso verificado.
+ * Centraliza el CRUD de usuarios (alta, consulta, actualización y baja lógica),
+ * el alta automática de cuentas para estudiantes (CREAR USUARIO) y el listado
+ * de docentes. La autorización por rol se resuelve en las rutas vía el
+ * middleware `role`, por lo que el servicio asume permiso verificado.
  */
 class UserService extends BasePaginadoService
 {
     /** Columnas estrictas expuestas del panel de administración (nunca password). */
     private const LISTA_COLUMNAS = [
         'id_usuario', 'ci', 'nombres', 'apellidos', 'email', 'telefono',
-        'rol', 'activo', 'created_at', 'updated_at',
+        'username', 'rol', 'activo', 'created_at', 'updated_at',
+    ];
+
+    /** Columnas del perfil aislado expuestas junto al usuario. */
+    private const PERFIL_ESTUDIANTE_COLUMNAS = [
+        'id_estudiante', 'ci', 'nombres', 'apellidos', 'registro_universitario',
+        'fecha_nacimiento', 'plan_estudios', 'fecha_conclusion_plan', 'promedio_global',
     ];
 
     /**
@@ -33,7 +43,7 @@ class UserService extends BasePaginadoService
         return $this->paginar(
             User::query()
                 ->select(self::LISTA_COLUMNAS)
-                ->with('estudiante:id_estudiante,id_usuario,codigo_universitario,plan_estudios,fecha_conclusion_plan,promedio_global,estado')
+                ->with('estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,plan_estudios,fecha_conclusion_plan,promedio_global')
                 ->where('activo', true)
                 ->orderByDesc('created_at'),
             $this->porPagina($perPage)
@@ -55,7 +65,10 @@ class UserService extends BasePaginadoService
     }
 
     /**
-     * Crea un usuario cifrando su contraseña.
+     * Crea un usuario cifrando su contraseña. El `username` lo asigna el
+     * administrador en el formulario de alta (CREAR ESTUDIANTE / CREAR USUARIO
+     * son casos independientes; los estudiantes obtienen su username automático
+     * con altaEstudiante()).
      */
     public function crear(array $datos): User
     {
@@ -65,31 +78,80 @@ class UserService extends BasePaginadoService
     }
 
     /**
-     * Actualiza un usuario; cifra password si se envía y sincroniza el perfil
-     * de estudiante (normalizando vacíos a null) cuando el rol es estudiante.
+     * Da de alta automáticamente la cuenta de acceso de un estudiante ya
+     * registrado en el sistema (CREAR USUARIO).
+     *
+     * Genera `username` y contraseña temporal según las reglas centralizadas
+     * (ver CredencialesEstudiante), vincula el perfil aislado con
+     * `estudiante_id` y devuelve las credenciales generadas una única vez para
+     * que el administrador las entregue al estudiante.
+     *
+     *
+     * @return array{usuario: User, username: string, password: string}
+     *
+     * @throws ValidationException Si el estudiante no
+     *                             existe o ya posee una cuenta de acceso.
+     * @throws \DomainException Si no se puede generar la contraseña
+     *                          (estudiante sin fecha de nacimiento).
+     */
+    public function altaEstudiante(string $identificador): array
+    {
+        $estudiante = Estudiante::query()
+            ->where('ci', $identificador)
+            ->orWhere('registro_universitario', $identificador)
+            ->first();
+
+        if ($estudiante === null) {
+            throw ValidationException::withMessages([
+                'identificador' => 'No se encontró un estudiante con ese CI o registro universitario.',
+            ]);
+        }
+
+        if ($estudiante->user !== null) {
+            throw ValidationException::withMessages([
+                'identificador' => 'El estudiante ya tiene una cuenta de acceso creada.',
+            ]);
+        }
+
+        $username = CredencialesEstudiante::usernameUnico($estudiante);
+        $password = CredencialesEstudiante::passwordDe($estudiante);
+
+        $usuario = User::create([
+            'ci' => $estudiante->ci,
+            'nombres' => $estudiante->nombres,
+            'apellidos' => $estudiante->apellidos,
+            'email' => null,
+            'username' => $username,
+            'password' => Hash::make($password),
+            'rol' => Roles::ESTUDIANTE,
+            'activo' => true,
+            'estudiante_id' => $estudiante->id_estudiante,
+        ]);
+
+        return [
+            'usuario' => $usuario->load('estudiante'),
+            'username' => $username,
+            'password' => $password,
+        ];
+    }
+
+    /**
+     * Actualiza un usuario; cifra password si se envía. El perfil de estudiante
+     * ya no se sincroniza aquí: el estudiante mantiene sus campos académicos
+     * por su cuenta y el administrador gestiona el perfil aislado aparte.
      */
     public function actualizar(int $id, array $datos): User
     {
         $user = User::findOrFail($id);
 
-        $perfil = $datos['estudiante'] ?? [];
-
-        $campos = collect($datos)->except(['password', 'estudiante'])->all();
+        $campos = collect($datos)->except(['password'])->all();
         if (! empty($datos['password'])) {
             $campos['password'] = Hash::make($datos['password']);
         }
 
         $user->update($campos);
 
-        if (! empty($perfil) && ($campos['rol'] ?? $user->rol) === Roles::ESTUDIANTE) {
-            $perfilNormalizado = collect($perfil)
-                ->map(fn ($valor) => ($valor === '' || $valor === null) ? null : $valor)
-                ->all();
-
-            $user->estudiante()->updateOrCreate([], $perfilNormalizado);
-        }
-
-        return $user->load('estudiante');
+        return $user->load('estudiante:'.implode(',', self::PERFIL_ESTUDIANTE_COLUMNAS));
     }
 
     /**
