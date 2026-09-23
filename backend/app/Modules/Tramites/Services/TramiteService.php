@@ -2,17 +2,19 @@
 
 namespace App\Modules\Tramites\Services;
 
-use App\Models\DocumentoAdjunto;
 use App\Models\EstadoTramite;
+use App\Models\Modalidad;
 use App\Models\Tramite;
 use App\Models\User;
 use App\Modules\Tramites\Events\EstadoTramiteCambiado;
 use App\Modules\Tramites\Events\TramiteCreado;
 use App\Modules\Tramites\Events\TramiteRevisado;
 use App\Modules\Tramites\Events\TutorAsignado;
+use App\Support\BasePaginadoService;
+use App\Support\DocumentoAdjuntoService;
 use App\Support\Roles;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -25,13 +27,44 @@ use Illuminate\Validation\ValidationException;
  * aquí directamente: se disparan eventos de dominio que el módulo de
  * Notificaciones escucha (desacoplamiento por eventos).
  */
-class TramiteService
+class TramiteService extends BasePaginadoService
 {
-    /** Relaciones comunes que se cargan en cada trámite. */
-    private const RELACIONES = ['modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor'];
+    /** Columnas estrictas del DETALLE de un trámite (prohibido `select *`). */
+    private const DETALLE_COLUMNAS = [
+        'id_tramite', 'id_estudiante', 'id_modalidad', 'id_tutor',
+        'estado_actual', 'observaciones', 'hitos', 'created_at', 'updated_at',
+    ];
 
-    public function __construct(private readonly TramiteStateService $stateService)
-    {
+    /** Columnas estrictas de los LISTADOS (solo lo que pinta el tablero). */
+    private const LISTA_COLUMNAS = [
+        'id_tramite', 'id_estudiante', 'id_modalidad', 'id_tutor',
+        'estado_actual', 'hitos', 'created_at', 'updated_at',
+    ];
+
+    /** Eager-loads del detalle con proyección de columnas (ni contraseñas ni sobrantes). */
+    private const DETALLE_CARGAS = [
+        'modalidad:id_modalidad,nombre,descripcion,requisitos_minimos',
+        'estudiante:id_estudiante,id_usuario,codigo_universitario,plan_estudios,fecha_conclusion_plan,promedio_global',
+        'estudiante.user:id_usuario,nombres,apellidos,email,rol',
+        'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,ruta_archivo,tamanio_kb,created_at',
+        'estados:id_estado,id_tramite,nombre_estado,descripcion,observaciones,id_usuario_responsable,created_at',
+        'estados.responsable:id_usuario,nombres,apellidos,rol',
+        'tutor:id_usuario,nombres,apellidos,email,rol',
+    ];
+
+    /** Eager-loads mínimos de los listados (tablero de revisión). */
+    private const LISTA_CARGAS = [
+        'modalidad:id_modalidad,nombre',
+        'estudiante:id_estudiante,id_usuario,codigo_universitario,promedio_global',
+        'estudiante.user:id_usuario,nombres,apellidos',
+        'tutor:id_usuario,nombres,apellidos',
+        'documentos:id_documento,id_tramite,tipo_documento,ruta_archivo',
+    ];
+
+    public function __construct(
+        private readonly TramiteStateService $stateService,
+        private readonly DocumentoAdjuntoService $documentos,
+    ) {
     }
 
     /**
@@ -45,9 +78,12 @@ class TramiteService
             return null;
         }
 
-        $tramite = Tramite::with(self::RELACIONES)
+        $tramite = Tramite::query()
+            ->select(self::DETALLE_COLUMNAS)
+            ->with(self::DETALLE_CARGAS)
             ->where('id_estudiante', $estudiante->id_estudiante)
-            ->orderBy('created_at', 'desc')
+            ->orderByDesc('created_at')
+            ->limit(1)
             ->first();
 
         if (! $tramite) {
@@ -94,16 +130,12 @@ class TramiteService
             ]);
 
             foreach ($validated['documentos'] as $documento) {
-                $ruta = $documento['archivo']->store('documentos_tramites', 'public');
-
-                DocumentoAdjunto::create([
-                    'id_tramite' => $tramite->id_tramite,
-                    'id_usuario_subio' => $user->id_usuario,
-                    'tipo_documento' => $documento['tipo'],
-                    'nombre_archivo' => $documento['archivo']->getClientOriginalName(),
-                    'ruta_archivo' => $ruta,
-                    'tamanio_kb' => round($documento['archivo']->getSize() / 1024, 2),
-                ]);
+                $this->documentos->guardar(
+                    $tramite->id_tramite,
+                    $user->id_usuario,
+                    $documento['archivo'],
+                    $documento['tipo'],
+                );
             }
 
             return $tramite->load('modalidad', 'documentos', 'estados');
@@ -116,57 +148,93 @@ class TramiteService
 
     /**
      * Solicitudes en proceso (estados no terminales) para los roles de gestión.
+     *
+     * Paginado por defecto y con proyección estricta de columnas; soporta
+     * búsqueda (q) sobre estudiante, código, modalidad y estado.
+     *
+     * @return array{data: array, meta: array<string, int|bool>}
      */
-    public function pendientes(): Collection
+    public function pendientes(?int $perPage = 20, ?string $q = null): array
     {
-        return Tramite::with(['estudiante.user', 'modalidad', 'documentos', 'tutor'])
-            ->whereNotIn('estado_actual', ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        return $this->paginar(
+            $this->listadoBase($q)
+                ->whereNotIn('estado_actual', TramiteStateService::terminales())
+                ->orderByDesc('created_at'),
+            $this->porPagina($perPage)
+        );
     }
 
     /**
-     * Trámites que ya finalizaron su flujo (concluidos: aprobado, reprobado,
-     * rechazado o reprobado por ausencia), ordenados por su cierre.
+     * Trámites que ya finalizaron su flujo (concluidos), paginado por defecto.
+     *
+     * @return array{data: array, meta: array<string, int|bool>}
      */
-    public function concluidos(): Collection
+    public function concluidos(?int $perPage = 20, ?string $q = null): array
     {
-        return Tramite::with(['estudiante.user', 'modalidad', 'documentos', 'tutor'])
-            ->whereIn('estado_actual', ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'])
-            ->orderBy('updated_at', 'desc')
-            ->get();
+        return $this->paginar(
+            $this->listadoBase($q)
+                ->whereIn('estado_actual', TramiteStateService::terminales())
+                ->orderByDesc('updated_at'),
+            $this->porPagina($perPage)
+        );
+    }
+
+    /**
+     * Consulta base de listados con columnas estrictas, eager-loads mínimos y
+     * búsqueda opcional delegada a subconsultas que usan los índices de FKs.
+     */
+    private function listadoBase(?string $q): Builder
+    {
+        $query = Tramite::query()
+            ->select(self::LISTA_COLUMNAS)
+            ->with(self::LISTA_CARGAS);
+
+        if ($q !== null && trim($q) !== '') {
+            $like = '%' . mb_strtolower(trim($q)) . '%';
+
+            $query->where(function (Builder $sub) use ($like) {
+                $sub->orWhereRaw('LOWER(tramites.estado_actual) LIKE ?', [$like])
+                    ->orWhereHas('modalidad', fn (Builder $m) => $m->whereRaw('LOWER(modalidades.nombre) LIKE ?', [$like]))
+                    ->orWhereHas('estudiante', fn (Builder $e) => $e
+                        ->whereRaw('LOWER(estudiantes.codigo_universitario) LIKE ?', [$like])
+                        ->orWhereHas('user', fn (Builder $u) => $u->whereRaw('LOWER(CONCAT(users.nombres, " ", users.apellidos)) LIKE ?', [$like])));
+            });
+        }
+
+        return $query;
     }
 
     /**
      * Resumen estadístico de aprobados/reprobados por modalidad.
+     *
+     * Agrega en SQL (GROUP BY sobre índices) en vez de cargar todas las filas
+     * a PHP y agruparlas en memoria.
      */
     public function estadisticas(): array
     {
-        $aprobados = ['aprobado'];
-        $reprobados = ['rechazado', 'reprobado', 'reprobado_ausencia'];
-
-        $porModalidad = Tramite::with('modalidad')
+        $porModalidad = Modalidad::query()
+            ->leftJoin('tramites', 'tramites.id_modalidad', '=', 'modalidades.id_modalidad')
+            ->select(['modalidades.id_modalidad', 'modalidades.nombre'])
+            ->selectRaw("SUM(CASE WHEN tramites.estado_actual = 'aprobado' THEN 1 ELSE 0 END) AS aprobados")
+            ->selectRaw("SUM(CASE WHEN tramites.estado_actual IN ('rechazado', 'reprobado', 'reprobado_ausencia') THEN 1 ELSE 0 END) AS reprobados")
+            ->selectRaw("COUNT(tramites.id_tramite) AS total")
+            ->groupBy(['modalidades.id_modalidad', 'modalidades.nombre'])
+            ->orderBy('modalidades.nombre')
             ->get()
-            ->groupBy('id_modalidad')
-            ->map(function ($tramites, $idModalidad) use ($aprobados, $reprobados) {
-                $primero = $tramites->first();
-
-                return [
-                    'id_modalidad' => $idModalidad,
-                    'nombre' => $primero->modalidad->nombre ?? 'Sin modalidad',
-                    'aprobados' => $tramites->whereIn('estado_actual', $aprobados)->count(),
-                    'reprobados' => $tramites->whereIn('estado_actual', $reprobados)->count(),
-                    'total' => $tramites->count(),
-                ];
-            })
-            ->sortBy('nombre')
-            ->values();
+            ->map(fn (Modalidad $m) => [
+                'id_modalidad' => $m->id_modalidad,
+                'nombre' => $m->nombre,
+                'aprobados' => (int) $m->aprobados,
+                'reprobados' => (int) $m->reprobados,
+                'total' => (int) $m->total,
+            ])
+            ->all();
 
         return [
             'totales' => [
-                'aprobados' => $porModalidad->sum('aprobados'),
-                'reprobados' => $porModalidad->sum('reprobados'),
-                'total' => $porModalidad->sum('total'),
+                'aprobados' => array_sum(array_column($porModalidad, 'aprobados')),
+                'reprobados' => array_sum(array_column($porModalidad, 'reprobados')),
+                'total' => array_sum(array_column($porModalidad, 'total')),
             ],
             'porModalidad' => $porModalidad,
         ];
@@ -177,12 +245,13 @@ class TramiteService
      */
     public function mostrar(int $id, User $actor): array
     {
-        $tramite = Tramite::with(self::RELACIONES)->findOrFail($id);
+        $tramite = Tramite::query()
+            ->select(self::DETALLE_COLUMNAS)
+            ->with(self::DETALLE_CARGAS)
+            ->findOrFail($id);
 
         if ($actor->rol === Roles::ESTUDIANTE) {
-            $esSuyo = $actor->estudiante && $tramite->id_estudiante === $actor->estudiante->id_estudiante;
-
-            if (! $esSuyo) {
+            if (! $tramite->perteneceA($actor)) {
                 throw new AuthorizationException('No autorizado');
             }
         }
@@ -225,7 +294,7 @@ class TramiteService
             $actor->id_usuario
         );
 
-        $tramite->load(self::RELACIONES);
+        $tramite->load(self::DETALLE_CARGAS);
 
         event(new TramiteRevisado($tramite, $accion, $observaciones));
 
@@ -247,7 +316,7 @@ class TramiteService
             $actor->id_usuario
         );
 
-        $tramite->refresh()->load(self::RELACIONES);
+        $tramite->refresh()->load(self::DETALLE_CARGAS);
 
         event(new EstadoTramiteCambiado($tramite, $nuevoEstado, $observaciones));
 
@@ -271,7 +340,7 @@ class TramiteService
         $tramite = Tramite::with('modalidad')->findOrFail($id);
         $tramite->update(['id_tutor' => $tutor->id_usuario]);
 
-        $tramite->load(self::RELACIONES);
+        $tramite->load(self::DETALLE_CARGAS);
 
         event(new TutorAsignado($tramite, $tutor));
 
@@ -279,16 +348,22 @@ class TramiteService
     }
 
     /**
-     * Trámites donde el usuario autenticado figura como tutor (panel docente).
+     * Trámites donde el usuario autenticado figura como tutor (panel docente),
+     * paginado y con proyección estricta.
+     *
+     * @return array{data: array, meta: array<string, int|bool>}
      */
-    public function tutoriasDe(User $user): array
+    public function tutoriasDe(User $user, ?int $perPage = 20): array
     {
-        $tramites = Tramite::with(self::RELACIONES)
-            ->where('id_tutor', $user->id_usuario)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return $tramites->map(fn (Tramite $t) => $this->formatear($t))->all();
+        return $this->paginar(
+            Tramite::query()
+                ->select(self::DETALLE_COLUMNAS)
+                ->with(self::DETALLE_CARGAS)
+                ->where('id_tutor', $user->id_usuario)
+                ->orderByDesc('created_at'),
+            $this->porPagina($perPage),
+            fn (Tramite $t) => $this->formatear($t)
+        );
     }
 
     /**

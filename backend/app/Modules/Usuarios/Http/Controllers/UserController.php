@@ -23,11 +23,11 @@ class UserController extends Controller
     }
 
     /**
-     * GET /api/usuarios (solo admin)
+     * GET /api/usuarios (solo admin) — paginado.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        return response()->json($this->userService->index());
+        return response()->json($this->userService->index($request->integer('per_page') ?: null));
     }
 
     /**

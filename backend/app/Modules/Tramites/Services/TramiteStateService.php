@@ -96,6 +96,19 @@ class TramiteStateService
     private const TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'];
 
     /**
+     * Estados terminales compartidos del sistema.
+     *
+     * Expuestos públicos para que otros servicios (listados, estadísticas)
+     * filtren sin duplicar la lista de estados.
+     *
+     * @return array<int, string>
+     */
+    public static function terminales(): array
+    {
+        return self::TERMINALES;
+    }
+
+    /**
      * Valida y ejecuta una transición de estado sobre un trámite.
      *
      * Dentro de una transacción de BD registra el nuevo estado en el historial

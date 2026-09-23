@@ -51,17 +51,24 @@ class TramiteController extends Controller
     /**
      * GET /api/tramites/pendientes (roles de gestión)
      */
-    public function pendientes(): JsonResponse
+    public function pendientes(Request $request): JsonResponse
     {
-        return response()->json($this->tramiteService->pendientes());
+        // Paginación por defecto con `per_page` acotado y búsqueda opcional `q`.
+        return response()->json($this->tramiteService->pendientes(
+            $request->integer('per_page') ?: null,
+            $request->query('q')
+        ));
     }
 
     /**
      * GET /api/tramites/concluidos (roles de gestión)
      */
-    public function concluidos(): JsonResponse
+    public function concluidos(Request $request): JsonResponse
     {
-        return response()->json($this->tramiteService->concluidos());
+        return response()->json($this->tramiteService->concluidos(
+            $request->integer('per_page') ?: null,
+            $request->query('q')
+        ));
     }
 
     /**
@@ -118,11 +125,13 @@ class TramiteController extends Controller
     }
 
     /**
-     * GET /api/tutorias (solo docente)
+     * GET /api/tutorias (solo docente) — paginado.
      */
     public function tutorias(Request $request): JsonResponse
     {
-        return response()->json($this->tramiteService->tutoriasDe($request->user()));
+        return response()->json(
+            $this->tramiteService->tutoriasDe($request->user(), $request->integer('per_page') ?: null)
+        );
     }
 
     /**

@@ -35,21 +35,34 @@ class NotificacionService
         static::insertar(collect([$idUsuario]), $tipo, $titulo, $mensaje, $enlace);
     }
 
-    /**
-     * Inserta una notificación por cada identificador de usuario.
+/**
+     * Inserta las notificaciones por lotes (bulk insert) en vez de un INSERT
+     * por usuario: reduce drásticamente el número de round-trips a la BD cuando
+     * se notifica a todos los usuarios de un rol.
      *
      * @param  Collection<int, int> $ids
      */
     private static function insertar(Collection $ids, string $tipo, string $titulo, ?string $mensaje, ?string $enlace): void
     {
-        foreach ($ids as $id) {
-            Notificacion::create([
-                'id_usuario' => $id,
-                'tipo' => $tipo,
-                'titulo' => $titulo,
-                'mensaje' => $mensaje,
-                'enlace' => $enlace,
-            ]);
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $ahora = now()->toDateTimeString();
+
+        $filas = $ids->map(fn (int $id) => [
+            'id_usuario' => $id,
+            'tipo' => $tipo,
+            'titulo' => $titulo,
+            'mensaje' => $mensaje,
+            'enlace' => $enlace,
+            'leida' => false,
+            'created_at' => $ahora,
+            'updated_at' => $ahora,
+        ])->all();
+
+        foreach (array_chunk($filas, 500) as $lote) {
+            Notificacion::insert($lote);
         }
     }
 }

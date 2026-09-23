@@ -21,13 +21,13 @@ export const tramitesService = {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
     },
-    /** Lista las solicitudes en proceso (Kardex/Dirección). */
-    pendientes() {
-        return http.get('/tramites/pendientes');
+    /** Lista las solicitudes en proceso (Kardex/Dirección). Respuesta paginada { data, meta }. */
+    pendientes(params = {}) {
+        return http.get('/tramites/pendientes', { params: { page: 1, per_page: 20, ...params } });
     },
-    /** Lista los trámites concluidos (finalizaron su flujo). */
-    concluidos() {
-        return http.get('/tramites/concluidos');
+    /** Lista los trámites concluidos (finalizaron su flujo). Respuesta paginada { data, meta }. */
+    concluidos(params = {}) {
+        return http.get('/tramites/concluidos', { params: { page: 1, per_page: 20, ...params } });
     },
     /** Estadísticas de aprobados/reprobados por modalidad. */
     estadisticas() {
@@ -49,9 +49,9 @@ export const tramitesService = {
     asignarTutor(id, idTutor) {
         return http.post(`/tramites/${id}/asignar-tutor`, { id_tutor: idTutor });
     },
-    /** Lista los trámites donde el docente autenticado es tutor. */
-    tutorias() {
-        return http.get('/tutorias');
+    /** Lista los trámites donde el docente autenticado es tutor. Respuesta paginada. */
+    tutorias(params = {}) {
+        return http.get('/tutorias', { params });
     },
     /** Lista los docentes activos para el selector de tutor. */
     docentes() {

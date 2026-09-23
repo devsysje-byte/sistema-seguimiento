@@ -3,9 +3,9 @@
 namespace App\Modules\Usuarios\Services;
 
 use App\Models\User;
+use App\Support\BasePaginadoService;
 use App\Support\Roles;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -15,22 +15,40 @@ use Illuminate\Support\Facades\Hash;
  * y el listado de docentes. La autorización por rol se resuelve en las rutas
  * vía el middleware `role`, por lo que el servicio asume permiso verificado.
  */
-class UserService
+class UserService extends BasePaginadoService
 {
+    /** Columnas estrictas expuestas del panel de administración (nunca password). */
+    private const LISTA_COLUMNAS = [
+        'id_usuario', 'ci', 'nombres', 'apellidos', 'email', 'telefono',
+        'rol', 'activo', 'created_at', 'updated_at',
+    ];
+
     /**
-     * Lista los usuarios activos con su perfil de estudiante (solo admin).
+     * Lista paginada de usuarios activos con su perfil de estudiante (solo admin).
+     *
+     * @return array{data: array, meta: array<string, int|bool>}
      */
-    public function index(): Collection
+    public function index(?int $perPage = 20): array
     {
-        return User::with('estudiante')->where('activo', true)->get();
+        return $this->paginar(
+            User::query()
+                ->select(self::LISTA_COLUMNAS)
+                ->with('estudiante:id_estudiante,id_usuario,codigo_universitario,plan_estudios,fecha_conclusion_plan,promedio_global,estado')
+                ->where('activo', true)
+                ->orderByDesc('created_at'),
+            $this->porPagina($perPage)
+        );
     }
 
     /**
      * Lista los docentes activos ordenados por nombre (roles de gestión).
+     * Catálogo pequeño: solo columnas usadas por el selector de tutor.
      */
     public function docentes(): Collection
     {
-        return User::where('rol', Roles::DOCENTE)
+        return User::query()
+            ->select(['id_usuario', 'nombres', 'apellidos', 'email'])
+            ->where('rol', Roles::DOCENTE)
             ->where('activo', true)
             ->orderBy('nombres')
             ->get();

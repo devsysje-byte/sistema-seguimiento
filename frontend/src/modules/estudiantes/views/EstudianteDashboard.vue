@@ -88,7 +88,7 @@
             </div>
             <span class="btn-warm px-5 py-2.5">
               <AppIcon name="arrow-left" :size="15" class="rotate-180" />
-              Continuar en el Módulo
+              Continuar con el seguimiento
             </span>
           </div>
         </router-link>
@@ -136,12 +136,12 @@
                 </div>
                 <div>
                   <h2 class="text-lg font-extrabold text-stone-900">Tesis de Grado</h2>
-                  <p class="text-sm text-stone-500">Módulo dedicado: solicitud con 3 documentos, seguimiento del Consejo, plazo de presentación y defensa.</p>
+                  <p class="text-sm text-stone-500">Aqui puedes solcitar la modalidad de graduación de Tesis de Grado y realizar el seguimiento correspondiente.</p>
                 </div>
               </div>
               <span class="btn-warm px-5 py-2.5">
                 <AppIcon name="arrow-left" :size="15" class="rotate-180" />
-                Ingresar al Módulo
+                Solicitar Modalidad
               </span>
             </div>
           </router-link>

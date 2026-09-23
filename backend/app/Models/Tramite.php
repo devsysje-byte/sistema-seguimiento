@@ -64,4 +64,18 @@ class Tramite extends Model
      *         que componen la línea de tiempo del trámite.
      */
     public function estados() { return $this->hasMany(EstadoTramite::class, 'id_tramite', 'id_tramite'); }
+
+    /**
+     * Indica si un usuario es el estudiante propietario de este trámite.
+     *
+     * Centraliza la comprobación de propiedad que los servicios de Tramites y
+     * Tesis repiten al autorizar al estudiante.
+     *
+     * @return bool true si el usuario tiene un perfil de estudiante y coincide
+     *              con el solicitante del trámite.
+     */
+    public function perteneceA(User $user): bool
+    {
+        return $user->estudiante && $this->id_estudiante === $user->estudiante->id_estudiante;
+    }
 }

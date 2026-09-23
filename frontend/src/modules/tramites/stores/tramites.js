@@ -18,6 +18,10 @@ export const useTramitesStore = defineStore('tramites', {
         modalidades: [],                                                        // Modalidades activas disponibles.
         tramitesPendientes: [],                                                 // Solicitudes en proceso (Kardex/Dirección).
         tramitesConcluidos: [],                                                  // Trámites que finalizaron su flujo.
+        metaPendientes: null,                                                   // Meta { per_page, has_more } de la última página de pendientes.
+        metaConcluidos: null,                                                   // Meta de la última página de concluidos.
+        paginaPendientes: 1,                                                    // Página actual de pendientes.
+        paginaConcluidos: 1,                                                    // Página actual de concluidos.
         estadisticas: { totales: { aprobados: 0, reprobados: 0, total: 0 }, porModalidad: [] },
         tramiteActivo: null,                                                    // Trámite más reciente del estudiante.
         tutorias: [],                                                           // Trámites donde el docente es tutor.
@@ -81,28 +85,50 @@ export const useTramitesStore = defineStore('tramites', {
             return response;
         },
         /**
-         * Carga las solicitudes pendientes desde GET /api/tramites/pendientes.
+         * Carga las solicitudes pendientes desde GET /api/tramites/pendientes (primera página).
          *
          * @param {boolean} [force=false] Si es true ignora la caché.
          * @returns {Promise<void>}
          */
         async cargarPendientes(force = false) {
             if (!force && this._fresco('pendientes', 30000)) return this.tramitesPendientes;
-            const { data } = await tramitesService.pendientes();
-            this.tramitesPendientes = data;
-            this._ts.pendientes = Date.now();
+            await this.irPagina('pendientes', 1);
+            return this.tramitesPendientes;
         },
         /**
-         * Carga los trámites concluidos desde GET /api/tramites/concluidos.
+         * Carga los trámites concluidos desde GET /api/tramites/concluidos (primera página).
          *
          * @param {boolean} [force=false] Si es true ignora la caché.
          * @returns {Promise<void>}
          */
         async cargarConcluidos(force = false) {
             if (!force && this._fresco('concluidos', 30000)) return this.tramitesConcluidos;
-            const { data } = await tramitesService.concluidos();
-            this.tramitesConcluidos = data;
-            this._ts.concluidos = Date.now();
+            await this.irPagina('concluidos', 1);
+            return this.tramitesConcluidos;
+        },
+        /**
+         * Solicita una página concreta de pendientes o concluidos (paginación lazy).
+         *
+         * @param {'pendientes'|'concluidos'} pestana Lista a paginar.
+         * @param {number} pagina Número de página a cargar.
+         * @returns {Promise<void>}
+         */
+        async irPagina(pestana, pagina) {
+            const esConcluidos = pestana === 'concluidos';
+            const params = { page: pagina, per_page: 20 };
+            const { data } = esConcluidos
+                ? await tramitesService.concluidos(params)
+                : await tramitesService.pendientes(params);
+            if (esConcluidos) {
+                this.tramitesConcluidos = data.data;
+                this.metaConcluidos = data.meta;
+                this.paginaConcluidos = pagina;
+            } else {
+                this.tramitesPendientes = data.data;
+                this.metaPendientes = data.meta;
+                this.paginaPendientes = pagina;
+            }
+            this._ts[pestana] = Date.now();
         },
         /**
          * Carga las estadísticas de aprobados/reprobados por modalidad desde
@@ -146,7 +172,7 @@ export const useTramitesStore = defineStore('tramites', {
             if (!force && this._fresco('tutorias', 30000)) return this.tutorias;
             try {
                 const { data } = await tramitesService.tutorias();
-                this.tutorias = data;
+                this.tutorias = data.data;
             } catch (error) {
                 this.tutorias = [];
             }

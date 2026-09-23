@@ -2,7 +2,6 @@
 
 namespace App\Modules\Tesis\Services;
 
-use App\Models\DocumentoAdjunto;
 use App\Models\Modalidad;
 use App\Models\Tramite;
 use App\Models\User;
@@ -10,6 +9,7 @@ use App\Modules\Tesis\Events\FechaDefensaSolicitada;
 use App\Modules\Tramites\Events\EstadoTramiteCambiado;
 use App\Modules\Tramites\Services\TramiteService;
 use App\Modules\Tramites\Services\TramiteStateService;
+use App\Support\DocumentoAdjuntoService;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
@@ -43,6 +43,7 @@ class TesisService
     public function __construct(
         private readonly TramiteService $tramiteService,
         private readonly TramiteStateService $stateService,
+        private readonly DocumentoAdjuntoService $documentos,
     ) {
     }
 
@@ -73,9 +74,7 @@ class TesisService
     {
         $tramite = Tramite::with('modalidad')->findOrFail($id);
 
-        $esSuyo = $user->estudiante && $tramite->id_estudiante === $user->estudiante->id_estudiante;
-
-        if (! $esSuyo) {
+        if (! $tramite->perteneceA($user)) {
             throw new AuthorizationException('No autorizado');
         }
 
@@ -214,9 +213,7 @@ class TesisService
     {
         $tramite = Tramite::with('modalidad')->findOrFail($id);
 
-        $esSuyo = $user->estudiante && $tramite->id_estudiante === $user->estudiante->id_estudiante;
-
-        if (! $esSuyo) {
+        if (! $tramite->perteneceA($user)) {
             throw new AuthorizationException('No autorizado');
         }
 
@@ -232,16 +229,12 @@ class TesisService
 
         DB::transaction(function () use ($tramite, $user, $perfil, $observaciones, $nuevoEstado) {
             if ($perfil) {
-                $ruta = $perfil->store('documentos_tramites', 'public');
-
-                DocumentoAdjunto::create([
-                    'id_tramite' => $tramite->id_tramite,
-                    'id_usuario_subio' => $user->id_usuario,
-                    'tipo_documento' => self::DOC_PERFIL,
-                    'nombre_archivo' => $perfil->getClientOriginalName(),
-                    'ruta_archivo' => $ruta,
-                    'tamanio_kb' => round($perfil->getSize() / 1024, 2),
-                ]);
+                $this->documentos->guardar(
+                    $tramite->id_tramite,
+                    $user->id_usuario,
+                    $perfil,
+                    self::DOC_PERFIL,
+                );
             }
 
             $this->stateService->transicionar(
@@ -286,9 +279,7 @@ class TesisService
     {
         $tramite = Tramite::with('modalidad')->findOrFail($id);
 
-        $esSuyo = $user->estudiante && $tramite->id_estudiante === $user->estudiante->id_estudiante;
-
-        if (! $esSuyo) {
+        if (! $tramite->perteneceA($user)) {
             throw new AuthorizationException('No autorizado');
         }
 
@@ -304,16 +295,12 @@ class TesisService
 
         DB::transaction(function () use ($tramite, $user, $documento, $observaciones, $nuevoEstado) {
             if ($documento) {
-                $ruta = $documento->store('documentos_tramites', 'public');
-
-                DocumentoAdjunto::create([
-                    'id_tramite' => $tramite->id_tramite,
-                    'id_usuario_subio' => $user->id_usuario,
-                    'tipo_documento' => self::DOC_FINAL,
-                    'nombre_archivo' => $documento->getClientOriginalName(),
-                    'ruta_archivo' => $ruta,
-                    'tamanio_kb' => round($documento->getSize() / 1024, 2),
-                ]);
+                $this->documentos->guardar(
+                    $tramite->id_tramite,
+                    $user->id_usuario,
+                    $documento,
+                    self::DOC_FINAL,
+                );
             }
 
             $this->stateService->transicionar(

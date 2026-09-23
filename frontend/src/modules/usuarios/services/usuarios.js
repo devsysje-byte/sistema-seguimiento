@@ -6,9 +6,9 @@ import http from '@/core/http/client';
  * baja lógica, además del listado de docentes activos para asignación de tutor.
  */
 export const usuariosService = {
-    /** Lista todos los usuarios activos de la plataforma. */
-    index() {
-        return http.get('/usuarios');
+    /** Lista los usuarios activos de la plataforma (respuesta paginada { data, meta }). */
+    index(params = {}) {
+        return http.get('/usuarios', { params: { page: 1, per_page: 20, ...params } });
     },
     /** Crea un usuario (y su perfil de estudiante si el rol lo requiere). */
     crear(datos) {

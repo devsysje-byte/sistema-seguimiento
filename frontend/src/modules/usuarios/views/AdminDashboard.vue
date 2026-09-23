@@ -306,7 +306,7 @@ const fetchUsers = async () => {
   cargando.value = true;
   try {
     const { data } = await usuariosService.index();
-    users.value = data;
+    users.value = data.data;
   } catch (error) {
     console.error('Error al cargar la matriz de usuarios:', error);
     if (error.response?.status === 401) {
