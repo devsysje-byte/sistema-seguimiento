@@ -69,20 +69,28 @@
 
           <!-- Asignación de tutor integrada en el flujo (solo gestión): la
                secretaria presiona el paso "tutor_asignado" y en ese momento se
-               despliega el selector para asignar al tutor. El cambio del tutor
-               ya asignado se hace desde el panel "Tutor Asignado" (arriba). -->
+               despliega el selector para asignar al tutor. Si el trámite YA está
+               en "tutor_asignado" y aún no hay tutor, el selector se muestra
+               directamente (open) porque es requisito para pasar a
+               "Investigación en Desarrollo". El cambio del tutor ya asignado se
+               hace desde el panel "Tutor Asignado" (arriba). -->
           <div
             v-if="paso.id === 'tutor_asignado' && asignarTutorEnFlujo && enProceso"
             class="mt-3 pt-3 border-t border-slate-200"
           >
-            <p v-if="tramite.tutor" class="flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+            <p v-if="asignacionForzada" class="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-700">
+              <AppIcon name="user-plus" :size="16" class="shrink-0" />
+              Asigna el tutor en este paso para poder avanzar a “Investigación en Desarrollo”.
+            </p>
+
+            <p v-else-if="tramite.tutor" class="flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
               <AppIcon name="user-check" :size="15" />
               {{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}
               <span class="ml-auto text-xs font-medium text-slate-400 normal-case">Cambiar desde el panel “Tutor Asignado”</span>
             </p>
 
             <button
-              v-else
+              v-if="!tramite.tutor && !asignacionForzada"
               class="w-full flex items-center justify-between gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-stone-600 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 transition"
               @click="asignacionAbierta = !asignacionAbierta"
             >
@@ -98,7 +106,7 @@
               />
             </button>
 
-            <div v-if="asignacionAbierta && !tramite.tutor" class="mt-2 flex flex-col sm:flex-row gap-2">
+            <div v-if="!tramite.tutor && (asignacionForzada || asignacionAbierta)" class="mt-2 flex flex-col sm:flex-row gap-2">
               <select v-model="tutorSeleccionado" class="input flex-1 min-w-0 text-sm" :disabled="asignandoTutor">
                 <option value="" disabled>Seleccione un docente tutor...</option>
                 <option v-for="doc in docentes" :key="doc.id_usuario" :value="doc.id_usuario">
@@ -157,6 +165,15 @@ const tutorSeleccionado = ref('');
 
 // true cuando el panel de asignación del paso "tutor_asignado" está desplegado.
 const asignacionAbierta = ref(false);
+
+// true cuando el trámite se encuentra EN "tutor_asignado" y aún no tiene tutor:
+// el selector se muestra abierto de inmediato porque es requisito para avanzar
+// a "Investigación en Desarrollo".
+const asignacionForzada = computed(() =>
+  props.asignarTutorEnFlujo
+  && estadoActual.value === 'tutor_asignado'
+  && !props.tramite?.tutor
+);
 
 // Datos derivados del trámite.
 const secuencia = computed(() => props.tramite.secuencia || []);        // Orden de estados posible.

@@ -245,7 +245,11 @@
               </option>
             </select>
             <input v-model="observaciones" class="input" placeholder="Observaciones (opcional)">
-            <button class="btn-primary w-full" :disabled="ejecutando || !nuevoEstado" @click="ejecutarTransicion">
+            <p v-if="bloqueadoInvestSinTutor" class="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 rounded-xl px-3 py-2.5">
+              <AppIcon name="user-plus" :size="15" class="shrink-0" />
+              Asigne el tutor desde el paso “Tutor Asignado” de la línea de tiempo antes de pasar a Investigación en Desarrollo.
+            </p>
+            <button class="btn-primary w-full" :disabled="ejecutando || !nuevoEstado || bloqueadoInvestSinTutor" @click="ejecutarTransicion">
               <AppIcon v-if="ejecutando" name="loader" :size="15" class="animate-spin" />
               <AppIcon v-else name="send" :size="15" />
               {{ ejecutando ? 'Ejecutando...' : 'Ejecutar Transición' }}
@@ -313,6 +317,12 @@ const esGestion = computed(() => perteneceRol(authStore.user?.rol, ROLES_GESTION
 
 // true si la modalidad del trámite es Tesis de Grado (validación con 3 documentos).
 const esTesis = computed(() => tramite.value?.modalidad?.nombre === 'Tesis de Grado');
+
+// true cuando se intenta avanzar a "Invest. en Desarrollo" sin tutor asignado:
+// el botón se deshabilita y se indica que el tutor se asigna en la línea de tiempo.
+const bloqueadoInvestSinTutor = computed(() =>
+  nuevoEstado.value === 'investigacion_en_desarrollo' && !tramite.value?.tutor
+);
 
 /** Carga el detalle del trámite desde GET /api/tramites/{id}. */
 const cargarTramite = async () => {

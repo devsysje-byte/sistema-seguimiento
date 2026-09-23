@@ -309,6 +309,14 @@ class TramiteService extends BasePaginadoService
     {
         $tramite = Tramite::with('modalidad')->findOrFail($id);
 
+        // La investigación en desarrollo solo comienza con tutor asignado:
+        // Kardex/Secretaría debe asignarlo en el paso "Tutor Asignado" antes de avanzar.
+        if ($nuevoEstado === 'investigacion_en_desarrollo' && $tramite->id_tutor === null) {
+            throw ValidationException::withMessages([
+                'id_tutor' => 'Debe asignar un tutor antes de pasar a Investigación en Desarrollo.',
+            ]);
+        }
+
         $this->stateService->transicionar(
             $tramite,
             $nuevoEstado,
