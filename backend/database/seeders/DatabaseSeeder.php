@@ -21,7 +21,6 @@ class DatabaseSeeder extends Seeder
             ['ci' => '2345678', 'nombres' => 'Kardex', 'apellidos' => 'Encargado', 'email' => 'kardex@example.com', 'telefono' => '59170000002', 'rol' => 'kardex'],
             ['ci' => '3456789', 'nombres' => 'Secretaria', 'apellidos' => 'Académica', 'email' => 'secretaria@example.com', 'telefono' => '59170000003', 'rol' => 'secretaria'],
             ['ci' => '4567890', 'nombres' => 'Dirección', 'apellidos' => 'Carrera', 'email' => 'direccion@example.com', 'telefono' => '59170000004', 'rol' => 'direccion'],
-            ['ci' => '5678901', 'nombres' => 'Concejo', 'apellidos' => 'Facultativo', 'email' => 'concejo@example.com', 'telefono' => '59170000005', 'rol' => 'concejo'],
             ['ci' => '6789012', 'nombres' => 'Docente', 'apellidos' => 'Tutor', 'email' => 'docente@example.com', 'telefono' => '59170000006', 'rol' => 'docente'],
             ['ci' => '7890123', 'nombres' => 'Estudiante', 'apellidos' => 'Prueba', 'email' => 'estudiante@example.com', 'telefono' => '59170000007', 'rol' => 'estudiante'],
             ['ci' => '8901234', 'nombres' => 'Estudiante', 'apellidos' => 'Dos', 'email' => 'estudiante2@example.com', 'telefono' => '59170000008', 'rol' => 'estudiante'],

@@ -1,5 +1,5 @@
 <template>
-  <AppShell title="Módulo de Tesis de Grado" subtitle="Flujo oficial del estudiante: solicitud, seguimiento y defensa">
+  <AppShell title="Solicitud de Tesis de Grado" subtitle="Flujo oficial del estudiante: solicitud, seguimiento y defensa">
     <div v-if="cargando" class="card flex items-center justify-center gap-2 py-16 text-stone-400">
       <AppIcon name="loader" :size="20" class="animate-spin" />
       Cargando tu tesis de grado...

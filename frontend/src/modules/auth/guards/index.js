@@ -16,7 +16,6 @@ export const HOME_BY_ROL = {
   kardex: '/kardex',
   secretaria: '/kardex',
   direccion: '/kardex',
-  concejo: '/kardex',
   docente: '/docente',
 };
 

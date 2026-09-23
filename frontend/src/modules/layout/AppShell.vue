@@ -107,7 +107,7 @@ const navItems = computed(() => {
   const rol = authStore.user?.rol;
   const items = [];
   if (rol === 'admin') items.push({ to: '/admin', label: 'Usuarios', icon: 'users' });
-  if (['kardex', 'secretaria', 'direccion', 'concejo', 'admin'].includes(rol)) {
+  if (['kardex', 'secretaria', 'direccion', 'admin'].includes(rol)) {
     items.push({ to: '/kardex', label: 'Trámites en Proceso', icon: 'folder' });
     items.push({ to: '/kardex/concluidos', label: 'Trámites Concluidos', icon: 'folder' });
   }

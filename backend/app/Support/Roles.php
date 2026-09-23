@@ -16,7 +16,6 @@ final class Roles
     public const KARDEX = 'kardex';
     public const SECRETARIA = 'secretaria';
     public const DIRECCION = 'direccion';
-    public const CONCEJO = 'concejo';
 
     /** Todos los roles del sistema. */
     public const TODOS = [
@@ -26,23 +25,13 @@ final class Roles
         self::KARDEX,
         self::SECRETARIA,
         self::DIRECCION,
-        self::CONCEJO,
     ];
 
-    /** Roles que gestionan trámites (revisión, asignación, paneles). */
+    /** Roles que gestionan trámites (revisión, asignación, paneles y avances). */
     public const GESTION = [
         self::ADMIN,
         self::KARDEX,
         self::SECRETARIA,
         self::DIRECCION,
-    ];
-
-    /** Roles de gestión más el concejo (puede transicionar estados). */
-    public const GESTION_CONCEJO = [
-        self::ADMIN,
-        self::KARDEX,
-        self::SECRETARIA,
-        self::DIRECCION,
-        self::CONCEJO,
     ];
 }

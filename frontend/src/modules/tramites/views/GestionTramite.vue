@@ -147,7 +147,7 @@
         </div>
       </div>
 
-      <div v-if="esGestion || esConcejoGestion" class="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div v-if="esGestion" class="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- Programación de la fecha de defensa de TESIS: llega la solicitud del estudiante -->
         <div v-if="esGestion && tramite.estado_actual === 'solicitud_fecha_defensa' && esTesis" class="card p-6">
           <h3 class="font-bold text-stone-800 mb-2 inline-flex items-center gap-2">
@@ -268,15 +268,14 @@
 // Muestra los datos del postulante, modalidad, tutor, documentos y la línea de
 // tiempo. La gestión académica (Kardex, Secretaría, Dirección, Admin) valida la
 // documentación inicial (con sección dedicada para Tesis), asigna tutor y
-// ejecuta transiciones; el Concejo solo avanza estados; el docente ve en modo
-// lectura la tutoría.
+// ejecuta transiciones; el docente ve en modo lectura la tutoría.
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { tramitesService } from '../services/tramites';
 import { useAuthStore } from '@/modules/auth';
 import { useTramitesStore } from '../stores/tramites';
 import { useToastStore } from '@/core/stores/toast';
-import { rolLabel, ROLES_GESTION, ROLES_GESTION_CONCEJO, perteneceRol } from '@/core/roles';
+import { rolLabel, ROLES_GESTION, perteneceRol } from '@/core/roles';
 import { formatoEstado, etiquetaDocumento } from '../utils/estados';
 import { assetUrl } from '@/core/http/storage';
 import { AppShell } from '@/modules/layout';
@@ -307,11 +306,10 @@ const programandoFecha = ref(false);    // true mientras se programa la fecha.
 // Fecha mínima seleccionable (hoy).
 const hoyISO = new Date().toISOString().slice(0, 10);
 
-// Grupos de rol del usuario: gestión valida la documentación inicial; gestión +
-// concejo solo avanza por la máquina de estados; el docente ve solo lectura.
+// Grupos de rol del usuario: gestión valida la documentación inicial, avanza
+// por la máquina de estados y asigna tutor; el docente ve solo lectura.
 const esDocente = computed(() => authStore.user?.rol === 'docente');
 const esGestion = computed(() => perteneceRol(authStore.user?.rol, ROLES_GESTION));
-const esConcejoGestion = computed(() => perteneceRol(authStore.user?.rol, ROLES_GESTION_CONCEJO));
 
 // true si la modalidad del trámite es Tesis de Grado (validación con 3 documentos).
 const esTesis = computed(() => tramite.value?.modalidad?.nombre === 'Tesis de Grado');

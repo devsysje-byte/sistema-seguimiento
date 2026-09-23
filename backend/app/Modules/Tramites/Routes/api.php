@@ -22,8 +22,8 @@ Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION)])->gro
     Route::post('/tramites/{id}/asignar-tutor', [TramiteController::class, 'asignarTutor']);
 });
 
-// Transición de estados: también lo pueden ejecutar los roles de gestión + concejo.
-Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION_CONCEJO)])->group(function () {
+// Transición de estados: la realiza la gestión del trámite (secretaría/kardex).
+Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION)])->group(function () {
     Route::post('/tramites/{id}/transicionar', [TramiteController::class, 'transicionar']);
 });
 

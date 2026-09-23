@@ -11,7 +11,7 @@ use Laravel\Sanctum\HasApiTokens;
  *
  * Representa a un usuario del sistema. Utiliza la clave primaria `id_usuario`
  * (personalizada) y soporta autenticación por tokens de Sanctum. Campo `rol`
- * disponible: admin, estudiante, docente, kardex, secretaria, direccion y concejo.
+ * disponible: admin, estudiante, docente, kardex, secretaria y direccion.
  */
 class User extends Authenticatable
 {

@@ -14,20 +14,17 @@ export const ROLE_LABELS = {
   kardex: 'Kardex',
   secretaria: 'Secretaría',
   direccion: 'Dirección',
-  concejo: 'Concejo',
 };
 
-// Roles de gestión académica: validan la documentación inicial de un trámite.
+// Roles de gestión académica: validan la documentación inicial, asignan tutor
+// y avanzan los trámites por el flujo de estados.
 export const ROLES_GESTION = ['admin', 'kardex', 'secretaria', 'direccion'];
-
-// Roles de gestión + concejo: avanzan trámites por el flujo de estados.
-export const ROLES_GESTION_CONCEJO = [...ROLES_GESTION, 'concejo'];
 
 /**
  * Comprueba si un rol pertenece a un grupo de roles del sistema.
  *
  * @param {string} rol Rol interno del usuario.
- * @param {string[]} lista Grupos como `ROLES_GESTION` o `ROLES_GESTION_CONCEJO`.
+ * @param {string[]} lista Grupos como `ROLES_GESTION`.
  * @returns {boolean} true si el rol está incluido en la lista.
  */
 export function perteneceRol(rol, lista) {
@@ -42,7 +39,6 @@ export const ROLE_TONES = {
   kardex: 'bg-violet-50 text-violet-700 border-violet-200',
   secretaria: 'bg-amber-50 text-amber-700 border-amber-200',
   direccion: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  concejo: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
 };
 
 /**

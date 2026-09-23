@@ -90,7 +90,7 @@ class TramiteController extends Controller
     }
 
     /**
-     * POST /api/tramites/{id}/transicionar (roles de gestión + concejo)
+     * POST /api/tramites/{id}/transicionar (roles de gestión: secretaría/kardex)
      */
     public function transicionar(TransicionarTramiteRequest $request, int $id): JsonResponse
     {
