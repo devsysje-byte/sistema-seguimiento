@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+  <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
     <div
       class="h-2 rounded-full transition-all duration-500"
       :class="barClass"
@@ -16,6 +16,6 @@ import { computed } from 'vue';
 
 const props = defineProps({
   value: { type: Number, default: 0 },                    // Porcentaje (0-100).
-  barClass: { type: String, default: 'bg-gradient-to-r from-indigo-500 to-violet-500' },
+  barClass: { type: String, default: 'bg-orange' },
 });
 </script>

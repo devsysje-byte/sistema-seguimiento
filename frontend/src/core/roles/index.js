@@ -33,12 +33,12 @@ export function perteneceRol(rol, lista) {
 
 // Colores (clases Tailwind) para la insignia de cada rol.
 export const ROLE_TONES = {
-  admin: 'bg-rose-50 text-rose-700 border-rose-200',
-  estudiante: 'bg-sky-50 text-sky-700 border-sky-200',
-  docente: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  kardex: 'bg-violet-50 text-violet-700 border-violet-200',
-  secretaria: 'bg-amber-50 text-amber-700 border-amber-200',
-  direccion: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  admin: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+  estudiante: 'bg-white/5 text-slate-300 border-white/20',
+  docente: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  kardex: 'bg-red-500/20 text-red-300 border-red-500/30',
+  secretaria: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  direccion: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
 };
 
 /**
@@ -58,5 +58,5 @@ export function rolLabel(rol) {
  * @returns {string} Clases Tailwind para la insignia, con un gris por defecto.
  */
 export function toneRol(rol) {
-  return ROLE_TONES[rol] || 'bg-slate-100 text-slate-700 border-slate-200';
+  return ROLE_TONES[rol] || 'bg-white/5 text-slate-400 border-white/20';
 }

@@ -1,35 +1,37 @@
 <template>
-  <div class="h-screen w-full overflow-hidden bg-slate-50">
-    <div class="flex h-full">
+  <div class="h-screen w-full overflow-hidden relative bg-gradient-to-br from-primary via-primary to-primary">
+    <div class="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-orange-600 rounded-full blur-[120px] opacity-30 pointer-events-none"></div>
+    <div class="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-red-600 rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
+    <div class="flex h-full relative z-10">
       <div
         v-if="open"
-        class="fixed inset-0 z-40 bg-stone-900/60 lg:hidden"
+        class="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden"
         @click="open = false"
       ></div>
 
       <aside
-        class="fixed inset-y-0 left-0 z-50 w-72 bg-stone-900 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static lg:h-full"
+        class="fixed inset-y-0 left-0 z-50 w-72 bg-primary/90 backdrop-blur-xl border-r border-white/10 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static lg:h-full"
         :class="open ? 'translate-x-0' : '-translate-x-full'"
       >
-        <div class="flex items-center gap-3 px-6 py-5 border-b border-stone-800">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg">
+        <div class="flex items-center gap-3 px-6 py-5 border-b border-white/10">
+          <div class="w-10 h-10 rounded-xl bg-orange flex items-center justify-center text-white shadow-lg">
             <AppIcon name="graduation" :size="22" />
           </div>
           <div>
             <p class="text-white font-bold leading-tight">Titulación UPEA</p>
-            <p class="text-xs text-stone-400">Seguimiento de Modalidades</p>
+            <p class="text-xs text-slate-400">Seguimiento de Modalidades</p>
           </div>
         </div>
 
         <nav class="flex-1 px-3 py-5 space-y-1">
-          <p class="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-stone-500">Menú</p>
+          <p class="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">Menú</p>
           <router-link
             v-for="item in navItems"
             :key="item.to"
             :to="item.to"
             @click="open = false"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition"
-            :class="isActive(item.to) ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg' : 'text-stone-300 hover:bg-stone-800 hover:text-white'"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+            :class="isActive(item.to) ? 'bg-orange text-white shadow-lg shadow-orange-900/40' : 'text-slate-300 hover:bg-white/5 hover:text-white'"
           >
             <AppIcon :name="item.icon" :size="19" />
             {{ item.label }}
@@ -38,25 +40,25 @@
       </aside>
 
       <div class="flex-1 flex flex-col min-w-0 h-full">
-        <header class="shrink-0 z-30 bg-white/80 backdrop-blur-md border-b border-stone-200">
+        <header class="shrink-0 z-30 bg-primary/70 backdrop-blur-xl border-b border-white/10">
           <div class="flex items-center gap-3 px-4 sm:px-6 lg:px-8 py-4">
-            <button class="p-2 rounded-lg text-stone-500 hover:bg-stone-100 lg:hidden" @click="open = true">
+            <button class="p-2 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-all duration-200 lg:hidden" @click="open = true">
               <AppIcon name="menu" :size="22" />
             </button>
             <div class="min-w-0">
-              <h1 class="text-lg sm:text-xl font-bold text-stone-900 truncate">{{ title }}</h1>
-              <p v-if="subtitle" class="text-xs sm:text-sm text-stone-500 truncate">{{ subtitle }}</p>
+              <h1 class="text-lg sm:text-xl font-bold text-white truncate">{{ title }}</h1>
+              <p v-if="subtitle" class="text-xs sm:text-sm text-slate-400 truncate">{{ subtitle }}</p>
             </div>
             <div class="ml-auto flex items-center gap-3">
               <NotificationBell />
-              <div class="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white ring-1 ring-stone-200">
+              <div class="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
                 <Avatar :nombres="authStore.user?.nombres" :apellidos="authStore.user?.apellidos" size="8" />
-                <span class="text-sm font-semibold text-stone-700">
+                <span class="text-sm font-semibold text-slate-300">
                   {{ authStore.user?.nombres }} {{ authStore.user?.apellidos }}
                 </span>
               </div>
               <button
-                class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white ring-1 ring-stone-200 text-stone-500 hover:bg-rose-50 hover:text-rose-600 hover:ring-rose-200 transition"
+                class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-red-600/80 hover:text-white hover:border-red-500/40 transition-all duration-200"
                 title="Cerrar Sesión"
                 @click="logout"
               >

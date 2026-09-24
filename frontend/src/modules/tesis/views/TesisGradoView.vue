@@ -1,19 +1,19 @@
 <template>
   <AppShell title="Solicitud de Tesis de Grado" subtitle="Flujo oficial del estudiante: solicitud, seguimiento y defensa">
-    <div v-if="cargando" class="card flex items-center justify-center gap-2 py-16 text-stone-400">
+    <div v-if="cargando" class="card flex items-center justify-center gap-2 py-16 text-slate-400">
       <AppIcon name="loader" :size="20" class="animate-spin" />
       Cargando tu tesis de grado...
     </div>
 
     <div v-else-if="!estudianteStore.perfilEstudiante?.id_estudiante"
          class="card overflow-hidden">
-      <div class="h-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500"></div>
+      <div class="h-2 bg-orange"></div>
       <div class="p-8 flex flex-col items-center text-center gap-3">
-        <div class="w-12 h-12 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
+        <div class="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300">
           <AppIcon name="user" :size="24" />
         </div>
-        <h2 class="text-lg font-extrabold text-stone-900">Necesitas completar tu perfil académico</h2>
-        <p class="text-sm text-stone-500 max-w-md">
+        <h2 class="text-lg font-extrabold text-white">Necesitas completar tu perfil académico</h2>
+        <p class="text-sm text-slate-400 max-w-md">
           El módulo de Tesis de Grado requiere tu información académica registrada
           para iniciar la solicitud.
         </p>
@@ -33,16 +33,16 @@
         <TesisHistorial v-if="ultimaTesisTerminada" :tramite="ultimaTesisTerminada" />
 
         <!-- Tesis aprobada: panel terminal, ya no puede iniciar más trámites -->
-        <div v-if="tesisAprobada" class="rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 p-6 sm:p-8 text-center">
-          <div class="mx-auto w-16 h-16 rounded-2xl bg-emerald-100 ring-1 ring-emerald-200 flex items-center justify-center text-emerald-600 mb-4">
+        <div v-if="tesisAprobada" class="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-6 sm:p-8 text-center">
+          <div class="mx-auto w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300 mb-4">
             <AppIcon name="award" :size="34" />
           </div>
-          <h2 class="text-2xl font-extrabold text-emerald-700">¡FELICIDADES! APROBADO</h2>
-          <p class="mt-2 text-sm font-medium text-emerald-800 max-w-md mx-auto">
+          <h2 class="text-2xl font-extrabold text-emerald-300">¡FELICIDADES! APROBADO</h2>
+          <p class="mt-2 text-sm font-medium text-emerald-400 max-w-md mx-auto">
             Tu tesis de grado fue aprobada. Has culminado tu modalidad de titulación y
             ya no puedes realizar más solicitudes de trámite.
           </p>
-          <p v-if="ultimaTesisTerminada" class="mt-1 text-xs text-emerald-600">
+          <p v-if="ultimaTesisTerminada" class="mt-1 text-xs text-emerald-500">
             Sustentación
             <template v-if="ultimaTesisTerminada.hitos?.fecha_defensa">
               aprobada el {{ formatoFechaLarga(ultimaTesisTerminada.hitos.fecha_defensa) }}.
@@ -55,7 +55,7 @@
 
         <template v-else>
           <!-- Tesis reprobada: informa cuándo podrá re-optar por una modalidad -->
-          <div v-if="tesisReprobada" class="rounded-xl bg-rose-50 ring-1 ring-rose-200 p-4 flex items-start gap-3 text-rose-800">
+          <div v-if="tesisReprobada" class="rounded-xl bg-red-900/50 border border-red-500/30 p-4 flex items-start gap-3 text-red-400">
             <AppIcon name="x-circle" :size="20" class="mt-0.5 shrink-0" />
             <p class="text-sm font-medium">
               Tu tesis de grado finalizó en estado
@@ -71,7 +71,7 @@
             </p>
           </div>
 
-          <div v-else-if="ultimaTesisTerminada" class="rounded-xl bg-orange-50 ring-1 ring-orange-200 p-4 flex items-start gap-3 text-orange-800">
+          <div v-else-if="ultimaTesisTerminada" class="rounded-xl bg-orange-500/10 border border-orange-500/30 p-4 flex items-start gap-3 text-orange-200">
             <AppIcon name="check-circle" :size="20" class="mt-0.5 shrink-0" />
             <p class="text-sm font-medium">
               Tu último trámite de tesis finalizó con estado
@@ -82,16 +82,16 @@
 
           <!-- Solicitud de nueva tesis (3 documentos obligatorios) -->
           <div v-if="puedeIniciarNueva" class="card overflow-hidden">
-            <div class="h-2 bg-gradient-to-r from-amber-500 to-orange-600"></div>
+            <div class="h-2 bg-orange"></div>
             <div class="p-6 sm:p-8">
               <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
-                  <div class="w-14 h-14 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
+                  <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300">
                     <AppIcon name="graduation" :size="28" />
                   </div>
                   <div>
-                    <h2 class="text-lg font-extrabold text-stone-900">Solicitud de Tesis de Grado</h2>
-                    <p class="text-sm text-stone-500">Presenta tu solicitud con los 3 documentos obligatorios en PDF.</p>
+                    <h2 class="text-lg font-extrabold text-white">Solicitud de Tesis de Grado</h2>
+                    <p class="text-sm text-slate-400">Presenta tu solicitud con los 3 documentos obligatorios en PDF.</p>
                   </div>
                 </div>
               </div>
@@ -99,18 +99,18 @@
               <!-- Resumen de fases del flujo -->
               <div class="mt-6 grid sm:grid-cols-5 gap-2">
                 <div v-for="fase in FASES_TESIS" :key="fase.id"
-                     class="rounded-xl px-3 py-3 ring-1 ring-stone-200 bg-stone-50 text-center">
-                  <AppIcon :name="fase.icon" :size="18" class="mx-auto text-amber-600 mb-1" />
-                  <p class="text-[11px] font-bold text-stone-700 uppercase tracking-wide">{{ fase.label }}</p>
+                     class="rounded-xl px-3 py-3 ring-1 ring-white/10 bg-white/5 text-center">
+                  <AppIcon :name="fase.icon" :size="18" class="mx-auto text-orange-300 mb-1" />
+                  <p class="text-[11px] font-bold text-white uppercase tracking-wide">{{ fase.label }}</p>
                 </div>
               </div>
 
               <form @submit.prevent="enviarSolicitud" class="mt-7 grid sm:grid-cols-2 gap-5">
                 <div v-for="(ruta, tipo) in tesisStore.config.tipos_documento" :key="tipo">
                   <label class="label">{{ ruta }} (PDF) · obligatorio</label>
-                  <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivos[tipo] ? 'border-amber-300 bg-amber-50' : 'border-stone-300 bg-stone-50 hover:border-amber-400']">
-                    <span class="flex items-center gap-2 text-sm min-w-0" :class="archivos[tipo] ? 'text-amber-700' : 'text-stone-500'">
-                      <AppIcon v-if="archivos[tipo]" name="check-circle" :size="18" class="text-emerald-500 shrink-0" />
+                  <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivos[tipo] ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40']">
+                    <span class="flex items-center gap-2 text-sm min-w-0" :class="archivos[tipo] ? 'text-orange-200' : 'text-slate-400'">
+                      <AppIcon v-if="archivos[tipo]" name="check-circle" :size="18" class="text-emerald-400 shrink-0" />
                       <AppIcon v-else name="file-text" :size="18" class="shrink-0" />
                       <span class="truncate">{{ archivos[tipo]?.name || 'Selecciona el archivo...' }}</span>
                     </span>
@@ -123,11 +123,11 @@
                 </div>
 
                 <div class="sm:col-span-2 flex items-center justify-between gap-3 pt-2">
-                  <p v-if="faltantes.length" class="text-xs text-stone-500 inline-flex items-center gap-1.5">
+                  <p v-if="faltantes.length" class="text-xs text-slate-400 inline-flex items-center gap-1.5">
                     <AppIcon name="info" :size="14" />
                     Faltan subir: {{ faltantes.join(', ') }}
                   </p>
-                  <p v-else class="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1.5">
+                  <p v-else class="text-xs font-semibold text-emerald-300 inline-flex items-center gap-1.5">
                     <AppIcon name="check" :size="14" />
                     Documentación completa para enviar.
                   </p>
@@ -151,23 +151,23 @@
         <div class="card p-6">
           <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 class="text-lg font-extrabold text-stone-900">Seguimiento de tu Tesis de Grado</h2>
-              <p class="text-sm text-stone-500 mt-1">
+              <h2 class="text-lg font-extrabold text-white">Seguimiento de tu Tesis de Grado</h2>
+              <p class="text-sm text-slate-400 mt-1">
                 Trámite N.º {{ tramite.id_tramite }} · Tutor:
                 <template v-if="tramite.tutor">
-                  <span class="font-semibold text-stone-700">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</span>
-                  <span v-if="tramite.tutor.telefono" class="inline-flex items-center gap-1 ml-2 text-amber-700 font-semibold">
+                  <span class="font-semibold text-white">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</span>
+                  <span v-if="tramite.tutor.telefono" class="inline-flex items-center gap-1 ml-2 text-orange-300 font-semibold">
                     <AppIcon name="phone" :size="14" />
                     {{ tramite.tutor.telefono }}
                   </span>
                 </template>
-                <template v-else class="text-orange-500">por asignar</template>
+                <template v-else class="text-orange-400">por asignar</template>
               </p>
             </div>
             <EstadoBadge :estado="tramite.estado_actual" upper />
           </div>
 
-          <p v-if="descripcionEstado" class="mt-3 text-sm text-stone-600 rounded-xl bg-stone-50 ring-1 ring-stone-200 px-4 py-3">
+          <p v-if="descripcionEstado" class="mt-3 text-sm text-slate-300 rounded-xl bg-white/5 border border-white/10 px-4 py-3">
             {{ descripcionEstado }}
           </p>
 
@@ -187,7 +187,7 @@
 
         <!-- Alerta de perfil rechazado + reenvío -->
         <div v-if="tramite.estado_actual === 'perfil_rechazado'"
-             class="rounded-xl bg-rose-50 ring-1 ring-rose-200 p-5 flex items-start gap-3 text-rose-800">
+             class="rounded-xl bg-red-900/50 border border-red-500/30 p-5 flex items-start gap-3 text-red-400">
           <AppIcon name="x-circle" :size="20" class="mt-0.5 shrink-0" />
           <div class="flex-1">
             <p class="font-bold text-sm">El Consejo Universitario rechazó tu perfil de tesis.</p>
@@ -201,7 +201,7 @@
 
         <!-- Alerta de documento insuficiente + reenvío a la Comisión Revisora -->
         <div v-if="tramite.estado_actual === 'insuficiente'"
-             class="rounded-xl bg-rose-50 ring-1 ring-rose-200 p-5 flex items-start gap-3 text-rose-800">
+             class="rounded-xl bg-red-900/50 border border-red-500/30 p-5 flex items-start gap-3 text-red-400">
           <AppIcon name="alert-triangle" :size="20" class="mt-0.5 shrink-0" />
           <div class="flex-1">
             <p class="font-bold text-sm">La Comisión Revisora calificó tu documento como insuficiente.</p>
@@ -215,10 +215,10 @@
 
         <!-- Veredicto de la Comisión Revisora: trabajo aprobado -->
         <div v-if="tramite.estado_actual === 'suficiente'"
-             class="rounded-2xl bg-emerald-50/80 ring-1 ring-emerald-200 p-5 flex items-start gap-3 text-emerald-800">
+             class="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-5 flex items-start gap-3 text-emerald-300">
           <AppIcon name="check-circle" :size="22" class="mt-0.5 shrink-0" />
           <div class="flex-1">
-            <h4 class="font-bold text-emerald-900">¡Trabajo Aprobado!</h4>
+            <h4 class="font-bold text-emerald-300">¡Trabajo Aprobado!</h4>
             <p class="text-sm mt-1">
               La Comisión Revisora calificó tu tesis como suficiente. Ya puedes solicitar
               la fecha de tu defensa; Kardex o Secretaría la programará.
@@ -228,10 +228,10 @@
 
         <!-- Defensa no aprobada: plazo de 90 días para volver a solicitar -->
         <div v-if="tramite.estado_actual === 'correcciones_90_dias'"
-             class="rounded-2xl bg-rose-50/80 ring-1 ring-rose-200 p-5 flex items-start gap-3 text-rose-800">
+             class="rounded-2xl bg-red-900/50 border border-red-500/30 p-5 flex items-start gap-3 text-red-400">
           <AppIcon name="alert-triangle" :size="22" class="mt-0.5 shrink-0" />
           <div class="flex-1">
-            <h4 class="font-bold text-rose-900">Tu defensa no fue aprobada</h4>
+            <h4 class="font-bold text-red-300">Tu defensa no fue aprobada</h4>
             <p class="text-sm mt-1">
               Tienes <strong>90 días</strong> para corregir tu trabajo y volver a solicitar una
               fecha de defensa. Si no lo haces dentro del plazo, tu tesis quedará reprobada.
@@ -245,23 +245,23 @@
         <!-- Solicitud de fecha de defensa (la solicita el estudiante a Kardex/Secretaría) -->
         <div v-if="puedeSolicitarFechaDefensa(tramite.estado_actual)"
              class="rounded-2xl ring-1 p-5"
-             :class="necesitaSolicitar ? 'bg-amber-50/70 ring-amber-200' : 'bg-emerald-50/70 ring-emerald-200'">
+             :class="necesitaSolicitar ? 'bg-orange-500/10 ring-orange-500/30' : 'bg-emerald-500/10 ring-emerald-500/30'">
           <div class="flex items-start gap-3">
             <span class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center ring-1"
-                  :class="necesitaSolicitar ? 'bg-amber-100 text-amber-600 ring-amber-200' : 'bg-emerald-100 text-emerald-600 ring-emerald-200'">
+                  :class="necesitaSolicitar ? 'bg-orange-500/15 text-orange-300 ring-orange-500/40' : 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/40'">
               <AppIcon name="calendar" :size="22" />
             </span>
             <div class="flex-1 min-w-0">
-              <h4 class="font-bold text-stone-900">Solicitud de fecha de defensa</h4>
+              <h4 class="font-bold text-white">Solicitud de fecha de defensa</h4>
               <template v-if="necesitaSolicitar">
                 <template v-if="tramite.estado_actual === 'correcciones_90_dias'">
-                  <p class="text-sm text-stone-600 mt-1">
+                  <p class="text-sm text-slate-400 mt-1">
                     Vuelve a solicitar una fecha para tu defensa después de corregir tu trabajo.
                     Kardex o Secretaría la programará.
                   </p>
                 </template>
                 <template v-else>
-                  <p class="text-sm text-stone-600 mt-1">
+                  <p class="text-sm text-slate-400 mt-1">
                     Tu tesis fue calificada como suficiente por la Comisión Revisora.
                     Solicita una fecha para tu defensa; Kardex o Secretaría la programará.
                   </p>
@@ -279,13 +279,13 @@
                 </form>
               </template>
               <template v-else>
-                <p class="text-sm text-stone-600 mt-1">
+                <p class="text-sm text-slate-400 mt-1">
                   Tu solicitud fue enviada a Kardex o Secretaría,
-                  <span class="font-semibold text-emerald-700">
+                  <span class="font-semibold text-emerald-300">
                     {{ tramite.hitos?.fecha_defensa_sugerida ? 'con fecha sugerida: ' + formatoFechaLarga(tramite.hitos.fecha_defensa_sugerida) + '.' : 'quienes te programarán una fecha de defensa.' }}
                   </span>
                 </p>
-                <p class="text-xs text-stone-500 mt-1.5">Solicitada el {{ formatoFechaLarga(tramite.hitos.fecha_defensa_solicitada) }}. Aguarda la programación de tu defensa.</p>
+                <p class="text-xs text-slate-500 mt-1.5">Solicitada el {{ formatoFechaLarga(tramite.hitos.fecha_defensa_solicitada) }}. Aguarda la programación de tu defensa.</p>
               </template>
             </div>
           </div>
@@ -293,14 +293,14 @@
 
         <!-- Fecha de defensa programada -->
         <div v-if="tramite.estado_actual === 'defensa_programada' && tramite.hitos?.fecha_defensa"
-             class="rounded-2xl bg-indigo-50/70 ring-1 ring-indigo-200 p-5">
+             class="rounded-2xl bg-orange-500/10 border border-orange-500/30 p-5">
           <div class="flex items-center gap-3">
-            <span class="w-11 h-11 rounded-xl bg-indigo-100 text-indigo-600 ring-1 ring-indigo-200 flex items-center justify-center">
+            <span class="w-11 h-11 rounded-xl bg-orange-500/15 text-orange-300 border border-orange-500/40 flex items-center justify-center">
               <AppIcon name="calendar" :size="22" />
             </span>
             <div>
-              <h4 class="font-bold text-indigo-900">Fecha de defensa programada</h4>
-              <p class="text-sm text-indigo-700 font-semibold">{{ formatoFechaLarga(tramite.hitos.fecha_defensa) }}</p>
+              <h4 class="font-bold text-orange-200">Fecha de defensa programada</h4>
+              <p class="text-sm text-orange-300 font-semibold">{{ formatoFechaLarga(tramite.hitos.fecha_defensa) }}</p>
             </div>
           </div>
         </div>
@@ -308,8 +308,8 @@
         <!-- Documentos presentados -->
         <div class="card overflow-hidden">
           <div class="p-6">
-            <h3 class="font-bold text-stone-800 mb-4 inline-flex items-center gap-2">
-              <span class="w-8 h-8 rounded-lg bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
+            <h3 class="font-bold text-white mb-4 inline-flex items-center gap-2">
+              <span class="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300">
                 <AppIcon name="file-text" :size="17" />
               </span>
               Documentos Presentados
@@ -317,13 +317,13 @@
             <div v-if="tramite.documentos.length" class="grid sm:grid-cols-2 gap-2.5">
               <a v-for="doc in tramite.documentos" :key="doc.id_documento"
                  :href="assetUrl(doc.ruta_archivo)" target="_blank"
-                 class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 transition">
+                 class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/30 hover:bg-orange-500/20 transition-all duration-200">
                 <AppIcon name="link" :size="16" />
                 {{ etiquetaDocumento(doc.tipo_documento) }}
-                <span class="ml-auto text-xs text-stone-400">{{ new Date(doc.created_at).toLocaleDateString('es-BO') }}</span>
+                <span class="ml-auto text-xs text-slate-400">{{ new Date(doc.created_at).toLocaleDateString('es-BO') }}</span>
               </a>
             </div>
-            <p v-else class="text-sm text-stone-400">Sin documentos registrados.</p>
+            <p v-else class="text-sm text-slate-400">Sin documentos registrados.</p>
           </div>
         </div>
 
@@ -333,15 +333,15 @@
     <!-- Modal de reenvío del perfil -->
     <UiModal v-model="mostrarReenvio" title="Reenviar Perfil Corregido" max-width="520px">
       <form @submit.prevent="enviarReenvio" class="space-y-5">
-        <p class="text-sm text-stone-500">
+        <p class="text-sm text-slate-400">
           Adjunta la versión corregida del perfil de tesis (PDF opcional). Si solo
           vas a reenviarlo sin cambios, puedes dejarlo vacío.
         </p>
         <div>
           <label class="label">Perfil de Tesis corregido (PDF)</label>
-          <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoReenvio ? 'border-amber-300 bg-amber-50' : 'border-stone-300 bg-stone-50 hover:border-amber-400']">
-            <span class="flex items-center gap-2 text-sm min-w-0" :class="archivoReenvio ? 'text-amber-700' : 'text-stone-500'">
-              <AppIcon v-if="archivoReenvio" name="check-circle" :size="18" class="text-emerald-500 shrink-0" />
+          <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoReenvio ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40']">
+            <span class="flex items-center gap-2 text-sm min-w-0" :class="archivoReenvio ? 'text-orange-200' : 'text-slate-400'">
+              <AppIcon v-if="archivoReenvio" name="check-circle" :size="18" class="text-emerald-400 shrink-0" />
               <AppIcon v-else name="file-text" :size="18" class="shrink-0" />
               <span class="truncate">{{ archivoReenvio?.name || 'Selecciona el archivo...' }}</span>
             </span>
@@ -370,15 +370,15 @@
     <!-- Modal de reenvío del documento final tras calificación insuficiente -->
     <UiModal v-model="mostrarReenvioDocumento" title="Enviar Documento Corregido" max-width="520px">
       <form @submit.prevent="enviarReenvioDocumento" class="space-y-5">
-        <p class="text-sm text-stone-500">
+        <p class="text-sm text-slate-400">
           Adjunta la versión corregida de tu documento final (PDF obligatorio). La
           Comisión Revisora lo evaluará nuevamente.
         </p>
         <div>
           <label class="label">Documento final corregido (PDF)</label>
-          <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoReenvioDocumento ? 'border-amber-300 bg-amber-50' : 'border-stone-300 bg-stone-50 hover:border-amber-400']">
-            <span class="flex items-center gap-2 text-sm min-w-0" :class="archivoReenvioDocumento ? 'text-amber-700' : 'text-stone-500'">
-              <AppIcon v-if="archivoReenvioDocumento" name="check-circle" :size="18" class="text-emerald-500 shrink-0" />
+          <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoReenvioDocumento ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40']">
+            <span class="flex items-center gap-2 text-sm min-w-0" :class="archivoReenvioDocumento ? 'text-orange-200' : 'text-slate-400'">
+              <AppIcon v-if="archivoReenvioDocumento" name="check-circle" :size="18" class="text-emerald-400 shrink-0" />
               <AppIcon v-else name="file-text" :size="18" class="shrink-0" />
               <span class="truncate">{{ archivoReenvioDocumento?.name || 'Selecciona el archivo...' }}</span>
             </span>
@@ -616,22 +616,22 @@ function estadoFase(fase) {
 
   if (actual.id === fase.id) {
     return {
-      contenedor: 'bg-gradient-to-br from-amber-500 to-orange-500 ring-amber-500 shadow-lg',
+      contenedor: 'bg-orange ring-orange-500 shadow-lg shadow-orange-900/30',
       icono: 'text-white',
       texto: 'text-white',
     };
   }
   if (actual.index > FASES_TESIS.indexOf(fase)) {
     return {
-      contenedor: 'bg-emerald-50 ring-emerald-200',
-      icono: 'text-emerald-500',
-      texto: 'text-emerald-700',
+      contenedor: 'bg-emerald-500/10 ring-emerald-500/30',
+      icono: 'text-emerald-400',
+      texto: 'text-emerald-300',
     };
   }
   return {
-    contenedor: 'bg-stone-50 ring-stone-200',
-    icono: 'text-stone-400',
-    texto: 'text-stone-500',
+    contenedor: 'bg-white/5 ring-white/10',
+    icono: 'text-slate-400',
+    texto: 'text-slate-400',
   };
 }
 

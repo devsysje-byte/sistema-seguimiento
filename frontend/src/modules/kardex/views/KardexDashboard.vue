@@ -1,10 +1,10 @@
 <template>
-  <div class="h-screen w-full overflow-hidden bg-slate-100 flex flex-col">
+  <div class="h-screen w-full overflow-hidden bg-primary flex flex-col">
     <!-- Encabezado del dashboard -->
-    <header class="shrink-0 z-40 bg-white border-b border-stone-200 shadow-sm">
+    <header class="shrink-0 z-40 bg-primary/70 backdrop-blur-xl border-b border-white/10">
       <div class="flex items-center gap-3 px-4 sm:px-6 py-3.5">
         <button
-          class="p-2 rounded-lg text-stone-500 hover:bg-stone-100 lg:hidden"
+          class="p-2 rounded-lg text-slate-300 hover:bg-white/10 lg:hidden"
           title="Abrir menú"
           @click="abrirMenu"
         >
@@ -12,27 +12,27 @@
         </button>
 
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg">
+          <div class="w-10 h-10 rounded-xl bg-orange flex items-center justify-center text-white shadow-lg shadow-orange-900/30">
             <AppIcon name="graduation" :size="22" />
           </div>
           <div class="leading-tight">
-            <h1 class="text-lg sm:text-xl font-extrabold tracking-wide text-stone-900 uppercase">Kardex</h1>
-            <p class="text-[11px] sm:text-xs text-stone-500">Sistema de Seguimiento de Titulación</p>
+            <h1 class="text-lg sm:text-xl font-extrabold tracking-wide text-white uppercase">SSMTECO</h1>
+            <p class="text-[11px] sm:text-xs text-slate-400">Sistema de Seguimiento de Titulación</p>
           </div>
         </div>
 
         <div class="ml-auto flex items-center gap-3">
-          <div class="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white ring-1 ring-stone-200">
+          <div class="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
             <Avatar :nombres="authStore.user?.nombres" :apellidos="authStore.user?.apellidos" size="8" />
             <div class="leading-tight">
-              <p class="text-sm font-semibold text-stone-700">
+              <p class="text-sm font-semibold text-white">
                 {{ authStore.user?.nombres }} {{ authStore.user?.apellidos }}
               </p>
-              <p class="text-[11px] text-stone-400">{{ rolLabel(authStore.user?.rol) }}</p>
+              <p class="text-[11px] text-slate-400">{{ rolLabel(authStore.user?.rol) }}</p>
             </div>
           </div>
           <button
-            class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white ring-1 ring-stone-200 text-stone-500 hover:bg-rose-50 hover:text-rose-600 hover:ring-rose-200 transition"
+            class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:bg-red-900/50 hover:text-red-400 hover:border-red-500/30 transition"
             title="Cerrar sesión"
             @click="cerrarSesion"
           >
@@ -44,7 +44,7 @@
     </header>
 
     <!-- Aviso de modo demostración -->
-    <div v-if="kardexStore.simulado" class="shrink-0 bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-2 text-xs sm:text-sm text-amber-800">
+    <div v-if="kardexStore.simulado" class="shrink-0 bg-orange-500/15 border-b border-orange-500/30 px-4 sm:px-6 py-2 text-xs sm:text-sm text-orange-300">
       <span class="inline-flex items-center gap-2">
         <AppIcon name="info" :size="15" />
         Modo demostración: la API no está disponible. Se muestran datos simulados.
@@ -55,24 +55,24 @@
       <!-- Capa oscura del menú móvil -->
       <div
         v-if="abierto"
-        class="fixed inset-0 z-40 bg-stone-900/60 lg:hidden"
+        class="fixed inset-0 z-40 bg-slate-950/60 lg:hidden"
         @click="abierto = false"
       ></div>
 
       <!-- Barra lateral con los 5 módulos -->
       <aside
-        class="fixed inset-y-0 left-0 z-50 w-80 bg-stone-900 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static lg:h-full"
+        class="fixed inset-y-0 left-0 z-50 w-80 bg-primary/95 backdrop-blur-xl border-r border-white/10 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static lg:h-full"
         :class="abierto ? 'translate-x-0' : '-translate-x-full'"
       >
-        <div v-if="abierto" class="flex items-center justify-between px-6 py-4 border-b border-stone-800 lg:hidden">
+        <div v-if="abierto" class="flex items-center justify-between px-6 py-4 border-b border-white/10 lg:hidden">
           <p class="text-white font-bold uppercase tracking-wider">Módulos</p>
-          <button class="p-2 rounded-lg text-stone-400 hover:bg-stone-800" @click="abierto = false">
+          <button class="p-2 rounded-lg text-slate-400 hover:bg-white/10" @click="abierto = false">
             <AppIcon name="x" :size="20" />
           </button>
         </div>
 
         <nav class="flex-1 px-5 py-6 space-y-4 overflow-y-auto">
-          <p v-if="!abierto" class="px-1 mb-2 text-[11px] font-bold uppercase tracking-wider text-stone-500">Módulos</p>
+          <p v-if="!abierto" class="px-1 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">Módulos</p>
           <router-link
             v-for="(m, i) in modulos"
             :key="m.to"
@@ -136,11 +136,11 @@ const modulos = [
 
 // Degradados naranjas/ámbar que distinguen cada tarjeta de módulo.
 const gradientes = [
-    'bg-gradient-to-br from-orange-600 to-orange-500',
-    'bg-gradient-to-br from-amber-500 to-orange-500',
-    'bg-gradient-to-br from-orange-500 to-amber-400',
-    'bg-gradient-to-br from-amber-600 to-orange-500',
-    'bg-gradient-to-br from-orange-600 to-amber-500',
+    'bg-orange',
+    'bg-orange',
+    'bg-orange',
+    'bg-orange',
+    'bg-orange',
 ];
 
 /** Determina si una ruta hija del módulo está activa.

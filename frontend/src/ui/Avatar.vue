@@ -1,6 +1,6 @@
 <template>
   <span
-    class="inline-flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-bold uppercase select-none"
+    class="inline-flex items-center justify-center rounded-full bg-orange text-white font-bold uppercase select-none"
     :class="[sizeClasses[size] || sizeClasses[10], extra]"
   >
     {{ iniciales }}

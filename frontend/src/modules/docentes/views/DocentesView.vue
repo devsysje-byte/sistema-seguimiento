@@ -8,14 +8,14 @@
     </div>
 
     <div class="card overflow-hidden">
-      <div class="flex flex-wrap items-center gap-3 p-5 border-b border-stone-100">
+      <div class="flex flex-wrap items-center gap-3 p-5 border-b border-white/10">
         <div>
-          <h2 class="text-lg font-bold text-stone-900">Docentes Registrados</h2>
-          <p class="text-sm text-stone-500">Registro académico independiente de las cuentas de acceso.</p>
+          <h2 class="text-lg font-bold text-white">Docentes Registrados</h2>
+          <p class="text-sm text-slate-400">Registro académico independiente de las cuentas de acceso.</p>
         </div>
         <div class="ml-auto w-full md:w-auto flex flex-wrap gap-3 items-center">
           <div class="relative flex-1 md:flex-none md:min-w-52">
-            <span class="absolute inset-y-0 left-3 flex items-center text-stone-400">
+            <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">
               <AppIcon name="search" :size="17" />
             </span>
             <input v-model="buscar" class="input pl-9 md:w-52" placeholder="Buscar docente..." />
@@ -27,7 +27,7 @@
         </div>
       </div>
 
-      <div v-if="cargando" class="flex items-center justify-center gap-2 py-16 text-stone-400">
+      <div v-if="cargando" class="flex items-center justify-center gap-2 py-16 text-slate-400">
         <AppIcon name="loader" :size="20" class="animate-spin" />
         Cargando docentes...
       </div>
@@ -41,7 +41,7 @@
 
         <div v-else class="overflow-x-auto">
           <table class="w-full min-w-[640px] text-left">
-            <thead class="bg-stone-50 border-b border-stone-200">
+            <thead class="bg-white/5 border-b border-white/10">
               <tr>
                 <th class="th">Docente</th>
                 <th class="th">CI</th>
@@ -50,38 +50,38 @@
                 <th class="th text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-stone-100">
-              <tr v-for="doc in docentesFiltrados" :key="doc.id_docente" class="hover:bg-amber-50/50 transition">
+            <tbody class="divide-y divide-white/10">
+              <tr v-for="doc in docentesFiltrados" :key="doc.id_docente" class="hover:bg-orange-500/5 transition">
                 <td class="td">
                   <div class="flex items-center gap-3">
                     <Avatar :nombres="doc.nombre" :apellidos="doc.apellidos" size="10" />
-                    <p class="font-semibold text-stone-800">{{ doc.nombre }} {{ doc.apellidos }}</p>
+                    <p class="font-semibold text-white">{{ doc.nombre }} {{ doc.apellidos }}</p>
                   </div>
                 </td>
-                <td class="td text-stone-600">{{ doc.ci }}</td>
+                <td class="td text-slate-300">{{ doc.ci }}</td>
                 <td class="td">
-                  <span class="inline-flex items-center gap-1.5 text-stone-600">
-                    <AppIcon name="mail" :size="14" class="text-stone-400" />
+                  <span class="inline-flex items-center gap-1.5 text-slate-300">
+                    <AppIcon name="mail" :size="14" class="text-slate-400" />
                     {{ doc.email || '—' }}
                   </span>
-                  <span v-if="doc.telefono" class="text-xs text-stone-400 block mt-0.5">{{ doc.telefono }}</span>
+                  <span v-if="doc.telefono" class="text-xs text-slate-400 block mt-0.5">{{ doc.telefono }}</span>
                 </td>
                 <td class="td">
-                  <span v-if="doc.materia" class="inline-flex px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold ring-1 ring-amber-200">
+                  <span v-if="doc.materia" class="inline-flex px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-300 text-xs font-semibold">
                     {{ doc.materia }}
                   </span>
-                  <span v-else class="text-stone-300">—</span>
+                  <span v-else class="text-slate-500">—</span>
                 </td>
                 <td class="td text-right">
                   <div class="flex items-center justify-end gap-2">
                     <button
-                      class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-800 transition px-2 py-1 rounded-lg hover:bg-amber-50"
+                      class="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-300 hover:text-orange-200 transition px-2 py-1 rounded-lg hover:bg-orange-500/10"
                       @click="abrirEditar(doc)"
                     >
                       <AppIcon name="pencil" :size="14" />
                       Editar
                     </button>
-                    <button class="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-500 hover:text-rose-700 transition px-2 py-1 rounded-lg hover:bg-rose-50" @click="eliminar(doc)">
+                    <button class="inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition px-2 py-1 rounded-lg hover:bg-red-900/50" @click="eliminar(doc)">
                       <AppIcon name="trash" :size="15" />
                       Eliminar
                     </button>
@@ -112,17 +112,17 @@
             <input v-model="form.ci" class="input" placeholder="1234567" required>
           </div>
           <div>
-            <label class="label">Materia <span class="text-stone-400 font-normal">(opcional)</span></label>
+            <label class="label">Materia <span class="text-slate-400 font-normal">(opcional)</span></label>
             <input v-model="form.materia" class="input" placeholder="Ej: Matemática III">
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="label">Email <span class="text-stone-400 font-normal">(opcional)</span></label>
+            <label class="label">Email <span class="text-slate-400 font-normal">(opcional)</span></label>
             <input v-model="form.email" type="email" class="input" placeholder="correo@upea.bo">
           </div>
           <div>
-            <label class="label">Teléfono <span class="text-stone-400 font-normal">(opcional)</span></label>
+            <label class="label">Teléfono <span class="text-slate-400 font-normal">(opcional)</span></label>
             <input v-model="form.telefono" class="input" placeholder="59170000000">
           </div>
         </div>

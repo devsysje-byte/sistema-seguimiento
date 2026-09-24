@@ -2,12 +2,12 @@
   <div class="space-y-6">
     <!-- Encabezado del módulo -->
     <div class="flex items-center gap-3">
-      <div class="w-11 h-11 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/30">
+      <div class="w-11 h-11 rounded-xl bg-orange text-white flex items-center justify-center shadow-lg shadow-orange-900/30">
         <AppIcon name="user-plus" :size="24" />
       </div>
       <div>
-        <h2 class="text-2xl font-bold text-stone-900 uppercase">Registro de Postulante</h2>
-        <p class="text-sm text-stone-500 mt-0.5">Busque por CI o registro universitario y asigne la modalidad de titulación.</p>
+        <h2 class="text-2xl font-bold text-white uppercase">Registro de Postulante</h2>
+        <p class="text-sm text-slate-400 mt-0.5">Busque por CI o registro universitario y asigne la modalidad de titulación.</p>
       </div>
     </div>
 
@@ -16,7 +16,7 @@
       <label class="label" for="identificador">Buscar por CI o Registro Universitario</label>
       <div class="flex flex-col sm:flex-row gap-3">
         <div class="relative flex-1">
-          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">
+          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
             <AppIcon name="search" :size="18" />
           </span>
           <input
@@ -43,7 +43,7 @@
     <!-- Error de búsqueda -->
     <div
       v-if="kardexStore.errorMessage && !kardexStore.postulante"
-      class="flex items-start gap-3 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700"
+      class="flex items-start gap-3 rounded-xl bg-red-900/50 border border-red-500/30 px-4 py-3 text-sm text-red-400"
     >
       <AppIcon name="alert-triangle" :size="18" class="shrink-0 mt-0.5" />
       {{ kardexStore.errorMessage }}
@@ -61,23 +61,23 @@
     <template v-if="kardexStore.postulante">
       <div class="card p-5">
         <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div class="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold text-lg flex items-center justify-center shadow-lg">
+          <div class="w-14 h-14 shrink-0 rounded-2xl bg-orange text-white font-bold text-lg flex items-center justify-center shadow-lg">
             {{ iniciales(kardexStore.postulante) }}
           </div>
           <div class="min-w-0 flex-1">
-            <h3 class="text-lg font-bold text-stone-900 truncate">
+            <h3 class="text-lg font-bold text-white truncate">
               {{ kardexStore.postulante.nombres }} {{ kardexStore.postulante.apellidos }}
             </h3>
             <div class="flex flex-wrap gap-2 mt-1.5">
-              <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-stone-100 text-stone-600 rounded-full px-2.5 py-1">
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 rounded-full px-2.5 py-1">
                 <AppIcon name="user" :size="12" /> CI: {{ kardexStore.postulante.ci }}
               </span>
-              <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-stone-100 text-stone-600 rounded-full px-2.5 py-1">
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 rounded-full px-2.5 py-1">
                 <AppIcon name="file-text" :size="12" /> R.U.: {{ kardexStore.postulante.registro_universitario }}
               </span>
               <span
-                class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1"
-                :class="kardexStore.postulante.tiene_cuenta ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 border"
+                :class="kardexStore.postulante.tiene_cuenta ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-orange-500/15 border-orange-500/30 text-orange-300'"
               >
                 <AppIcon :name="kardexStore.postulante.tiene_cuenta ? 'check-circle' : 'clock'" :size="12" />
                 {{ kardexStore.postulante.tiene_cuenta ? 'Con cuenta de acceso' : 'Sin cuenta de acceso' }}
@@ -90,33 +90,33 @@
           </button>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-stone-100 text-sm">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-white/10 text-sm">
           <div>
-            <p class="text-[11px] uppercase tracking-wider text-stone-400 font-semibold">Fecha de nacimiento</p>
-            <p class="text-stone-700 font-medium mt-0.5">{{ fechaLegible(kardexStore.postulante.fecha_nacimiento) }}</p>
+            <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Fecha de nacimiento</p>
+            <p class="text-slate-200 font-medium mt-0.5">{{ fechaLegible(kardexStore.postulante.fecha_nacimiento) }}</p>
           </div>
           <div>
-            <p class="text-[11px] uppercase tracking-wider text-stone-400 font-semibold">Email</p>
-            <p class="text-stone-700 font-medium mt-0.5 truncate">{{ kardexStore.postulante.email || '—' }}</p>
+            <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Email</p>
+            <p class="text-slate-200 font-medium mt-0.5 truncate">{{ kardexStore.postulante.email || '—' }}</p>
           </div>
           <div>
-            <p class="text-[11px] uppercase tracking-wider text-stone-400 font-semibold">Teléfono</p>
-            <p class="text-stone-700 font-medium mt-0.5">{{ kardexStore.postulante.telefono || '—' }}</p>
+            <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Teléfono</p>
+            <p class="text-slate-200 font-medium mt-0.5">{{ kardexStore.postulante.telefono || '—' }}</p>
           </div>
           <div>
-            <p class="text-[11px] uppercase tracking-wider text-stone-400 font-semibold">Promedio global</p>
-            <p class="text-stone-700 font-medium mt-0.5">{{ kardexStore.postulante.promedio_global ?? '—' }}</p>
+            <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Promedio global</p>
+            <p class="text-slate-200 font-medium mt-0.5">{{ kardexStore.postulante.promedio_global ?? '—' }}</p>
           </div>
         </div>
       </div>
 
       <!-- Asignación de modalidad -->
       <div class="card p-5">
-        <h3 class="font-bold text-stone-900 uppercase flex items-center gap-2">
-          <AppIcon name="graduation" :size="18" class="text-orange-500" />
+        <h3 class="font-bold text-white uppercase flex items-center gap-2">
+          <AppIcon name="graduation" :size="18" class="text-orange-300" />
           Asignar modalidad de titulación
         </h3>
-        <p class="text-sm text-stone-500 mt-1">
+        <p class="text-sm text-slate-400 mt-1">
           Al asignar la modalidad se generarán automáticamente las credenciales de acceso del postulante.
         </p>
 
@@ -127,18 +127,18 @@
             type="button"
             class="relative rounded-xl border-2 p-4 text-left transition cursor-pointer"
             :class="seleccion === m.id_modalidad
-              ? 'border-orange-500 bg-orange-50 shadow-sm'
-              : 'border-stone-200 bg-white hover:border-orange-300'"
+              ? 'border-orange-500 bg-orange-500/10'
+              : 'border-white/10 bg-white/5 hover:border-orange-500/50'"
             @click="seleccion = m.id_modalidad"
           >
             <span
               class="absolute top-3 right-3 w-4 h-4 rounded-full border-2"
-              :class="seleccion === m.id_modalidad ? 'bg-orange-500 border-orange-500' : 'border-stone-300'"
+              :class="seleccion === m.id_modalidad ? 'bg-orange-500 border-orange-500' : 'border-white/20'"
             >
-              <span v-if="seleccion === m.id_modalidad" class="absolute inset-0.5 rounded-full bg-white" />
+              <span v-if="seleccion === m.id_modalidad" class="absolute inset-0.5 rounded-full bg-primary" />
             </span>
-            <span class="text-sm font-bold text-stone-800">{{ m.nombre }}</span>
-            <p class="text-[11px] text-stone-400 mt-1">Modalidad de titulación</p>
+            <span class="text-sm font-bold text-white">{{ m.nombre }}</span>
+            <p class="text-[11px] text-slate-400 mt-1">Modalidad de titulación</p>
           </button>
         </div>
 
@@ -154,56 +154,56 @@
       </div>
 
       <!-- Credenciales generadas -->
-      <div v-if="kardexStore.credenciales" class="card p-5 border-emerald-200">
+      <div v-if="kardexStore.credenciales" class="card p-5 border-emerald-500/30">
         <div class="flex items-center justify-between gap-3 flex-wrap">
-          <h3 class="font-bold text-stone-900 uppercase flex items-center gap-2">
-            <AppIcon :name="kardexStore.credenciales.generadas ? 'check-circle' : 'info'" :size="18" :class="kardexStore.credenciales.generadas ? 'text-emerald-500' : 'text-amber-500'" />
+          <h3 class="font-bold text-white uppercase flex items-center gap-2">
+            <AppIcon :name="kardexStore.credenciales.generadas ? 'check-circle' : 'info'" :size="18" :class="kardexStore.credenciales.generadas ? 'text-emerald-400' : 'text-orange-400'" />
             {{ kardexStore.credenciales.generadas ? 'Credenciales generadas' : 'Credenciales existentes' }}
           </h3>
           <span
-            class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1"
-            :class="kardexStore.credenciales.generadas ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'"
+            class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 border"
+            :class="kardexStore.credenciales.generadas ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-orange-500/15 border-orange-500/30 text-orange-300'"
           >
             <AppIcon :name="kardexStore.credenciales.generadas ? 'zap' : 'user'" :size="12" />
             {{ kardexStore.credenciales.generadas ? 'Nueva cuenta' : 'Cuenta ya creada' }}
           </span>
         </div>
 
-        <p v-if="kardexStore.credenciales.generadas" class="text-sm text-stone-500 mt-1">
+        <p v-if="kardexStore.credenciales.generadas" class="text-sm text-slate-400 mt-1">
           Entregue estas credenciales al postulante para que acceda al sistema.
         </p>
-        <p v-else class="text-sm text-stone-500 mt-1">
+        <p v-else class="text-sm text-slate-400 mt-1">
           El postulante ya posee acceso. Use el usuario mostrado para informe; la contraseña no se vuelve a generar.
         </p>
 
         <div class="grid sm:grid-cols-2 gap-3 mt-4">
-          <div class="rounded-xl bg-stone-900 text-white p-4">
-            <p class="text-[11px] uppercase tracking-wider text-amber-400 font-semibold">Usuario</p>
+          <div class="rounded-xl bg-primary border border-white/10 text-white p-4">
+            <p class="text-[11px] uppercase tracking-wider text-orange-300 font-semibold">Usuario</p>
             <p class="font-mono text-lg font-bold mt-1 break-all">{{ kardexStore.credenciales.username }}</p>
             <button
-              class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-amber-300 hover:text-amber-200 transition"
+              class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-orange-300 hover:text-orange-200 transition"
               @click="copiar(kardexStore.credenciales.username)"
             >
               <AppIcon name="clipboard" :size="14" /> Copiar
             </button>
           </div>
-          <div class="rounded-xl bg-stone-900 text-white p-4">
-            <p class="text-[11px] uppercase tracking-wider text-amber-400 font-semibold">Contraseña</p>
+          <div class="rounded-xl bg-primary border border-white/10 text-white p-4">
+            <p class="text-[11px] uppercase tracking-wider text-orange-300 font-semibold">Contraseña</p>
             <p v-if="kardexStore.credenciales.password" class="font-mono text-lg font-bold mt-1 break-all">
               {{ kardexStore.credenciales.password }}
             </p>
-            <p v-else class="text-stone-400 mt-1 text-sm">—</p>
-            <button v-if="kardexStore.credenciales.password" class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-amber-300 hover:text-amber-200 transition" @click="copiar(kardexStore.credenciales.password)">
+            <p v-else class="text-slate-400 mt-1 text-sm">—</p>
+            <button v-if="kardexStore.credenciales.password" class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-orange-300 hover:text-orange-200 transition" @click="copiar(kardexStore.credenciales.password)">
               <AppIcon name="clipboard" :size="14" /> Copiar
             </button>
           </div>
         </div>
 
-        <div v-if="kardexStore.tramite" class="mt-4 pt-4 border-t border-stone-100 text-sm flex flex-wrap items-center gap-x-4 gap-y-2">
-          <span class="text-stone-500">Trámite iniciado:</span>
+        <div v-if="kardexStore.tramite" class="mt-4 pt-4 border-t border-white/10 text-sm flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span class="text-slate-400">Trámite iniciado:</span>
           <EstadoBadge :estado="kardexStore.tramite.estado_actual" />
-          <span class="text-stone-500">
-            Modalidad: <strong class="text-stone-800">{{ kardexStore.tramite.modalidad?.nombre }}</strong>
+          <span class="text-slate-400">
+            Modalidad: <strong class="text-white">{{ kardexStore.tramite.modalidad?.nombre }}</strong>
           </span>
         </div>
       </div>

@@ -1,52 +1,52 @@
 <template>
   <div
     class="rounded-2xl p-5 ring-1 overflow-hidden"
-    :class="vencido ? 'bg-rose-50/70 ring-rose-200' : softClass"
+    :class="vencido ? 'bg-red-900/50 ring-red-500/30' : softClass"
   >
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div class="flex items-start gap-3">
         <span
           class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center ring-1"
-          :class="vencido ? 'bg-rose-100 text-rose-600 ring-rose-200' : iconClass"
+          :class="vencido ? 'bg-red-500/15 text-red-400 ring-red-500/40' : iconClass"
         >
           <AppIcon :name="vencido ? 'alert-triangle' : 'clock'" :size="22" />
         </span>
         <div class="min-w-0">
-          <h4 class="font-bold text-stone-900">{{ titulo }}</h4>
-          <p v-if="descripcion" class="text-sm text-stone-500 mt-0.5">{{ descripcion }}</p>
+          <h4 class="font-bold text-white">{{ titulo }}</h4>
+          <p v-if="descripcion" class="text-sm text-slate-400 mt-0.5">{{ descripcion }}</p>
         </div>
       </div>
 
       <div class="text-right shrink-0">
-        <p class="text-[11px] font-semibold uppercase tracking-wider text-stone-400">Tiempo restante</p>
-        <p class="text-3xl font-extrabold leading-tight" :class="vencido ? 'text-rose-600' : 'text-stone-900'">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tiempo restante</p>
+        <p class="text-3xl font-extrabold leading-tight" :class="vencido ? 'text-red-400' : 'text-white'">
           <template v-if="vencido">Plazo vencido</template>
           <template v-else>{{ partes.dias }} <span class="text-base font-bold">días</span>
-            <span class="text-sm font-semibold text-stone-400">· {{ partes.horas }} h</span>
+            <span class="text-sm font-semibold text-slate-400">· {{ partes.horas }} h</span>
           </template>
         </p>
       </div>
     </div>
 
     <div v-if="!vencido" class="mt-4">
-      <div class="flex justify-between text-xs font-semibold text-stone-500 mb-1.5">
+      <div class="flex justify-between text-xs font-semibold text-slate-400 mb-1.5">
         <span>Inicio {{ formatoFecha(fechaInicio) }}</span>
         <span :class="restanteClass">{{ porcentajeRestante }}% restante</span>
         <span>Vence {{ formatoFecha(fechaLimite) }}</span>
       </div>
-      <div class="h-2.5 rounded-full bg-stone-200 overflow-hidden">
+      <div class="h-2.5 rounded-full bg-white/10 overflow-hidden">
         <div
           class="h-full rounded-full transition-all duration-700"
           :class="barClass"
           :style="{ width: Math.max(porcentajeRestante, 2) + '%' }"
         ></div>
       </div>
-      <p class="mt-2 text-xs text-stone-500">
+      <p class="mt-2 text-xs text-slate-400">
         Ventana configurada de presentación del documento final.
       </p>
     </div>
 
-    <p v-else class="mt-3 text-sm font-medium text-rose-700">
+    <p v-else class="mt-3 text-sm font-medium text-red-400">
       Se superó el plazo establecido. Contacta a tu tutor o a la Dirección de Carrera.
     </p>
   </div>
@@ -103,27 +103,27 @@ const estadoVital = computed(() => {
 });
 
 const softClass = computed(() => ({
-  ok: 'bg-emerald-50/70 border-emerald-200',
-  medio: 'bg-amber-50/70 border-amber-200',
-  critico: 'bg-rose-50/70 border-rose-200',
+  ok: 'bg-emerald-500/10 border-emerald-500/30',
+  medio: 'bg-orange-500/15 border-orange-500/30',
+  critico: 'bg-red-900/50 border-red-500/30',
 }[estadoVital.value]));
 
 const iconClass = computed(() => ({
-  ok: 'bg-emerald-100 text-emerald-600 ring-emerald-200',
-  medio: 'bg-amber-100 text-amber-600 ring-amber-200',
-  critico: 'bg-rose-100 text-rose-600 ring-rose-200',
+  ok: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/40',
+  medio: 'bg-orange-500/15 text-orange-300 ring-orange-500/40',
+  critico: 'bg-red-500/15 text-red-400 ring-red-500/40',
 }[estadoVital.value]));
 
 const barClass = computed(() => ({
   ok: 'bg-gradient-to-r from-emerald-500 to-teal-500',
-  medio: 'bg-gradient-to-r from-amber-400 to-orange-500',
-  critico: 'bg-gradient-to-r from-rose-500 to-red-500',
+  medio: 'bg-orange',
+  critico: 'bg-gradient-to-r from-red-500 to-red-600',
 }[estadoVital.value]));
 
 const restanteClass = computed(() => ({
-  ok: 'text-emerald-600',
-  medio: 'text-amber-600',
-  critico: 'text-rose-600',
+  ok: 'text-emerald-300',
+  medio: 'text-orange-300',
+  critico: 'text-red-400',
 }[estadoVital.value]));
 
 /** Formatea una fecha (YYYY-MM-DD) en formato corto local. */

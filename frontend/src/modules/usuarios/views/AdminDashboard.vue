@@ -11,39 +11,39 @@
       <EstadisticasModalidades />
 
       <div class="mt-6 grid sm:grid-cols-2 gap-4">
-        <button class="card group flex items-center gap-4 p-5 text-left hover:ring-2 hover:ring-amber-400/50 transition-shadow" @click="abrirCrearEstudiante">
-          <div class="w-12 h-12 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+        <button class="card group flex items-center gap-4 p-5 text-left hover:ring-2 hover:ring-orange-500/40 transition-all duration-200" @click="abrirCrearEstudiante">
+          <div class="w-12 h-12 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center text-orange-300 shrink-0 group-hover:bg-orange-500/20 transition-colors">
             <AppIcon name="graduation" :size="24" />
           </div>
           <div class="flex-1">
-            <p class="font-extrabold text-stone-900 group-hover:text-amber-700 transition-colors">CREAR ESTUDIANTE</p>
-            <p class="text-xs text-stone-500 mt-0.5">Registra el perfil aislado del estudiante (CI, registro universitario y nacimiento).</p>
+            <p class="font-extrabold text-white group-hover:text-orange-300 transition-colors">CREAR ESTUDIANTE</p>
+            <p class="text-xs text-slate-400 mt-0.5">Registra el perfil aislado del estudiante (CI, registro universitario y nacimiento).</p>
           </div>
-          <AppIcon name="chevron-right" :size="18" class="text-stone-300 group-hover:text-amber-500" />
+          <AppIcon name="chevron-right" :size="18" class="text-slate-500 group-hover:text-orange-400 transition-colors" />
         </button>
 
-        <button class="card group flex items-center gap-4 p-5 text-left hover:ring-2 hover:ring-orange-400/50 transition-shadow" @click="abrirAltaUsuario">
-          <div class="w-12 h-12 rounded-2xl bg-orange-50 ring-1 ring-orange-200 flex items-center justify-center text-orange-600 shrink-0">
+        <button class="card group flex items-center gap-4 p-5 text-left hover:ring-2 hover:ring-orange-400/40 transition-all duration-200" @click="abrirAltaUsuario">
+          <div class="w-12 h-12 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center text-orange-300 shrink-0 group-hover:bg-orange-500/20 transition-colors">
             <AppIcon name="user-plus" :size="24" />
           </div>
           <div class="flex-1">
-            <p class="font-extrabold text-stone-900 group-hover:text-orange-700 transition-colors">CREAR USUARIO</p>
-            <p class="text-xs text-stone-500 mt-0.5">Genera la cuenta de acceso de un estudiante ya registrado (usuario y contraseña automáticos).</p>
+            <p class="font-extrabold text-white group-hover:text-orange-300 transition-colors">CREAR USUARIO</p>
+            <p class="text-xs text-slate-400 mt-0.5">Genera la cuenta de acceso de un estudiante ya registrado (usuario y contraseña automáticos).</p>
           </div>
-          <AppIcon name="chevron-right" :size="18" class="text-stone-300 group-hover:text-orange-500" />
+          <AppIcon name="chevron-right" :size="18" class="text-slate-500 group-hover:text-orange-400 transition-colors" />
         </button>
       </div>
     </div>
 
     <div id="seccion-tabla" class="scroll-mt-28 card overflow-hidden mt-6">
-      <div class="flex flex-wrap items-center gap-3 p-5 border-b border-stone-100">
+      <div class="flex flex-wrap items-center gap-3 p-5 border-b border-white/10">
         <div>
-          <h2 class="text-lg font-bold text-stone-900">Matriz de Actores</h2>
-          <p class="text-sm text-stone-500">Usuarios registrados y habilitados en la plataforma.</p>
+          <h2 class="text-lg font-bold text-white">Matriz de Actores</h2>
+          <p class="text-sm text-slate-400">Usuarios registrados y habilitados en la plataforma.</p>
         </div>
         <div class="ml-auto w-full md:w-auto flex flex-wrap gap-3 items-center">
           <div class="relative flex-1 md:flex-none md:min-w-52">
-            <span class="absolute inset-y-0 left-3 flex items-center text-stone-400">
+            <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">
               <AppIcon name="search" :size="17" />
             </span>
             <input v-model="buscar" class="input pl-9 md:w-52" placeholder="Buscar usuario..." />
@@ -59,7 +59,7 @@
         </div>
       </div>
 
-      <div v-if="cargando" class="flex items-center justify-center gap-2 py-16 text-stone-400">
+      <div v-if="cargando" class="flex items-center justify-center gap-2 py-16 text-slate-400">
         <AppIcon name="loader" :size="20" class="animate-spin" />
         Cargando usuarios...
       </div>
@@ -73,7 +73,7 @@
 
         <div v-else class="overflow-x-auto">
           <table class="w-full min-w-[640px] text-left">
-            <thead class="bg-stone-50 border-b border-stone-200">
+            <thead class="bg-white/5 border-b border-white/10">
               <tr>
                 <th class="th">Usuario</th>
                 <th class="th">Contacto</th>
@@ -81,29 +81,29 @@
                 <th class="th text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-stone-100">
+            <tbody class="divide-y divide-white/5">
               <tr
                 v-for="user in usuariosFiltrados"
                 :key="user.id_usuario"
-                class="hover:bg-amber-50/50 transition cursor-pointer"
-                :class="usuarioSeleccionado?.id_usuario === user.id_usuario ? 'bg-amber-50 ring-1 ring-amber-200' : ''"
+                class="hover:bg-white/5 transition cursor-pointer"
+                :class="usuarioSeleccionado?.id_usuario === user.id_usuario ? 'bg-orange-500/10 ring-1 ring-orange-500/30' : ''"
                 @click="seleccionarUsuario(user)"
               >
                 <td class="td">
                   <div class="flex items-center gap-3">
                     <Avatar :nombres="user.nombres" :apellidos="user.apellidos" size="10" />
                     <div>
-                      <p class="font-semibold text-stone-800">{{ user.nombres }} {{ user.apellidos }}</p>
-                      <p class="text-xs text-stone-400">CI: {{ user.ci }} · @{{ user.username }}</p>
+                      <p class="font-semibold text-white">{{ user.nombres }} {{ user.apellidos }}</p>
+                      <p class="text-xs text-slate-400">CI: {{ user.ci }} · @{{ user.username }}</p>
                     </div>
                   </div>
                 </td>
                 <td class="td">
-                  <span class="inline-flex items-center gap-1.5 text-stone-600">
-                    <AppIcon name="mail" :size="14" class="text-stone-400" />
-                    {{ user.email || 'â€”' }}
+                  <span class="inline-flex items-center gap-1.5 text-slate-300">
+                    <AppIcon name="mail" :size="14" class="text-slate-400" />
+                    {{ user.email || '—' }}
                   </span>
-                  <span v-if="user.telefono" class="text-xs text-stone-400 block mt-0.5">{{ user.telefono }}</span>
+                  <span v-if="user.telefono" class="text-xs text-slate-400 block mt-0.5">{{ user.telefono }}</span>
                 </td>
                 <td class="td">
                   <RoleBadge :rol="user.rol" />
@@ -111,13 +111,13 @@
                 <td class="td text-right">
                   <div class="flex items-center justify-end gap-2">
                     <button
-                      class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-800 transition px-2 py-1 rounded-lg hover:bg-amber-50"
+                      class="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-300 hover:text-orange-200 transition px-2 py-1 rounded-lg hover:bg-orange-500/10"
                       @click.stop="editarUsuario(user)"
                     >
                       <AppIcon name="pencil" :size="14" />
                       Editar
                     </button>
-                    <button class="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-500 hover:text-rose-700 transition px-2 py-1 rounded-lg hover:bg-rose-50" @click.stop="eliminarUsuario(user)">
+                    <button class="inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition px-2 py-1 rounded-lg hover:bg-red-500/10" @click.stop="eliminarUsuario(user)">
                       <AppIcon name="trash" :size="15" />
                       Dar de baja
                     </button>
@@ -154,7 +154,7 @@
         </div>
         <div>
           <label class="label">Fecha de Nacimiento</label>
-          <p class="text-xs text-stone-400 -mt-1 mb-1">Se usa para generar la contraseña inicial (dd-mm-aa).</p>
+          <p class="text-xs text-slate-400 -mt-1 mb-1">Se usa para generar la contraseña inicial (dd-mm-aa).</p>
           <input v-model="estudianteForm.fecha_nacimiento" type="date" class="input" required :max="hoy">
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -182,26 +182,26 @@
     <UiModal v-model="showModalAltaUsuario" title="CREAR USUARIO" max-width="560px">
       <template v-if="alta.resultado">
         <div class="text-center py-2">
-          <div class="mx-auto w-14 h-14 rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 flex items-center justify-center text-emerald-600">
+          <div class="mx-auto w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300">
             <AppIcon name="check-circle" :size="28" />
           </div>
-          <h3 class="mt-4 text-lg font-extrabold text-stone-900">Cuenta creada correctamente</h3>
-          <p class="mt-1 text-sm text-stone-500">Entrega estas credenciales al estudiante. Solo se muestran esta vez.</p>
+          <h3 class="mt-4 text-lg font-extrabold text-white">Cuenta creada correctamente</h3>
+          <p class="mt-1 text-sm text-slate-400">Entrega estas credenciales al estudiante. Solo se muestran esta vez.</p>
 
           <div class="mt-6 space-y-3 text-left">
-            <div class="rounded-xl bg-stone-50 ring-1 ring-stone-200 p-4 flex items-center justify-between gap-3">
+            <div class="rounded-xl bg-white/5 border border-white/10 p-4 flex items-center justify-between gap-3">
               <div>
-                <p class="text-xs uppercase tracking-wide text-stone-400 font-semibold">Usuario</p>
-                <p class="font-mono font-bold text-stone-900">{{ alta.resultado.username }}</p>
+                <p class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Usuario</p>
+                <p class="font-mono font-bold text-white">{{ alta.resultado.username }}</p>
               </div>
               <button class="btn-ghost px-3 py-1.5 text-xs" @click="copiar(alta.resultado.username)">
                 <AppIcon name="clipboard" :size="14" /> Copiar
               </button>
             </div>
-            <div class="rounded-xl bg-stone-50 ring-1 ring-stone-200 p-4 flex items-center justify-between gap-3">
+            <div class="rounded-xl bg-white/5 border border-white/10 p-4 flex items-center justify-between gap-3">
               <div>
-                <p class="text-xs uppercase tracking-wide text-stone-400 font-semibold">Contraseña temporal</p>
-                <p class="font-mono font-bold text-stone-900">{{ alta.resultado.password }}</p>
+                <p class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Contraseña temporal</p>
+                <p class="font-mono font-bold text-white">{{ alta.resultado.password }}</p>
               </div>
               <button class="btn-ghost px-3 py-1.5 text-xs" @click="copiar(alta.resultado.password)">
                 <AppIcon name="clipboard" :size="14" /> Copiar
@@ -219,14 +219,14 @@
       </template>
 
       <template v-else>
-        <p class="text-sm text-stone-500 mb-4">
+        <p class="text-sm text-slate-400 mb-4">
           Busca al estudiante por CI, nombre o registro universitario. Solo aparecen
-          estudiantes <strong>sin cuenta de acceso</strong>.
+          estudiantes <strong class="text-white">sin cuenta de acceso</strong>.
         </p>
 
         <form class="flex gap-2" @submit.prevent="buscarCandidatos">
           <div class="relative flex-1">
-            <span class="absolute inset-y-0 left-3 flex items-center text-stone-400">
+            <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">
               <AppIcon name="search" :size="17" />
             </span>
             <input v-model="alta.q" class="input pl-9" placeholder="CI, nombre o registro universitario..." />
@@ -239,11 +239,11 @@
         </form>
 
         <div class="mt-4 max-h-64 overflow-y-auto space-y-2 pr-1">
-          <div v-if="alta.cargando" class="text-center py-8 text-stone-400">
+          <div v-if="alta.cargando" class="text-center py-8 text-slate-400">
             <AppIcon name="loader" :size="20" class="animate-spin inline" />
           </div>
 
-          <div v-else-if="alta.candidatos.length === 0" class="text-center py-8 text-stone-400 text-sm">
+          <div v-else-if="alta.candidatos.length === 0" class="text-center py-8 text-slate-400 text-sm">
             {{ alta.buscado ? 'Sin estudiantes pendientes de cuenta.' : 'Ingresa un criterio de búsqueda.' }}
           </div>
 
@@ -251,12 +251,12 @@
             v-for="c in alta.candidatos"
             :key="c.id_estudiante"
             type="button"
-            class="w-full text-left rounded-xl p-3 ring-1 transition"
-            :class="alta.seleccionado?.id_estudiante === c.id_estudiante ? 'ring-amber-400 bg-amber-50' : 'ring-stone-200 hover:ring-amber-300'"
+            class="w-full text-left rounded-xl p-3 border transition-all duration-200"
+            :class="alta.seleccionado?.id_estudiante === c.id_estudiante ? 'border-orange-500/40 bg-orange-500/10' : 'border-white/10 hover:border-orange-500/30 hover:bg-white/5'"
             @click="alta.seleccionado = c"
           >
-            <p class="font-semibold text-stone-800 text-sm">{{ c.nombres }} {{ c.apellidos }}</p>
-            <p class="text-xs text-stone-400 mt-0.5">CI: {{ c.ci }} · R.U.: {{ c.registro_universitario }}</p>
+            <p class="font-semibold text-white text-sm">{{ c.nombres }} {{ c.apellidos }}</p>
+            <p class="text-xs text-slate-400 mt-0.5">CI: {{ c.ci }} · R.U.: {{ c.registro_universitario }}</p>
           </button>
         </div>
 
@@ -359,7 +359,7 @@
             <label class="label">Contraseña</label>
             <input v-model="editarForm.password" type="password" class="input" placeholder="Nueva contraseña" autocomplete="new-password">
           </div>
-          <p class="sm:col-span-2 text-xs text-stone-400">Déjala vacía para mantener la contraseña actual o escríbela para reestablecerla.</p>
+          <p class="sm:col-span-2 text-xs text-slate-400">Déjala vacía para mantener la contraseña actual o escríbela para reestablecerla.</p>
         </div>
 
         <div class="flex justify-end gap-2 pt-2">

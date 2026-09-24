@@ -2,12 +2,12 @@
   <div class="space-y-6">
     <!-- Encabezado del módulo -->
     <div class="flex items-center gap-3">
-      <div class="w-11 h-11 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/30">
+      <div class="w-11 h-11 rounded-xl bg-orange text-white flex items-center justify-center shadow-lg shadow-orange-900/30">
         <AppIcon name="book" :size="24" />
       </div>
       <div>
-        <h2 class="text-2xl font-bold text-stone-900 uppercase">Tesis de Grado</h2>
-        <p class="text-sm text-stone-500 mt-0.5">Consulte el flujo de titulación del postulante y actualice el estado de su trámite.</p>
+        <h2 class="text-2xl font-bold text-white uppercase">Tesis de Grado</h2>
+        <p class="text-sm text-slate-400 mt-0.5">Consulte el flujo de titulación del postulante y actualice el estado de su trámite.</p>
       </div>
     </div>
 
@@ -16,7 +16,7 @@
       <label class="label" for="filtro-ci-ru">Filtrar por CI/RU</label>
       <div class="flex flex-col sm:flex-row gap-3">
         <div class="relative flex-1">
-          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">
+          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
             <AppIcon name="search" :size="18" />
           </span>
           <input
@@ -43,7 +43,7 @@
     <!-- Error -->
     <div
       v-if="kardexStore.errorMessage && !kardexStore.postulante"
-      class="flex items-start gap-3 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700"
+      class="flex items-start gap-3 rounded-xl bg-red-900/50 border border-red-500/30 px-4 py-3 text-sm text-red-400"
     >
       <AppIcon name="alert-triangle" :size="18" class="shrink-0 mt-0.5" />
       {{ kardexStore.errorMessage }}
@@ -61,18 +61,18 @@
       <!-- Resumen del postulante -->
       <div class="card p-5">
         <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div class="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold text-lg flex items-center justify-center shadow-lg">
+          <div class="w-14 h-14 shrink-0 rounded-2xl bg-orange text-white font-bold text-lg flex items-center justify-center shadow-lg">
             {{ iniciales(kardexStore.postulante) }}
           </div>
           <div class="min-w-0 flex-1">
-            <h3 class="text-lg font-bold text-stone-900 truncate">
+            <h3 class="text-lg font-bold text-white truncate">
               {{ kardexStore.postulante.nombres }} {{ kardexStore.postulante.apellidos }}
             </h3>
             <div class="flex flex-wrap gap-2 mt-1.5">
-              <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-stone-100 text-stone-600 rounded-full px-2.5 py-1">
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 rounded-full px-2.5 py-1">
                 <AppIcon name="user" :size="12" /> CI: {{ kardexStore.postulante.ci }}
               </span>
-              <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-stone-100 text-stone-600 rounded-full px-2.5 py-1">
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-white/5 border border-white/10 text-slate-300 rounded-full px-2.5 py-1">
                 <AppIcon name="file-text" :size="12" /> R.U.: {{ kardexStore.postulante.registro_universitario }}
               </span>
             </div>
@@ -101,7 +101,7 @@
         <!-- Aviso cuando la modalidad asignada no es Tesis de Grado -->
         <div
           v-if="kardexStore.tramite.modalidad?.nombre !== 'Tesis de Grado'"
-          class="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800"
+          class="flex items-start gap-3 rounded-xl bg-orange-500/15 border border-orange-500/30 px-4 py-3 text-sm text-orange-200"
         >
           <AppIcon name="info" :size="18" class="shrink-0 mt-0.5" />
           El postulante tiene asignada la modalidad <strong>{{ kardexStore.tramite.modalidad?.nombre }}</strong>.
@@ -111,8 +111,8 @@
         <!-- Estado actual del flujo -->
         <div class="card p-5">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h3 class="font-bold text-stone-900 uppercase flex items-center gap-2">
-              <AppIcon name="trending-up" :size="18" class="text-orange-500" />
+            <h3 class="font-bold text-white uppercase flex items-center gap-2">
+              <AppIcon name="trending-up" :size="18" class="text-orange-300" />
               Estado actual del flujo
             </h3>
             <EstadoBadge :estado="kardexStore.tramite.estado_actual" :upper="true" />
@@ -128,48 +128,48 @@
           />
 
           <!-- Plazos y fechas (hitos) -->
-          <div v-if="countdown || hitosList.length" class="mt-6 pt-5 border-t border-stone-100">
-            <h4 class="font-bold text-stone-800 mb-3 flex items-center gap-2">
-              <AppIcon name="calendar" :size="16" class="text-orange-500" />
+          <div v-if="countdown || hitosList.length" class="mt-6 pt-5 border-t border-white/10">
+            <h4 class="font-bold text-white mb-3 flex items-center gap-2">
+              <AppIcon name="calendar" :size="16" class="text-orange-300" />
               Plazos y fechas
             </h4>
 
-            <div v-if="countdown" class="rounded-xl bg-orange-50 border border-orange-200 p-4 mb-3">
-              <p class="text-sm font-bold text-orange-800">{{ countdown.titulo }}</p>
-              <p class="text-xs text-orange-700 mt-0.5">{{ countdown.descripcion }}</p>
-              <p class="text-xs text-orange-800 mt-2">
+            <div v-if="countdown" class="rounded-xl bg-orange-500/15 border border-orange-500/30 p-4 mb-3">
+              <p class="text-sm font-bold text-orange-200">{{ countdown.titulo }}</p>
+              <p class="text-xs text-orange-300/80 mt-0.5">{{ countdown.descripcion }}</p>
+              <p class="text-xs text-orange-200 mt-2">
                 Límite: <strong>{{ fechaLegible(countdown.fechaLimite) }}</strong>
               </p>
             </div>
 
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              <div v-for="hito in hitosList" :key="hito.k" class="rounded-xl bg-stone-50 ring-1 ring-stone-200 px-3.5 py-2.5">
-                <p class="text-[11px] uppercase tracking-wider text-stone-400 font-semibold">{{ hito.label }}</p>
-                <p class="text-sm font-semibold text-stone-700 mt-0.5">{{ hito.fecha }}</p>
+              <div v-for="hito in hitosList" :key="hito.k" class="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5">
+                <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">{{ hito.label }}</p>
+                <p class="text-sm font-semibold text-white mt-0.5">{{ hito.fecha }}</p>
               </div>
             </div>
           </div>
 
-          <div v-if="descripcionEstado" class="mt-5 rounded-xl bg-indigo-50 border border-indigo-100 p-4 text-sm text-indigo-800">
+          <div v-if="descripcionEstado" class="mt-5 rounded-xl bg-white/5 border border-white/10 p-4 text-sm text-slate-300">
             {{ descripcionEstado }}
           </div>
         </div>
 
         <!-- Asignación del tutor (modalidades con paso "Tutor Asignado") -->
         <div v-if="conPasoTutor" class="card p-5">
-          <h3 class="font-bold text-stone-900 uppercase flex items-center gap-2">
-            <AppIcon name="user-check" :size="18" class="text-orange-500" />
+          <h3 class="font-bold text-white uppercase flex items-center gap-2">
+            <AppIcon name="user-check" :size="18" class="text-orange-300" />
             Tutor Asignado
           </h3>
 
-          <div v-if="kardexStore.tramite.tutor" class="mt-3 rounded-xl bg-emerald-50 ring-1 ring-emerald-200 px-4 py-3">
-            <p class="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+          <div v-if="kardexStore.tramite.tutor" class="mt-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-4 py-3">
+            <p class="flex items-center gap-2 text-sm font-semibold text-emerald-300">
               <AppIcon name="user" :size="16" />
               {{ kardexStore.tramite.tutor.nombres }} {{ kardexStore.tramite.tutor.apellidos }}
             </p>
-            <p class="text-xs text-emerald-700 mt-0.5">{{ kardexStore.tramite.tutor.email }}</p>
+            <p class="text-xs text-emerald-400/80 mt-0.5">{{ kardexStore.tramite.tutor.email }}</p>
           </div>
-          <p v-else class="mt-3 text-sm font-medium text-orange-600 flex items-center gap-2">
+          <p v-else class="mt-3 text-sm font-medium text-orange-300 flex items-center gap-2">
             <AppIcon name="alert-triangle" :size="16" />
             Aún no se ha asignado un tutor al postulante.
           </p>
@@ -197,20 +197,20 @@
               <span class="uppercase tracking-wide">{{ kardexStore.tramite.tutor ? 'Cambiar tutor' : 'Asignar tutor' }}</span>
             </button>
           </div>
-          <p class="text-xs text-stone-400 mt-2">
+          <p class="text-xs text-slate-400 mt-2">
             El tutor debe designarse antes de pasar a <strong>Investigación en Desarrollo</strong>.
           </p>
         </div>
 
         <!-- Actualización del estado del trámite -->
         <div class="card p-5">
-          <h3 class="font-bold text-stone-900 uppercase flex items-center gap-2">
-            <AppIcon name="zap" :size="18" class="text-orange-500" />
+          <h3 class="font-bold text-white uppercase flex items-center gap-2">
+            <AppIcon name="zap" :size="18" class="text-orange-300" />
             Actualizar estado del trámite
           </h3>
 
           <template v-if="siguientes.length">
-            <p class="text-sm text-stone-500 mt-1">
+            <p class="text-sm text-slate-400 mt-1">
               Seleccione el siguiente estado del flujo para el trámite del postulante.
             </p>
             <div class="grid md:grid-cols-2 gap-3 mt-4">
@@ -223,8 +223,8 @@
                     type="button"
                     class="text-sm font-semibold rounded-full px-4 py-2 ring-1 transition"
                     :class="nuevoEstado === s
-                      ? 'bg-orange-500 text-white ring-orange-500 shadow-lg shadow-orange-500/30'
-                      : 'bg-white text-stone-600 ring-stone-300 hover:ring-orange-400'"
+                      ? 'bg-orange text-white ring-orange-500 shadow-lg shadow-orange-900/30'
+                      : 'bg-white/5 text-slate-300 ring-white/20 hover:ring-orange-500'"
                     @click="nuevoEstado = s"
                   >
                     {{ formatoEstado(s) }}
@@ -252,14 +252,14 @@
           </template>
 
           <template v-else>
-            <p class="flex items-center gap-2 text-sm text-stone-500 mt-1">
-              <AppIcon name="check-circle" :size="18" class="text-emerald-500" />
+            <p class="flex items-center gap-2 text-sm text-slate-400 mt-1">
+              <AppIcon name="check-circle" :size="18" class="text-emerald-400" />
               El flujo del trámite ha concluido
               <span v-if="terminal">({{ formatoEstado(kardexStore.tramite.estado_actual) }}).</span>
             </p>
           </template>
 
-          <p v-if="kardexStore.errorMessage && kardexStore.tramite" class="mt-3 text-sm text-rose-600">
+          <p v-if="kardexStore.errorMessage && kardexStore.tramite" class="mt-3 text-sm text-red-400">
             {{ kardexStore.errorMessage }}
           </p>
         </div>

@@ -12,21 +12,21 @@
     </div>
 
     <div id="seccion-busqueda" class="scroll-mt-28 card overflow-hidden mb-6">
-          <div class="flex flex-wrap items-center gap-3 p-5 border-b border-stone-100">
+          <div class="flex flex-wrap items-center gap-3 p-5 border-b border-white/10">
             <div>
-              <h2 class="text-lg font-bold text-stone-900">{{ tab === 'concluidos' ? 'Trámites Concluidos' : 'Solicitudes en Proceso' }}</h2>
-              <p class="text-sm text-stone-500">{{ subtituloVista }}</p>
+              <h2 class="text-lg font-bold text-white">{{ tab === 'concluidos' ? 'Trámites Concluidos' : 'Solicitudes en Proceso' }}</h2>
+              <p class="text-sm text-slate-400">{{ subtituloVista }}</p>
             </div>
             <div class="ml-auto w-full md:w-auto">
               <div class="relative md:w-64">
-                <span class="absolute inset-y-0 left-3 flex items-center text-stone-400">
+                <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">
                   <AppIcon name="search" :size="17" />
                 </span>
                 <input v-model="buscar" class="input pl-9 md:w-64" :placeholder="tab === 'pendientes' ? 'Buscar trámite...' : 'Buscar trámite concluido...'" />
               </div>
             </div>
           </div>
-          <div v-if="cargando" class="flex items-center justify-center gap-2 py-16 text-stone-400">
+          <div v-if="cargando" class="flex items-center justify-center gap-2 py-16 text-slate-400">
             <AppIcon name="loader" :size="20" class="animate-spin" />
             Cargando trámites...
           </div>
@@ -43,22 +43,22 @@
 
         <div id="seccion-tramites" class="scroll-mt-28">
           <div v-if="!cargando && filtrados.length" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div v-for="tramite in filtrados" :key="tramite.id_tramite" class="card overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-0.5 transition duration-200">
-              <div class="relative h-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500"></div>
+            <div v-for="tramite in filtrados" :key="tramite.id_tramite" class="card overflow-hidden flex flex-col hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-200">
+              <div class="relative h-2 bg-orange"></div>
               <div class="p-5 flex-1 flex flex-col">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <div class="flex items-center gap-2">
-                      <h3 class="text-lg font-bold text-amber-700 truncate">{{ tramite.modalidad.nombre }}</h3>
-                      <span class="text-xs text-stone-400">#{{ tramite.id_tramite }}</span>
+                      <h3 class="text-lg font-bold text-orange-300 truncate">{{ tramite.modalidad.nombre }}</h3>
+                      <span class="text-xs text-slate-400">#{{ tramite.id_tramite }}</span>
                     </div>
                     <div class="flex items-center gap-2.5 mt-2">
                       <Avatar :nombres="tramite.estudiante.user.nombres" :apellidos="tramite.estudiante.user.apellidos" size="10" />
                       <div>
-                        <p class="font-semibold text-stone-800 text-sm leading-tight">
+                        <p class="font-semibold text-white text-sm leading-tight">
                           {{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}
                         </p>
-                        <p class="text-xs text-stone-400">
+                        <p class="text-xs text-slate-400">
                           Cod: {{ tramite.estudiante.registro_universitario }} · Promedio: {{ tramite.estudiante.promedio_global }}
                         </p>
                       </div>
@@ -68,26 +68,26 @@
                 </div>
 
                 <div v-if="tramite.estado_actual === 'solicitud_fecha_defensa' && tramite.hitos?.fecha_defensa_solicitada"
-                     class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 ring-1 ring-orange-200 text-orange-700 text-xs font-semibold">
+                     class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500/20 border border-orange-500/30 text-orange-300 text-xs font-semibold">
                   <AppIcon name="calendar" :size="13" />
                   Solicitud de fecha de defensa pendiente de programar
                 </div>
-                <div v-else-if="tramite.estado_actual === 'solicitud_fecha_defensa'" class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-stone-50 ring-1 ring-stone-200 text-stone-500 text-xs font-semibold">
+                <div v-else-if="tramite.estado_actual === 'solicitud_fecha_defensa'" class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-slate-400 text-xs font-semibold">
                   <AppIcon name="calendar" :size="13" />
                   El estudiante puede solicitar su fecha de defensa
                 </div>
 
                 <div class="mt-4 space-y-1.5 text-sm">
-                  <div class="flex items-center gap-2 text-stone-600">
-                    <AppIcon name="user-check" :size="14" class="text-stone-400 shrink-0" />
-                    <span class="text-stone-400 font-medium">Tutor:</span>
+                  <div class="flex items-center gap-2 text-slate-300">
+                    <AppIcon name="user-check" :size="14" class="text-slate-400 shrink-0" />
+                    <span class="text-slate-400 font-medium">Tutor:</span>
                     <span v-if="tramite.tutor">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</span>
-                    <span v-else class="text-orange-500 font-semibold">No asignado</span>
+                    <span v-else class="text-orange-400 font-semibold">No asignado</span>
                   </div>
-                  <div class="flex items-center gap-2 text-stone-600">
-                    <AppIcon name="trending-up" :size="14" class="text-stone-400 shrink-0" />
-                    <span class="text-stone-400 font-medium">Progreso:</span>
-                    <span class="font-bold text-amber-600">{{ progresoEstado(tramite) }}%</span>
+                  <div class="flex items-center gap-2 text-slate-300">
+                    <AppIcon name="trending-up" :size="14" class="text-slate-400 shrink-0" />
+                    <span class="text-slate-400 font-medium">Progreso:</span>
+                    <span class="font-bold text-orange-300">{{ progresoEstado(tramite) }}%</span>
                   </div>
                 </div>
 
@@ -98,13 +98,13 @@
                 <div class="mt-4 flex flex-wrap gap-1.5">
                   <a v-for="doc in tramite.documentos" :key="doc.id_documento"
                      :href="assetUrl(doc.ruta_archivo)" target="_blank"
-                     class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 transition">
+                     class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/30 hover:bg-orange-500/20 transition-all duration-200">
                     <AppIcon name="link" :size="13" />
                     {{ etiquetaDocumento(doc.tipo_documento) }}
                   </a>
                 </div>
 
-                <div class="mt-4 pt-4 border-t border-stone-100 flex flex-wrap gap-2">
+                <div class="mt-4 pt-4 border-t border-white/10 flex flex-wrap gap-2">
                   <button v-if="esGestion && tramite.estado_actual === 'solicitud_presentada'"
                           class="btn-primary flex-1 py-2.5" @click="abrirAprobar(tramite)">
                     <AppIcon name="check" :size="15" />
@@ -126,12 +126,12 @@
         </div>
 
     <UiModal v-model="showAprobar" :title="`Aprobar solicitud #${tramiteAprobar?.id_tramite || ''}`" max-width="460px">
-      <div class="bg-emerald-50 ring-1 ring-emerald-200 rounded-xl p-3.5 text-sm text-emerald-800 mb-4">
+      <div class="bg-emerald-500/20 border border-emerald-500/30 rounded-xl p-3.5 text-sm text-emerald-300 mb-4">
         <p class="font-bold mb-1">Estudiante:</p>
         <p>{{ tramiteAprobar?.estudiante?.user?.nombres }} {{ tramiteAprobar?.estudiante?.user?.apellidos }}</p>
         <p class="text-xs mt-1">{{ tramiteAprobar?.modalidad?.nombre }}</p>
       </div>
-      <p class="text-sm text-stone-600">Se dará por aprobada la documentación inicial y el trámite avanzará al siguiente estado del flujo.</p>
+      <p class="text-sm text-slate-300">Se dará por aprobada la documentación inicial y el trámite avanzará al siguiente estado del flujo.</p>
       <div class="flex justify-end gap-2 mt-5">
         <button class="btn-ghost px-4 py-2.5" @click="showAprobar = false">Cancelar</button>
         <button class="btn-primary px-4 py-2.5" :disabled="aprobando" @click="aprobar(tramiteAprobar)">
@@ -143,7 +143,7 @@
     </UiModal>
 
     <UiModal v-model="showRechazo" :title="`Rechazar solicitud #${tramiteRechazo?.id_tramite || ''}`" max-width="460px">
-      <div class="bg-orange-50 ring-1 ring-orange-200 rounded-xl p-3.5 text-sm text-orange-800 mb-4">
+      <div class="bg-red-900/50 border border-red-500/30 rounded-xl p-3.5 text-sm text-red-400 mb-4">
         <p class="font-bold mb-1">Estudiante:</p>
         <p>{{ tramiteRechazo?.estudiante?.user?.nombres }} {{ tramiteRechazo?.estudiante?.user?.apellidos }}</p>
         <p class="text-xs mt-1">{{ tramiteRechazo?.modalidad?.nombre }}</p>

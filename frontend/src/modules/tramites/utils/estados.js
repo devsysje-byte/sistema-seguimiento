@@ -75,33 +75,33 @@ export function formatoEstado(nombre) {
 export function toneEstado(estado) {
   if (estado === 'correcciones_90_dias') {
     return {
-      soft: 'bg-amber-50 text-amber-700 border-amber-200',
+      soft: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
       solid: 'bg-amber-500',
-      bar: 'bg-amber-500',
+      bar: 'bg-orange',
       dot: 'bg-amber-500',
     };
   }
   if (ESTADOS_OK.includes(estado)) {
     return {
-      soft: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      soft: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
       solid: 'bg-emerald-500',
-      bar: 'bg-emerald-500',
+      bar: 'bg-gradient-to-r from-emerald-400 to-teal-500',
       dot: 'bg-emerald-500',
     };
   }
   if (ESTADOS_ERROR.includes(estado)) {
     return {
-      soft: 'bg-rose-50 text-rose-700 border-rose-200',
-      solid: 'bg-rose-500',
-      bar: 'bg-rose-500',
-      dot: 'bg-rose-500',
+      soft: 'bg-red-900/50 text-red-400 border-red-500/30',
+      solid: 'bg-red-600',
+      bar: 'bg-gradient-to-r from-red-500 to-rose-600',
+      dot: 'bg-red-500',
     };
   }
   return {
-    soft: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    solid: 'bg-indigo-500',
-    bar: 'bg-gradient-to-r from-indigo-500 to-violet-500',
-    dot: 'bg-indigo-500',
+    soft: 'bg-white/5 text-orange-200 border-white/20',
+    solid: 'bg-orange-500',
+    bar: 'bg-orange',
+    dot: 'bg-orange-500',
   };
 }
 
@@ -131,5 +131,5 @@ export function progresoEstado(tramite) {
 export function statusGlobal(estado) {
   if (estado === 'aprobado') return { label: 'Aprobado', tone: toneEstado(estado).soft };
   if (ESTADOS_ERROR.includes(estado)) return { label: 'Rechazado', tone: toneEstado(estado).soft };
-  return { label: 'En Proceso', tone: 'bg-sky-50 text-sky-700 border-sky-200' };
+  return { label: 'En Proceso', tone: 'bg-white/5 text-orange-200 border-white/20' };
 }

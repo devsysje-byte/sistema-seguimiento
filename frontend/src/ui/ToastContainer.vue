@@ -14,9 +14,9 @@
         >
           <AppIcon :name="iconFor(toast.type)" :size="19" />
         </span>
-        <p class="text-sm font-semibold leading-snug flex-1 :text-stone-800">{{ toast.message }}</p>
+        <p class="text-sm font-semibold leading-snug flex-1 text-white">{{ toast.message }}</p>
         <button
-          class="shrink-0 p-1 rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition"
+          class="shrink-0 p-1 rounded-lg text-slate-400 hover:bg-white/10 hover:text-white transition"
           @click="toastStore.remove(toast.id)"
         >
           <AppIcon name="x" :size="15" />
@@ -39,24 +39,24 @@ const toastStore = useToastStore();
 // Clases Tailwind por tipo de toast (tarjeta, icono y barra de progreso).
 const toastClasses = {
   success: {
-    card: 'bg-emerald-50 ring-emerald-200',
-    icon: 'bg-emerald-100 text-emerald-600',
+    card: 'bg-slate-800/90 ring-emerald-500/30',
+    icon: 'bg-emerald-500/20 text-emerald-300',
     progress: 'bg-emerald-400',
   },
   error: {
-    card: 'bg-rose-50 ring-rose-200',
-    icon: 'bg-rose-100 text-rose-600',
-    progress: 'bg-rose-400',
+    card: 'bg-slate-800/90 ring-red-500/40',
+    icon: 'bg-red-900/50 text-red-400',
+    progress: 'bg-red-500',
   },
   warning: {
-    card: 'bg-amber-50 ring-amber-200',
-    icon: 'bg-amber-100 text-amber-600',
+    card: 'bg-slate-800/90 ring-amber-500/30',
+    icon: 'bg-amber-500/20 text-amber-300',
     progress: 'bg-amber-400',
   },
   info: {
-    card: 'bg-sky-50 ring-sky-200',
-    icon: 'bg-sky-100 text-sky-600',
-    progress: 'bg-sky-400',
+    card: 'bg-slate-800/90 ring-orange-500/30',
+    icon: 'bg-orange-500/20 text-orange-300',
+    progress: 'bg-orange-400',
   },
 };
 

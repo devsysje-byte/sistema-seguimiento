@@ -14,7 +14,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       vue(),
-      vueDevTools(),
+      // Optimización de performance: devtools solo en desarrollo; descarta el plugin del build de producción.
+      ...(mode !== 'production' ? [vueDevTools()] : []),
     ],
     resolve: {
       alias: {
@@ -28,6 +29,11 @@ export default defineConfig(({ mode }) => {
     preview: {
       port,
       host: true,
+    },
+    build: {
+      // Optimización de performance: separa CSS por chunk y desactiva sourcemaps (valores por defecto de Vite, explícitos).
+      cssCodeSplit: true,
+      sourcemap: false,
     },
   }
 })

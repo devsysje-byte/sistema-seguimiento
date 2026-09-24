@@ -1,14 +1,14 @@
 <template>
   <div class="relative" ref="contenedor">
     <button
-      class="relative p-2 rounded-full bg-white ring-1 ring-stone-200 text-stone-500 hover:text-stone-700 hover:bg-stone-50 transition"
+      class="relative p-2 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition"
       title="Notificaciones"
       @click="toggle"
     >
       <AppIcon name="bell" :size="20" />
       <span
         v-if="contador !== null"
-        class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-[10px] font-bold text-white flex items-center justify-center ring-2 ring-white"
+        class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-[10px] font-bold text-white flex items-center justify-center ring-2 ring-primary"
       >
         {{ contador }}
       </span>
@@ -24,18 +24,18 @@
     >
       <div
         v-if="abierto"
-        class="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl ring-1 ring-stone-200 shadow-xl z-50 overflow-hidden"
+        class="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-primary border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl"
       >
-        <div class="flex items-center justify-between px-4 py-3 border-b border-stone-100">
-          <p class="text-sm font-bold text-stone-900">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <p class="text-sm font-bold text-white">
             Notificaciones
-            <span v-if="store.noLeidas > 0" class="ml-1 text-xs font-semibold text-stone-400">
+            <span v-if="store.noLeidas > 0" class="ml-1 text-xs font-semibold text-slate-400">
               ({{ store.noLeidas }} pendiente{{ store.noLeidas === 1 ? '' : 's' }})
             </span>
           </p>
           <button
             v-if="store.noLeidas > 0"
-            class="text-xs font-semibold text-amber-600 hover:text-amber-700"
+            class="text-xs font-semibold text-orange-300 hover:text-orange-200"
             @click="marcarTodas"
           >
             Marcar todas leídas
@@ -47,24 +47,24 @@
             <button
               v-for="n in store.items"
               :key="n.id_notificacion"
-              class="w-full text-left px-4 py-3 flex gap-3 hover:bg-stone-50 transition border-b border-stone-50 last:border-0"
-              :class="n.leida ? 'opacity-60' : 'bg-amber-50/40'"
+              class="w-full text-left px-4 py-3 flex gap-3 hover:bg-white/5 transition border-b border-white/5 last:border-0"
+              :class="n.leida ? 'opacity-60' : 'bg-orange-500/10'"
               @click="pulsarNotificacion(n)"
             >
               <span
                 class="mt-1.5 shrink-0 w-2 h-2 rounded-full"
-                :class="n.leida ? 'bg-stone-200' : 'bg-rose-500'"
+                :class="n.leida ? 'bg-white/20' : 'bg-red-500'"
               ></span>
               <span class="min-w-0">
-                <span class="block text-sm font-semibold text-stone-800 truncate">{{ n.titulo }}</span>
-                <span v-if="n.mensaje" class="block text-xs text-stone-500 line-clamp-2">{{ n.mensaje }}</span>
-                <span class="block text-[11px] text-stone-400 mt-0.5">{{ tiempoRelativo(n.created_at) }}</span>
+                <span class="block text-sm font-semibold text-white truncate">{{ n.titulo }}</span>
+                <span v-if="n.mensaje" class="block text-xs text-slate-400 line-clamp-2">{{ n.mensaje }}</span>
+                <span class="block text-[11px] text-slate-500 mt-0.5">{{ tiempoRelativo(n.created_at) }}</span>
               </span>
             </button>
           </template>
           <div v-else class="px-4 py-10 text-center">
-            <p class="text-sm font-medium text-stone-500">Sin notificaciones</p>
-            <p class="text-xs text-stone-400 mt-1">Aquí verás los avisos de tus trámites.</p>
+            <p class="text-sm font-medium text-slate-300">Sin notificaciones</p>
+            <p class="text-xs text-slate-500 mt-1">Aquí verás los avisos de tus trámites.</p>
           </div>
         </div>
       </div>

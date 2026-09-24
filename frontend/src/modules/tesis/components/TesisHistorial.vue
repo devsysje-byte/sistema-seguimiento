@@ -1,13 +1,13 @@
 <template>
   <div v-if="pasos.length" class="card overflow-hidden">
     <div class="p-6">
-      <h3 class="font-bold text-stone-800 inline-flex items-center gap-2">
-        <span class="w-8 h-8 rounded-lg bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
+      <h3 class="font-bold text-white inline-flex items-center gap-2">
+        <span class="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300">
           <AppIcon name="layers" :size="17" />
         </span>
         Flujo seguido por tu tesis
       </h3>
-      <p class="text-sm text-stone-500 mt-1">
+      <p class="text-sm text-slate-400 mt-1">
         Cada paso que tu trámite ha seguido hasta su estado actual.
       </p>
 
@@ -15,27 +15,27 @@
         <li v-for="(paso, index) in pasos" :key="index" class="relative pl-10">
           <span
             v-if="index < pasos.length - 1"
-            class="absolute left-[15px] top-7 bottom-[-1rem] w-px bg-stone-200"
+            class="absolute left-[15px] top-7 bottom-[-1rem] w-px bg-white/10"
           ></span>
           <span
-            class="absolute left-[7px] top-3 w-4 h-4 rounded-full ring-4 ring-white border-2 flex items-center justify-center"
+            class="absolute left-[7px] top-3 w-4 h-4 rounded-full ring-4 ring-primary border-2 flex items-center justify-center"
             :class="dotClass(paso)"
           >
-            <span v-if="paso.actual" class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
+            <span v-if="paso.actual" class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
           </span>
 
           <div class="rounded-xl p-3.5 ring-1" :class="cardClass(paso)">
             <div class="flex flex-wrap items-center gap-2">
               <h4 class="font-bold text-sm" :class="titleClass(paso)">{{ paso.etiqueta }}</h4>
-              <span v-if="paso.actual" class="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+              <span v-if="paso.actual" class="bg-orange-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
                 Actual
               </span>
             </div>
 
-            <p v-if="paso.descripcion" class="text-sm text-stone-600 mt-1">{{ paso.descripcion }}</p>
-            <p v-if="paso.observaciones" class="text-sm text-stone-600 mt-1 italic">“{{ paso.observaciones }}”</p>
+            <p v-if="paso.descripcion" class="text-sm text-slate-300 mt-1">{{ paso.descripcion }}</p>
+            <p v-if="paso.observaciones" class="text-sm text-slate-300 mt-1 italic">“{{ paso.observaciones }}”</p>
 
-            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500 mt-2">
+            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400 mt-2">
               <span v-if="paso.fecha" class="inline-flex items-center gap-1">
                 <AppIcon name="calendar" :size="12" />
                 {{ formatoFecha(paso.fecha) }}
@@ -98,23 +98,23 @@ const pasos = computed(() => {
 
 // Clases del punto según si el paso está completado o es el vigente.
 const dotClass = (paso) => {
-  if (paso.actual) return 'bg-white border-2 border-indigo-600';
+  if (paso.actual) return 'bg-white/10 border-2 border-orange-500';
   return `border-2 ${paso.tono.dot}`;
 };
 
 // Clases de la tarjeta según el estado del paso.
 const cardClass = (paso) => {
-  if (paso.actual) return 'bg-indigo-50/70 ring-indigo-200 shadow-md';
-  return 'ring-stone-200 bg-white';
+  if (paso.actual) return 'bg-orange-500/10 ring-orange-500/40 shadow-lg';
+  return 'ring-white/10 bg-white/5';
 };
 
 // Clases del título según el estado del paso.
 const titleClass = (paso) => {
-  if (paso.actual) return 'text-indigo-700';
-  if (paso.nombre === 'aprobado') return 'text-emerald-700';
-  if (paso.tono.dot.includes('rose')) return 'text-rose-600';
-  if (paso.tono.dot.includes('amber')) return 'text-amber-700';
-  return 'text-stone-700';
+  if (paso.actual) return 'text-orange-200';
+  if (paso.nombre === 'aprobado') return 'text-emerald-300';
+  if (paso.tono.dot.includes('rose')) return 'text-red-400';
+  if (paso.tono.dot.includes('amber')) return 'text-orange-300';
+  return 'text-slate-300';
 };
 
 /** Formatea una fecha ISO en formato largo local (dd de mes de año). */

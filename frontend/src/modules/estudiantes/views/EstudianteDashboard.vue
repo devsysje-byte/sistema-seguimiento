@@ -3,18 +3,18 @@
     <template v-if="sinPerfil">
       <div class="max-w-2xl mx-auto">
         <div class="card overflow-hidden">
-          <div class="h-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500"></div>
+          <div class="h-2 bg-orange"></div>
           <div class="p-8 text-center">
-            <div class="mx-auto w-14 h-14 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600">
+            <div class="mx-auto w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300">
               <AppIcon name="user" :size="26" />
             </div>
-            <h1 class="mt-4 text-xl font-extrabold text-stone-900">Tu perfil aún no está registrado</h1>
-            <p class="mt-2 text-sm text-stone-500 leading-relaxed max-w-md mx-auto">
+            <h1 class="mt-4 text-xl font-extrabold text-white">Tu perfil aún no está registrado</h1>
+            <p class="mt-2 text-sm text-slate-400 leading-relaxed max-w-md mx-auto">
               Si aún no tienes cuenta, regístrate desde la pantalla de ingreso
               (pestaña "Registrarse"). Una vez registrado, Kardex o la Dirección
               de Carrera generarán tu usuario y contraseña de acceso.
             </p>
-            <p class="mt-4 text-xs font-semibold text-stone-400">Contacta a la Dirección de Carrera.</p>
+            <p class="mt-4 text-xs font-semibold text-slate-500">Contacta a la Dirección de Carrera.</p>
           </div>
         </div>
       </div>
@@ -36,88 +36,88 @@
 
       <div class="grid lg:grid-cols-2 gap-4 mb-6">
         <div class="card overflow-hidden">
-          <div class="h-2 bg-gradient-to-r from-stone-400 to-stone-600"></div>
+          <div class="h-2 bg-gradient-to-r from-slate-500 to-slate-400"></div>
           <div class="p-6">
-            <h2 class="text-base font-extrabold text-stone-900 flex items-center gap-2">
-              <AppIcon name="user" :size="18" class="text-stone-500" />
+            <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+              <AppIcon name="user" :size="18" class="text-orange-300" />
               Mis Datos
             </h2>
-            <p class="mt-1 text-xs text-stone-400">Registrados al crear tu cuenta · solo lectura</p>
+            <p class="mt-1 text-xs text-slate-400">Registrados al crear tu cuenta · solo lectura</p>
             <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <div>
-                <dt class="text-xs uppercase tracking-wide text-stone-400 font-semibold">CI</dt>
-                <dd class="mt-0.5 font-semibold text-stone-800">{{ perfilEstudiante.ci }}</dd>
+                <dt class="text-xs uppercase tracking-wide text-slate-400 font-semibold">CI</dt>
+                <dd class="mt-0.5 font-semibold text-white">{{ perfilEstudiante.ci }}</dd>
               </div>
               <div>
-                <dt class="text-xs uppercase tracking-wide text-stone-400 font-semibold">Registro Universitario</dt>
-                <dd class="mt-0.5 font-semibold text-stone-800">{{ perfilEstudiante.registro_universitario }}</dd>
+                <dt class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Registro Universitario</dt>
+                <dd class="mt-0.5 font-semibold text-white">{{ perfilEstudiante.registro_universitario }}</dd>
               </div>
               <div>
-                <dt class="text-xs uppercase tracking-wide text-stone-400 font-semibold">Nombre Completo</dt>
-                <dd class="mt-0.5 font-semibold text-stone-800">{{ displayNombres }}</dd>
+                <dt class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Nombre Completo</dt>
+                <dd class="mt-0.5 font-semibold text-white">{{ displayNombres }}</dd>
               </div>
               <div>
-                <dt class="text-xs uppercase tracking-wide text-stone-400 font-semibold">Fecha de Nacimiento</dt>
-                <dd class="mt-0.5 font-semibold text-stone-800">{{ formatoFechaLarga(perfilEstudiante.fecha_nacimiento) }}</dd>
+                <dt class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Fecha de Nacimiento</dt>
+                <dd class="mt-0.5 font-semibold text-white">{{ formatoFechaLarga(perfilEstudiante.fecha_nacimiento) }}</dd>
               </div>
             </dl>
           </div>
         </div>
 
         <div class="card overflow-hidden">
-          <div class="h-2 bg-gradient-to-r from-amber-500 to-orange-600"></div>
+          <div class="h-2 bg-orange"></div>
           <div class="p-6">
-            <h2 class="text-base font-extrabold text-stone-900 flex items-center gap-2">
-              <AppIcon name="mail" :size="18" class="text-amber-600" />
+            <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+              <AppIcon name="mail" :size="18" class="text-orange-300" />
               Datos de Contacto y Cuenta
             </h2>
-            <p class="mt-1 text-xs text-stone-400">
+            <p class="mt-1 text-xs text-slate-400">
               Tu usuario y contraseña los genera la instancia académica (Kardex).
               No puedes editar tu perfil ni tus credenciales.
             </p>
             <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <div>
-                <dt class="text-xs uppercase tracking-wide text-stone-400 font-semibold">Email</dt>
-                <dd class="mt-0.5 font-semibold text-stone-800">{{ perfilEstudiante.email || '—' }}</dd>
+                <dt class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Email</dt>
+                <dd class="mt-0.5 font-semibold text-white">{{ perfilEstudiante.email || '—' }}</dd>
               </div>
               <div>
-                <dt class="text-xs uppercase tracking-wide text-stone-400 font-semibold">Teléfono</dt>
-                <dd class="mt-0.5 font-semibold text-stone-800">{{ perfilEstudiante.telefono || '—' }}</dd>
+                <dt class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Teléfono</dt>
+                <dd class="mt-0.5 font-semibold text-white">{{ perfilEstudiante.telefono || '—' }}</dd>
               </div>
               <div v-if="perfilEstudiante.promedio_global !== null">
-                <dt class="text-xs uppercase tracking-wide text-stone-400 font-semibold">Promedio Global</dt>
-                <dd class="mt-0.5 font-semibold text-stone-800">{{ perfilEstudiante.promedio_global }}</dd>
+                <dt class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Promedio Global</dt>
+                <dd class="mt-0.5 font-semibold text-white">{{ perfilEstudiante.promedio_global }}</dd>
               </div>
             </dl>
           </div>
         </div>
       </div>
 
-      <div v-if="cargandoTramite" class="card flex items-center justify-center gap-2 py-16 text-stone-400">
+      <div v-if="cargandoTramite" class="card flex items-center justify-center gap-2 py-16 text-slate-400">
         <AppIcon name="loader" :size="20" class="animate-spin" />
         Cargando tu trámite...
       </div>
 
       <div v-else class="space-y-6">
         <div v-if="tramitesStore.tramiteActivo && !esTesisActivo" class="card overflow-hidden">
-          <div class="h-2 bg-gradient-to-r from-amber-500 to-orange-600"></div>
+          <div class="h-2 bg-orange"></div>
           <div class="p-6 sm:p-8">
             <TimelineTramite :tramite="tramitesStore.tramiteActivo" title="Seguimiento de mi Titulación" />
           </div>
         </div>
 
         <router-link v-else-if="tramitesStore.tramiteActivo && esTesisActivo" to="/estudiante/tesis" class="card overflow-hidden relative block group">
-          <div class="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-amber-500 to-rose-500"></div>
+          <div class="absolute inset-x-0 top-0 h-2 bg-orange"></div>
           <div class="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-              <div class="w-14 h-14 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600 group-hover:scale-105 transition">
+              <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300 group-hover:scale-105 transition">
                 <AppIcon name="graduation" :size="28" />
               </div>
               <div>
-                <h2 class="text-lg font-extrabold text-stone-900">Tesis de Grado · En Curso</h2>
-                <p class="text-sm text-stone-500">
+                <h2 class="text-lg font-extrabold text-white">Tesis de Grado · En Curso</h2>
+                <p class="text-sm text-slate-400">
                   Estado:
-                  <span class="font-semibold text-amber-700">{{ formatoEstado(tramitesStore.tramiteActivo.estado_actual) }}</span>
+                  <span class="font-semibold text-orange-300">{{ formatoEstado(tramitesStore.tramiteActivo.estado_actual) }}</span>
                 </p>
               </div>
             </div>
@@ -129,7 +129,7 @@
         </router-link>
 
         <template v-if="mostrarInicioSolicitud">
-          <div v-if="terminalAprobada" class="rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 p-5 flex items-start gap-3 text-emerald-800">
+          <div v-if="terminalAprobada" class="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-5 flex items-start gap-3 text-emerald-300">
             <AppIcon name="award" :size="22" class="mt-0.5 shrink-0" />
             <p class="text-sm font-medium">
               <strong>¡FELICIDADES APROBADO!</strong> Tu tesis de grado fue aprobada
@@ -137,7 +137,7 @@
             </p>
           </div>
 
-          <div v-else-if="terminalReprobada" class="rounded-xl bg-rose-50 ring-1 ring-rose-200 p-4 flex items-start gap-3 text-rose-800">
+          <div v-else-if="terminalReprobada" class="rounded-xl bg-red-900/50 border border-red-500/30 p-4 flex items-start gap-3 text-red-400">
             <AppIcon name="x-circle" :size="20" class="mt-0.5 shrink-0" />
             <p class="text-sm font-medium">
               Tu tesis de grado no fue aprobada.
@@ -151,7 +151,7 @@
             </p>
           </div>
 
-          <div v-else-if="tramiteTerminado" class="rounded-xl bg-orange-50 ring-1 ring-orange-200 p-4 flex items-start gap-3 text-orange-800">
+          <div v-else-if="tramiteTerminado" class="rounded-xl bg-orange-500/10 border border-orange-500/30 p-4 flex items-start gap-3 text-orange-200">
             <AppIcon name="check-circle" :size="20" class="mt-0.5 shrink-0" />
             <p class="text-sm font-medium">
               Tu último trámite finalizó con estado
@@ -161,15 +161,15 @@
           </div>
 
           <router-link to="/estudiante/tesis" class="card overflow-hidden relative block group">
-            <div class="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-amber-500 to-rose-500"></div>
+            <div class="absolute inset-x-0 top-0 h-2 bg-orange"></div>
             <div class="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center text-amber-600 group-hover:scale-105 transition">
+                <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300 group-hover:scale-105 transition">
                   <AppIcon name="graduation" :size="28" />
                 </div>
                 <div>
-                  <h2 class="text-lg font-extrabold text-stone-900">Tesis de Grado</h2>
-                  <p class="text-sm text-stone-500">Aqui puedes solcitar la modalidad de graduación de Tesis de Grado y realizar el seguimiento correspondiente.</p>
+                  <h2 class="text-lg font-extrabold text-white">Tesis de Grado</h2>
+                  <p class="text-sm text-slate-400">Aqui puedes solcitar la modalidad de graduación de Tesis de Grado y realizar el seguimiento correspondiente.</p>
                 </div>
               </div>
               <span class="btn-warm px-5 py-2.5">
