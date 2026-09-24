@@ -49,7 +49,7 @@ class TramiteService extends BasePaginadoService
         'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,ruta_archivo,tamanio_kb,created_at',
         'estados:id_estado,id_tramite,nombre_estado,descripcion,observaciones,id_usuario_responsable,created_at',
         'estados.responsable:id_usuario,nombres,apellidos,rol',
-        'tutor:id_usuario,nombres,apellidos,email,rol',
+        'tutor:id_usuario,nombres,apellidos,email,telefono,rol',
     ];
 
     /** Eager-loads mínimos de los listados (tablero de revisión). */

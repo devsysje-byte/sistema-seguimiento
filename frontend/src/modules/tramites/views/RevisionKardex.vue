@@ -190,9 +190,9 @@ const authStore = useAuthStore();
 const tramitesStore = useTramitesStore();
 const toastStore = useToastStore();
 
-// Cuando `soloConcluidos` es true (ruta /kardex/concluidos) la vista muestra
-// únicamente los trámites que finalizaron su flujo; en caso contrario lista
-// las solicitudes en proceso.
+// Cuando `soloConcluidos` es true (ruta /kardex/tramites/concluidos) la vista
+// muestra únicamente los trámites que finalizaron su flujo; en caso contrario
+// lista las solicitudes en proceso.
 const props = defineProps({
   soloConcluidos: { type: Boolean, default: false },
 });

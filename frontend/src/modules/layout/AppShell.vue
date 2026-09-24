@@ -109,8 +109,9 @@ const navItems = computed(() => {
   if (rol === 'admin') items.push({ to: '/admin', label: 'Usuarios', icon: 'users' });
   if (rol === 'admin') items.push({ to: '/admin/docentes', label: 'Docentes', icon: 'user-check' });
   if (['kardex', 'secretaria', 'direccion', 'admin'].includes(rol)) {
-    items.push({ to: '/kardex', label: 'Trámites en Proceso', icon: 'folder' });
-    items.push({ to: '/kardex/concluidos', label: 'Trámites Concluidos', icon: 'folder' });
+    items.push({ to: '/kardex', label: 'Dashboard Kardex', icon: 'dash-grid' });
+    items.push({ to: '/kardex/tramites', label: 'Trámites en Proceso', icon: 'folder' });
+    items.push({ to: '/kardex/tramites/concluidos', label: 'Trámites Concluidos', icon: 'folder' });
   }
   if (rol === 'docente') items.push({ to: '/docente', label: 'Mis Tutorías', icon: 'book' });
   if (rol === 'estudiante') items.push({ to: '/estudiante', label: 'Mi Trámite', icon: 'graduation' });
@@ -120,7 +121,14 @@ const navItems = computed(() => {
 
 /** Determina si una ruta está activa (para resaltar el ítem del menú). */
 const isActive = (to) => {
-  if (to === '/kardex') return route.path === '/kardex' || route.path.startsWith('/tramites/');
+  // Dashboard Kardex: sus módulos viven bajo /kardex/... sin invadir /kardex/tramites.
+  if (to === '/kardex') {
+    return route.path === '/kardex'
+      || (route.path.startsWith('/kardex/') && !route.path.startsWith('/kardex/tramites'));
+  }
+  if (to === '/kardex/tramites') {
+    return route.path === '/kardex/tramites' || route.path.startsWith('/tramites/');
+  }
   return route.path === to;
 };
 

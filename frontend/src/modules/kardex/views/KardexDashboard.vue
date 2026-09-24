@@ -1,0 +1,177 @@
+<template>
+  <div class="h-screen w-full overflow-hidden bg-slate-100 flex flex-col">
+    <!-- Encabezado del dashboard -->
+    <header class="shrink-0 z-40 bg-white border-b border-stone-200 shadow-sm">
+      <div class="flex items-center gap-3 px-4 sm:px-6 py-3.5">
+        <button
+          class="p-2 rounded-lg text-stone-500 hover:bg-stone-100 lg:hidden"
+          title="Abrir menú"
+          @click="abrirMenu"
+        >
+          <AppIcon name="menu" :size="22" />
+        </button>
+
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg">
+            <AppIcon name="graduation" :size="22" />
+          </div>
+          <div class="leading-tight">
+            <h1 class="text-lg sm:text-xl font-extrabold tracking-wide text-stone-900 uppercase">Kardex</h1>
+            <p class="text-[11px] sm:text-xs text-stone-500">Sistema de Seguimiento de Titulación</p>
+          </div>
+        </div>
+
+        <div class="ml-auto flex items-center gap-3">
+          <div class="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white ring-1 ring-stone-200">
+            <Avatar :nombres="authStore.user?.nombres" :apellidos="authStore.user?.apellidos" size="8" />
+            <div class="leading-tight">
+              <p class="text-sm font-semibold text-stone-700">
+                {{ authStore.user?.nombres }} {{ authStore.user?.apellidos }}
+              </p>
+              <p class="text-[11px] text-stone-400">{{ rolLabel(authStore.user?.rol) }}</p>
+            </div>
+          </div>
+          <button
+            class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white ring-1 ring-stone-200 text-stone-500 hover:bg-rose-50 hover:text-rose-600 hover:ring-rose-200 transition"
+            title="Cerrar sesión"
+            @click="cerrarSesion"
+          >
+            <AppIcon name="logout" :size="17" />
+            <span class="hidden md:inline text-sm font-semibold">Cerrar sesión</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Aviso de modo demostración -->
+    <div v-if="kardexStore.simulado" class="shrink-0 bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-2 text-xs sm:text-sm text-amber-800">
+      <span class="inline-flex items-center gap-2">
+        <AppIcon name="info" :size="15" />
+        Modo demostración: la API no está disponible. Se muestran datos simulados.
+      </span>
+    </div>
+
+    <div class="flex-1 flex min-h-0">
+      <!-- Capa oscura del menú móvil -->
+      <div
+        v-if="abierto"
+        class="fixed inset-0 z-40 bg-stone-900/60 lg:hidden"
+        @click="abierto = false"
+      ></div>
+
+      <!-- Barra lateral con los 5 módulos -->
+      <aside
+        class="fixed inset-y-0 left-0 z-50 w-80 bg-stone-900 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static lg:h-full"
+        :class="abierto ? 'translate-x-0' : '-translate-x-full'"
+      >
+        <div v-if="abierto" class="flex items-center justify-between px-6 py-4 border-b border-stone-800 lg:hidden">
+          <p class="text-white font-bold uppercase tracking-wider">Módulos</p>
+          <button class="p-2 rounded-lg text-stone-400 hover:bg-stone-800" @click="abierto = false">
+            <AppIcon name="x" :size="20" />
+          </button>
+        </div>
+
+        <nav class="flex-1 px-5 py-6 space-y-4 overflow-y-auto">
+          <p v-if="!abierto" class="px-1 mb-2 text-[11px] font-bold uppercase tracking-wider text-stone-500">Módulos</p>
+          <router-link
+            v-for="(m, i) in modulos"
+            :key="m.to"
+            :to="m.to"
+            :style="{ animationDelay: `${i * 40}ms` }"
+            class="flex items-center gap-3 px-4 py-4 rounded-2xl text-white font-bold transition transform hover:scale-[1.02] active:scale-[0.98] shadow-lg opacity-90 hover:opacity-100"
+            :class="[
+              gradientes[i % gradientes.length],
+              esActivo(m.to) ? 'ring-4 ring-white/30' : 'ring-0',
+            ]"
+            @click="abierto = false"
+          >
+            <AppIcon :name="m.icono" :size="22" />
+            <span class="text-sm uppercase tracking-wide">{{ m.label }}</span>
+          </router-link>
+        </nav>
+      </aside>
+
+      <!-- Contenido dinámico de cada módulo -->
+      <main class="flex-1 overflow-y-auto min-w-0">
+        <div class="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
+          <router-view v-slot="{ Component }">
+            <transition name="fade" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
+        </div>
+      </main>
+    </div>
+  </div>
+</template>
+
+<script setup>
+// Shell del Dashboard de KARDEX: encabezado con marca "KARDEX", perfil y cierre
+// de sesión; barra lateral oscura con los 5 módulos en naranja; y un área de
+// contenido dinámico donde cada módulo se monta en su propia ruta hija.
+import { ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '@/modules/auth';
+import { useKardexStore } from '@/modules/kardex';
+import { rolLabel } from '@/core/roles';
+import AppIcon from '@/ui/AppIcon.vue';
+import Avatar from '@/ui/Avatar.vue';
+
+const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
+const kardexStore = useKardexStore();
+const abierto = ref(false);
+
+// Los módulos del dashboard (barra lateral) con su destino y color.
+// El primer ítem es el panel general (estadísticas); el resto, los 5 módulos.
+const modulos = [
+    { to: '/kardex', label: 'Panel General', icono: 'dash-grid' },
+    { to: '/kardex/postulante', label: 'Registro de Postulante', icono: 'user-plus' },
+    { to: '/kardex/tesis', label: 'Tesis de Grado', icono: 'book' },
+    { to: '/kardex/trabajo-dirigido', label: 'Trabajo Dirigido', icono: 'folder' },
+    { to: '/kardex/examen', label: 'Examen de Grado', icono: 'graduation' },
+    { to: '/kardex/reporte', label: 'Reporte de Modalidad', icono: 'chart' },
+];
+
+// Degradados naranjas/ámbar que distinguen cada tarjeta de módulo.
+const gradientes = [
+    'bg-gradient-to-br from-orange-600 to-orange-500',
+    'bg-gradient-to-br from-amber-500 to-orange-500',
+    'bg-gradient-to-br from-orange-500 to-amber-400',
+    'bg-gradient-to-br from-amber-600 to-orange-500',
+    'bg-gradient-to-br from-orange-600 to-amber-500',
+];
+
+/** Determina si una ruta hija del módulo está activa.
+ *  El panel general (/kardex) solo se activa con la ruta exacta, para que el
+ *  resto de módulos conserve su propio resaltado. */
+const esActivo = (to) => {
+  if (to === '/kardex') return route.path === '/kardex';
+  return route.path === to || route.path.startsWith(`${to}/`);
+};
+
+/** Abre el menú (móvil). */
+const abrirMenu = () => { abierto.value = true; };
+
+/** Cierra la sesión y redirige al login. */
+const cerrarSesion = () => {
+    authStore.logout();
+    window.location.href = '/login';
+};
+</script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.fade-enter-from {
+    opacity: 0;
+    transform: translateY(6px);
+}
+.fade-leave-to {
+    opacity: 0;
+    transform: translateY(-4px);
+}
+</style>

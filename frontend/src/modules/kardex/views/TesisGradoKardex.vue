@@ -1,0 +1,402 @@
+<template>
+  <div class="space-y-6">
+    <!-- Encabezado del módulo -->
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/30">
+        <AppIcon name="book" :size="24" />
+      </div>
+      <div>
+        <h2 class="text-2xl font-bold text-stone-900 uppercase">Tesis de Grado</h2>
+        <p class="text-sm text-stone-500 mt-0.5">Consulte el flujo de titulación del postulante y actualice el estado de su trámite.</p>
+      </div>
+    </div>
+
+    <!-- Barra de filtro por CI/RU -->
+    <form class="card p-4 sm:p-5" @submit.prevent="buscar">
+      <label class="label" for="filtro-ci-ru">Filtrar por CI/RU</label>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1">
+          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">
+            <AppIcon name="search" :size="18" />
+          </span>
+          <input
+            id="filtro-ci-ru"
+            v-model="identificador"
+            type="text"
+            class="input pl-10"
+            placeholder="Ej: 6654321 o RU-2018-0112"
+            autocomplete="off"
+          />
+        </div>
+        <button
+          type="submit"
+          class="btn-primary shrink-0 justify-center"
+          :disabled="!identificador.trim() || kardexStore.cargando"
+        >
+          <AppIcon v-if="kardexStore.cargando" name="loader" :size="18" class="animate-spin" />
+          <AppIcon v-else name="search" :size="18" />
+          <span class="uppercase tracking-wide">Buscar</span>
+        </button>
+      </div>
+    </form>
+
+    <!-- Error -->
+    <div
+      v-if="kardexStore.errorMessage && !kardexStore.postulante"
+      class="flex items-start gap-3 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700"
+    >
+      <AppIcon name="alert-triangle" :size="18" class="shrink-0 mt-0.5" />
+      {{ kardexStore.errorMessage }}
+    </div>
+
+    <!-- Estado vacío inicial -->
+    <EmptyState
+      v-if="!kardexStore.postulante && !kardexStore.errorMessage"
+      icon="search"
+      title="Consultar flujo del postulante"
+      message="Filtre por CI o registro universitario para visualizar el estado actual del flujo de titulación."
+    />
+
+    <template v-if="kardexStore.postulante">
+      <!-- Resumen del postulante -->
+      <div class="card p-5">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div class="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold text-lg flex items-center justify-center shadow-lg">
+            {{ iniciales(kardexStore.postulante) }}
+          </div>
+          <div class="min-w-0 flex-1">
+            <h3 class="text-lg font-bold text-stone-900 truncate">
+              {{ kardexStore.postulante.nombres }} {{ kardexStore.postulante.apellidos }}
+            </h3>
+            <div class="flex flex-wrap gap-2 mt-1.5">
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-stone-100 text-stone-600 rounded-full px-2.5 py-1">
+                <AppIcon name="user" :size="12" /> CI: {{ kardexStore.postulante.ci }}
+              </span>
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-stone-100 text-stone-600 rounded-full px-2.5 py-1">
+                <AppIcon name="file-text" :size="12" /> R.U.: {{ kardexStore.postulante.registro_universitario }}
+              </span>
+            </div>
+          </div>
+          <button class="btn-ghost shrink-0" @click="reiniciar">
+            <AppIcon name="x" :size="16" />
+            Limpiar
+          </button>
+        </div>
+      </div>
+
+      <!-- Sin trámite asignado -->
+      <EmptyState
+        v-if="!kardexStore.tramite"
+        icon="inbox"
+        title="El postulante aún no tiene un trámite asignado"
+        message="Regístrelo en el módulo de Registro de Postulante para asignarle una modalidad de titulación."
+      >
+        <router-link :to="{ name: 'KardexRegistroPostulante' }" class="btn-warm">
+          <AppIcon name="user-plus" :size="16" />
+          Ir a Registro de Postulante
+        </router-link>
+      </EmptyState>
+
+      <template v-if="kardexStore.tramite">
+        <!-- Aviso cuando la modalidad asignada no es Tesis de Grado -->
+        <div
+          v-if="kardexStore.tramite.modalidad?.nombre !== 'Tesis de Grado'"
+          class="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800"
+        >
+          <AppIcon name="info" :size="18" class="shrink-0 mt-0.5" />
+          El postulante tiene asignada la modalidad <strong>{{ kardexStore.tramite.modalidad?.nombre }}</strong>.
+          Se muestra su flujo actual y puede actualizar su estado desde aquí.
+        </div>
+
+        <!-- Estado actual del flujo -->
+        <div class="card p-5">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h3 class="font-bold text-stone-900 uppercase flex items-center gap-2">
+              <AppIcon name="trending-up" :size="18" class="text-orange-500" />
+              Estado actual del flujo
+            </h3>
+            <EstadoBadge :estado="kardexStore.tramite.estado_actual" :upper="true" />
+          </div>
+
+          <TimelineTramite
+            :tramite="kardexStore.tramite"
+            title="Flujo de titulación"
+            :asignar-tutor-en-flujo="true"
+            :docentes="docentes"
+            :asignando-tutor="asignandoTutor"
+            @asignar-tutor="asignarTutor"
+          />
+
+          <!-- Plazos y fechas (hitos) -->
+          <div v-if="countdown || hitosList.length" class="mt-6 pt-5 border-t border-stone-100">
+            <h4 class="font-bold text-stone-800 mb-3 flex items-center gap-2">
+              <AppIcon name="calendar" :size="16" class="text-orange-500" />
+              Plazos y fechas
+            </h4>
+
+            <div v-if="countdown" class="rounded-xl bg-orange-50 border border-orange-200 p-4 mb-3">
+              <p class="text-sm font-bold text-orange-800">{{ countdown.titulo }}</p>
+              <p class="text-xs text-orange-700 mt-0.5">{{ countdown.descripcion }}</p>
+              <p class="text-xs text-orange-800 mt-2">
+                Límite: <strong>{{ fechaLegible(countdown.fechaLimite) }}</strong>
+              </p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              <div v-for="hito in hitosList" :key="hito.k" class="rounded-xl bg-stone-50 ring-1 ring-stone-200 px-3.5 py-2.5">
+                <p class="text-[11px] uppercase tracking-wider text-stone-400 font-semibold">{{ hito.label }}</p>
+                <p class="text-sm font-semibold text-stone-700 mt-0.5">{{ hito.fecha }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="descripcionEstado" class="mt-5 rounded-xl bg-indigo-50 border border-indigo-100 p-4 text-sm text-indigo-800">
+            {{ descripcionEstado }}
+          </div>
+        </div>
+
+        <!-- Asignación del tutor (modalidades con paso "Tutor Asignado") -->
+        <div v-if="conPasoTutor" class="card p-5">
+          <h3 class="font-bold text-stone-900 uppercase flex items-center gap-2">
+            <AppIcon name="user-check" :size="18" class="text-orange-500" />
+            Tutor Asignado
+          </h3>
+
+          <div v-if="kardexStore.tramite.tutor" class="mt-3 rounded-xl bg-emerald-50 ring-1 ring-emerald-200 px-4 py-3">
+            <p class="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+              <AppIcon name="user" :size="16" />
+              {{ kardexStore.tramite.tutor.nombres }} {{ kardexStore.tramite.tutor.apellidos }}
+            </p>
+            <p class="text-xs text-emerald-700 mt-0.5">{{ kardexStore.tramite.tutor.email }}</p>
+          </div>
+          <p v-else class="mt-3 text-sm font-medium text-orange-600 flex items-center gap-2">
+            <AppIcon name="alert-triangle" :size="16" />
+            Aún no se ha asignado un tutor al postulante.
+          </p>
+
+          <div class="mt-4 flex flex-col sm:flex-row gap-2">
+            <select
+              v-model="tutorSeleccionado"
+              class="input flex-1 min-w-0"
+              :disabled="asignandoTutor"
+            >
+              <option value="" disabled>
+                {{ kardexStore.tramite.tutor ? 'Seleccione un docente para cambiar' : 'Seleccione un docente tutor...' }}
+              </option>
+              <option v-for="doc in docentes" :key="doc.id_usuario" :value="doc.id_usuario">
+                {{ doc.nombres }} {{ doc.apellidos }}
+              </option>
+            </select>
+            <button
+              class="btn-warm shrink-0 justify-center"
+              :disabled="asignandoTutor || !tutorSeleccionado"
+              @click="asignarTutor(tutorSeleccionado)"
+            >
+              <AppIcon v-if="asignandoTutor" name="loader" :size="18" class="animate-spin" />
+              <AppIcon v-else name="user-check" :size="18" />
+              <span class="uppercase tracking-wide">{{ kardexStore.tramite.tutor ? 'Cambiar tutor' : 'Asignar tutor' }}</span>
+            </button>
+          </div>
+          <p class="text-xs text-stone-400 mt-2">
+            El tutor debe designarse antes de pasar a <strong>Investigación en Desarrollo</strong>.
+          </p>
+        </div>
+
+        <!-- Actualización del estado del trámite -->
+        <div class="card p-5">
+          <h3 class="font-bold text-stone-900 uppercase flex items-center gap-2">
+            <AppIcon name="zap" :size="18" class="text-orange-500" />
+            Actualizar estado del trámite
+          </h3>
+
+          <template v-if="siguientes.length">
+            <p class="text-sm text-stone-500 mt-1">
+              Seleccione el siguiente estado del flujo para el trámite del postulante.
+            </p>
+            <div class="grid md:grid-cols-2 gap-3 mt-4">
+              <div>
+                <label class="label" for="nuevo-estado">Nuevo estado</label>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="s in siguientes"
+                    :key="s"
+                    type="button"
+                    class="text-sm font-semibold rounded-full px-4 py-2 ring-1 transition"
+                    :class="nuevoEstado === s
+                      ? 'bg-orange-500 text-white ring-orange-500 shadow-lg shadow-orange-500/30'
+                      : 'bg-white text-stone-600 ring-stone-300 hover:ring-orange-400'"
+                    @click="nuevoEstado = s"
+                  >
+                    {{ formatoEstado(s) }}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="label" for="observaciones">Observaciones (opcional)</label>
+                <textarea
+                  id="observaciones"
+                  v-model="observaciones"
+                  rows="3"
+                  class="input resize-none"
+                  placeholder="Comentario sobre la actualización del estado..."
+                ></textarea>
+              </div>
+            </div>
+            <div class="flex justify-end mt-4">
+              <button class="btn-warm px-6" :disabled="!nuevoEstado || kardexStore.cargando" @click="actualizar">
+                <AppIcon v-if="kardexStore.cargando" name="loader" :size="18" class="animate-spin" />
+                <AppIcon v-else name="check" :size="18" />
+                <span class="uppercase tracking-wide">Actualizar estado</span>
+              </button>
+            </div>
+          </template>
+
+          <template v-else>
+            <p class="flex items-center gap-2 text-sm text-stone-500 mt-1">
+              <AppIcon name="check-circle" :size="18" class="text-emerald-500" />
+              El flujo del trámite ha concluido
+              <span v-if="terminal">({{ formatoEstado(kardexStore.tramite.estado_actual) }}).</span>
+            </p>
+          </template>
+
+          <p v-if="kardexStore.errorMessage && kardexStore.tramite" class="mt-3 text-sm text-rose-600">
+            {{ kardexStore.errorMessage }}
+          </p>
+        </div>
+      </template>
+    </template>
+  </div>
+</template>
+
+<script setup>
+// Módulo B del Dashboard de KARDEX: Tesis de Grado.
+//
+// Filtra por CI/RU, muestra el flujo del trámite del postulante (línea de
+// tiempo, plazos y estado actual) y permite actualizar el estado del trámite
+// usando los estados siguientes permitidos por la máquina de estados.
+import { ref, computed, onMounted } from 'vue';
+import { useKardexStore } from '@/modules/kardex';
+import { fechaLegible, iniciales } from '@/modules/kardex/utils/formato';
+import { TimelineTramite, EstadoBadge, formatoEstado, ESTADOS_TERMINALES, useTramitesStore } from '@/modules/tramites';
+import { DESCRIPCION_ESTADO, countdownDe } from '@/modules/tesis';
+import { DOCENTES_MOCK } from '@/modules/kardex/mock/data';
+import { useToastStore } from '@/core/stores/toast';
+import AppIcon from '@/ui/AppIcon.vue';
+import EmptyState from '@/ui/EmptyState.vue';
+
+const kardexStore = useKardexStore();
+const toastStore = useToastStore();
+const tramitesStore = useTramitesStore();
+
+const identificador = ref('');
+const nuevoEstado = ref(null);
+const observaciones = ref('');
+const tutorSeleccionado = ref('');
+const asignandoTutor = ref(false);
+
+// Catálogo de docentes disponibles para asignar como tutor (con respaldo demo
+// cuando la API de usuarios no está disponible en modo simulado).
+const docentes = computed(() =>
+  tramitesStore.docentes.length ? tramitesStore.docentes : DOCENTES_MOCK,
+);
+
+// true cuando la modalidad del trámite incluye el paso "Tutor Asignado".
+const conPasoTutor = computed(() =>
+  kardexStore.tramite?.secuencia?.includes('tutor_asignado') || false,
+);
+
+// Descripción legible del estado actual (flujo oficial de tesis).
+const descripcionEstado = computed(() =>
+  DESCRIPCION_ESTADO[kardexStore.tramite?.estado_actual] || '',
+);
+
+// Estados siguientes permitidos en el estado actual del trámite.
+const siguientes = computed(() => kardexStore.tramite?.siguientes_estados || []);
+
+// true cuando el trámite ya finalizó su flujo.
+const terminal = computed(() => ESTADOS_TERMINALES.includes(kardexStore.tramite?.estado_actual));
+
+// Cuenta regresiva (plazo de presentación / corrección) si aplica.
+const countdown = computed(() => countdownDe(kardexStore.tramite));
+
+// Hitos (fechas clave) registrados en el trámite.
+const HITOS_LABEL = {
+  perfil_aprobado: 'Perfil aprobado',
+  tutor_asignado: 'Tutor asignado',
+  investigacion_en_desarrollo: 'Investigación en desarrollo',
+  documento_final_presentado: 'Documento final presentado',
+  limite_correccion: 'Límite de correcciones',
+  limite_presentacion: 'Límite de presentación',
+  solicitud_fecha_defensa: 'Fecha de defensa solicitada',
+  defensa_programada: 'Defensa programada',
+  defensa_en_curso: 'Defensa en curso',
+  aprobado: 'Aprobado',
+  reprobado: 'Reprobado',
+};
+const hitosList = computed(() =>
+  Object.entries(kardexStore.tramite?.hitos || {}).map(([k, v]) => ({
+    k,
+    label: HITOS_LABEL[k] || formatoEstado(k),
+    fecha: fechaLegible(v),
+  })),
+);
+
+// Al recibir un nuevo trámite (o actualizarlo), preseleccionar el primer estado
+// siguiente permitido y reiniciar el selector de tutor.
+const sincronizarEstado = () => {
+  const lista = kardexStore.tramite?.siguientes_estados || [];
+  nuevoEstado.value = lista[0] || null;
+  tutorSeleccionado.value = '';
+};
+onMounted(() => {
+  sincronizarEstado();
+  tramitesStore.cargarDocentes();
+});
+
+/** Filtra el flujo del postulante por CI/RU. */
+const buscar = async () => {
+  if (!identificador.value.trim() || kardexStore.cargando) return;
+  const resultado = await kardexStore.consultar(identificador.value.trim());
+  if (resultado) sincronizarEstado();
+};
+
+/** Actualiza el estado del trámite. */
+const actualizar = async () => {
+  if (!nuevoEstado.value || kardexStore.cargando || !kardexStore.tramite) return;
+  const actualizado = await kardexStore.actualizarEstado(
+    kardexStore.tramite.id_tramite,
+    nuevoEstado.value,
+    observaciones.value.trim(),
+  );
+  if (actualizado) {
+    toastStore.success('Estado del trámite actualizado correctamente.');
+    observaciones.value = '';
+    sincronizarEstado();
+  } else {
+    toastStore.error(kardexStore.errorMessage || 'No se pudo actualizar el estado del trámite.');
+  }
+};
+
+/** Limpia la consulta para empezar de nuevo. */
+const reiniciar = () => {
+  kardexStore.limpiar();
+  identificador.value = '';
+  nuevoEstado.value = null;
+  observaciones.value = '';
+  tutorSeleccionado.value = '';
+};
+
+/** Asigna (o reasigna) el tutor seleccionado al trámite. */
+const asignarTutor = async (idTutor) => {
+  if (!kardexStore.tramite || !idTutor || kardexStore.cargando) return;
+  asignandoTutor.value = true;
+  const actualizado = await kardexStore.asignarTutor(kardexStore.tramite.id_tramite, idTutor);
+  asignandoTutor.value = false;
+  if (actualizado) {
+    toastStore.success('Tutor asignado correctamente.');
+    tutorSeleccionado.value = '';
+  } else {
+    toastStore.error(kardexStore.errorMessage || 'No se pudo asignar el tutor.');
+  }
+};
+</script>

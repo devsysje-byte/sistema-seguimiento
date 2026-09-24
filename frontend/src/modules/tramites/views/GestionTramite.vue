@@ -351,7 +351,7 @@ onMounted(async () => {
 const volver = () => {
   if (esDocente.value) return router.push('/docente');
   if (authStore.user?.rol === 'admin') return router.push('/admin');
-  router.push('/kardex');
+  router.push('/kardex/tramites');
 };
 
 /** Asigna el tutor seleccionado al trámite vía POST /api/tramites/{id}/asignar-tutor. */

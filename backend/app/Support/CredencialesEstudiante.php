@@ -15,8 +15,8 @@ use Illuminate\Support\Str;
  *  - `username`: primer nombre con su inicial en mayúscula + "_" + CI, sin
  *    espacios (ej: `Juan_202021`). Si colisiona con otro usuario existente se
  *    le agrega un sufijo aleatorio corto hasta garantizar unicidad.
- *  - `password`: fecha de nacimiento en formato DD-MM-AA (ej: una persona
- *    nacida el 14/03/2005 recibe `14-03-05`).
+ *  - `password`: fecha de nacimiento en formato DD-MM-AAAA (ej: una persona
+ *    nacida el 14/03/2005 recibe `14-03-2005`).
  */
 final class CredencialesEstudiante
 {
@@ -35,7 +35,7 @@ final class CredencialesEstudiante
     }
 
     /**
-     * Genera la contraseña temporal (fecha de nacimiento en DD-MM-AA).
+     * Genera la contraseña temporal (fecha de nacimiento en DD-MM-AAAA).
      *
      * @throws \DomainException Si el estudiante no tiene fecha de nacimiento registrada.
      */
@@ -47,7 +47,7 @@ final class CredencialesEstudiante
             );
         }
 
-        return $estudiante->fecha_nacimiento->format('d-m-y');
+        return $estudiante->fecha_nacimiento->format('d-m-Y');
     }
 
     /**

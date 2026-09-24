@@ -1,5 +1,5 @@
 // Roles con acceso al panel de revisión y gestión de trámites.
-// El tablero de revisión (/kardex) es de la gestión académica; la gestión
+// El tablero de revisión (/kardex/tramites) es de la gestión académica; la gestión
 // individual (/tramites/:id/gestion) avanza estados y el docente ve tutorías.
 const ROLES_TRAMITES = ['kardex', 'secretaria', 'direccion', 'admin', 'docente'];
 
@@ -17,7 +17,7 @@ export default [
         meta: { requiresAuth: true, roles: ['docente'] }
     },
     {
-        path: '/kardex',
+        path: '/kardex/tramites',
         name: 'RevisionKardex',
         component: () => import('@/modules/tramites/views/RevisionKardex.vue'),
         meta: { requiresAuth: true, roles: ROLES_TRAMITES }
@@ -25,7 +25,7 @@ export default [
     {
         // Panel de trámites que finalizaron su flujo. Reutiliza la vista de
         // revisión con la pestaña "concluidos" forzada mediante prop.
-        path: '/kardex/concluidos',
+        path: '/kardex/tramites/concluidos',
         name: 'RevisionKardexConcluidos',
         component: () => import('@/modules/tramites/views/RevisionKardex.vue'),
         props: { soloConcluidos: true },

@@ -18,6 +18,7 @@ import notificacionesModule from './notificaciones';
 import tesisModule from './tesis';
 import tramitesModule from './tramites';
 import usuariosModule from './usuarios';
+import kardexModule from './kardex';
 
 export const modules = [
     authModule,
@@ -28,6 +29,7 @@ export const modules = [
     tesisModule,
     tramitesModule,
     usuariosModule,
+    kardexModule,
 ];
 
 /** Concatena las rutas declaradas por todos los módulos registrados. */

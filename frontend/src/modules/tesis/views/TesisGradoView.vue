@@ -154,7 +154,13 @@
               <h2 class="text-lg font-extrabold text-stone-900">Seguimiento de tu Tesis de Grado</h2>
               <p class="text-sm text-stone-500 mt-1">
                 Trámite N.º {{ tramite.id_tramite }} · Tutor:
-                <template v-if="tramite.tutor">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</template>
+                <template v-if="tramite.tutor">
+                  <span class="font-semibold text-stone-700">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</span>
+                  <span v-if="tramite.tutor.telefono" class="inline-flex items-center gap-1 ml-2 text-amber-700 font-semibold">
+                    <AppIcon name="phone" :size="14" />
+                    {{ tramite.tutor.telefono }}
+                  </span>
+                </template>
                 <template v-else class="text-orange-500">por asignar</template>
               </p>
             </div>

@@ -154,7 +154,7 @@
 
               <div>
                 <label class="label">Fecha de Nacimiento</label>
-                <p class="text-xs text-stone-400 -mt-1 mb-1">Se usa para generar la contraseña inicial (dd-mm-aa).</p>
+                <p class="text-xs text-stone-400 -mt-1 mb-1">Se usa para generar la contraseña inicial (dd-mm-aaaa).</p>
                 <input v-model="reg.fecha_nacimiento" type="date" class="input" required :max="hoy">
               </div>
 
