@@ -2,11 +2,13 @@ import { defineStore } from 'pinia';
 import { estudianteService } from '../services/estudiantes';
 
 /**
- * Store del perfil académico del estudiante autenticado.
+ * Store del perfil del estudiante autenticado.
  *
  * Vive en el módulo Estudiantes y pertenece al dominio estudiante (perfil),
  * desacoplado del store de trámites. Mantiene el perfil sincronizado con
  * localStorage y aplica caché temporal (`_ts`) para evitar peticiones repetidas.
+ * El perfil es SOLO LECTURA para el estudiante: los datos los aporta el
+ * auto-registro o la administración y el estudiante no puede modificarlos.
  */
 export const useEstudianteStore = defineStore('estudiante', {
     state: () => ({
@@ -46,19 +48,6 @@ export const useEstudianteStore = defineStore('estudiante', {
             }
             this._ts.perfil = Date.now();
             return this.perfilEstudiante;
-        },
-        /**
-         * Guarda los campos académicos del estudiante vía PUT /api/estudiante/perfil.
-         *
-         * @param {Object} datos Datos validados (plan de estudios, fecha de
-         *                       conclusión y promedio global).
-         * @returns {Promise<Object>} Perfil devuelto por la API.
-         */
-        async guardarPerfil(datos) {
-            const { data } = await estudianteService.guardarPerfil(datos);
-            this.perfilEstudiante = data;
-            localStorage.setItem('perfilEstudiante', JSON.stringify(data));
-            this._ts.perfil = Date.now();
         },
     },
 });

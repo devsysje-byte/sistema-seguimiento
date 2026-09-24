@@ -9,27 +9,27 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /**
  * Modelo Eloquent de la tabla `estudiantes`.
  *
- * Representa el PERFIL AISLADO del estudiante: datos personales e
- * institucionales básicos (`ci`, `nombres`, `apellidos`, `registro_universitario`,
- * `fecha_nacimiento`) más los campos académicos que el propio estudiante
- * mantiene por su cuenta (`plan_estudios`, `fecha_conclusion_plan`,
- * `promedio_global`). Es el registro oficial del estudiante; la cuenta de acceso
- * (`users`) solo se vincula de forma opcional mediante `estudiantes → users.estudiante_id`.
+ * Representa el PERFIL del estudiante: datos personales, institucionales y de
+ * contacto (`ci`, `nombres`, `apellidos`, `fecha_nacimiento`, `email`,
+ * `telefono`, `registro_universitario`) y, opcionalmente, su `promedio_global`.
+ * El estudiante puede auto-registrarse desde el login; la cuenta de acceso
+ * (`users`) se vincula de forma independiente mediante
+ * `estudiantes → users.estudiante_id` cuando la instancia académica genera las
+ * credenciales (CREAR USUARIO).
  */
 class Estudiante extends Model
 {
     protected $primaryKey = 'id_estudiante';
 
     protected $fillable = [
-        'ci', 'nombres', 'apellidos', 'registro_universitario', 'fecha_nacimiento',
-        'plan_estudios', 'fecha_conclusion_plan', 'promedio_global',
+        'ci', 'nombres', 'apellidos', 'fecha_nacimiento', 'email', 'telefono',
+        'registro_universitario', 'promedio_global',
     ];
 
     protected function casts(): array
     {
         return [
             'fecha_nacimiento' => 'date',
-            'fecha_conclusion_plan' => 'date',
             'promedio_global' => 'decimal:2',
         ];
     }

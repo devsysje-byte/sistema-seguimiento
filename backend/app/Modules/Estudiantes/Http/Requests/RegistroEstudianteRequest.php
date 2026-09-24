@@ -2,25 +2,23 @@
 
 namespace App\Modules\Estudiantes\Http\Requests;
 
-use App\Support\Roles;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Validación del alta administrativa del perfil de un estudiante.
+ * Validación del auto-registro público del estudiante desde el login.
  *
- * El administrador registra los datos personales, institucionales y de
- * contacto del estudiante (CI, nombres, apellidos, registro universitario,
- * fecha de nacimiento, email y teléfono); el alta de credenciales de acceso es
- * un paso posterior e independiente (CREAR USUARIO). Los datos académicos ya no
- * se piden en el alta: el promedio global es opcional. Autorización resuelta
- * aquí: solo admin.
+ * El aspirante aporta sus datos personales, institucionales y de contacto
+ * (CI, nombres, apellidos, registro universitario, fecha de nacimiento, email
+ * y teléfono). Con estos datos se crea el perfil aislado; las credenciales de
+ * acceso llegan después vía el flujo CREAR USUARIO de la instancia académica.
+ * El endpoint es público (no requiere sesión).
  */
-class StoreEstudianteRequest extends FormRequest
+class RegistroEstudianteRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->rol === Roles::ADMIN;
+        return true;
     }
 
     /**
@@ -40,13 +38,6 @@ class StoreEstudianteRequest extends FormRequest
             'fecha_nacimiento' => ['required', 'date', 'before:today'],
             'email' => ['nullable', 'email', 'max:120'],
             'telefono' => ['nullable', 'string', 'max:20'],
-        ];
-    }
-
-    public function messages(): array
-    {
-        return [
-            'authorize' => 'Solo el administrador puede crear estudiantes',
         ];
     }
 }

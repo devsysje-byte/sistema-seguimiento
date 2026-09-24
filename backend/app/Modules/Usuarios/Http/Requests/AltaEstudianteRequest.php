@@ -7,14 +7,15 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Validación del alta automática de la cuenta de acceso de un estudiante
- * (CREAR USUARIO). El administrador solo aporta el identificador (CI o registro
- * universitario) del estudiante ya registrado; el sistema genera las credenciales.
+ * (CREAR USUARIO). La instancia académica (admin o kardex) solo aporta el
+ * identificador (CI o registro universitario) del estudiante ya registrado;
+ * el sistema genera las credenciales.
  */
 class AltaEstudianteRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->rol === Roles::ADMIN;
+        return in_array($this->user()?->rol, [Roles::ADMIN, Roles::KARDEX], true);
     }
 
     /**

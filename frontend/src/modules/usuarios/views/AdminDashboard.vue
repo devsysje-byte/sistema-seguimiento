@@ -157,6 +157,16 @@
           <p class="text-xs text-stone-400 -mt-1 mb-1">Se usa para generar la contraseña inicial (dd-mm-aa).</p>
           <input v-model="estudianteForm.fecha_nacimiento" type="date" class="input" required :max="hoy">
         </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="label">Email</label>
+            <input v-model="estudianteForm.email" type="email" class="input" placeholder="correo@upea.bo">
+          </div>
+          <div>
+            <label class="label">Teléfono</label>
+            <input v-model="estudianteForm.telefono" class="input" placeholder="59170000000">
+          </div>
+        </div>
 
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" class="btn-ghost px-4 py-2.5" @click="showModalCrearEstudiante = false">Cancelar</button>
@@ -404,6 +414,7 @@ const usuarioSeleccionado = ref(null);
 // Botón CREAR ESTUDIANTE: perfil aislado del estudiante.
 const estudianteForm = ref({
   ci: '', nombres: '', apellidos: '', registro_universitario: '', fecha_nacimiento: '',
+  email: '', telefono: '',
 });
 const creando = ref(false);
 const hoy = new Date().toISOString().slice(0, 10);
@@ -473,7 +484,7 @@ const seleccionarUsuario = (user) => {
 
 // ---------- CREAR ESTUDIANTE ----------
 const abrirCrearEstudiante = () => {
-  estudianteForm.value = { ci: '', nombres: '', apellidos: '', registro_universitario: '', fecha_nacimiento: '' };
+  estudianteForm.value = { ci: '', nombres: '', apellidos: '', registro_universitario: '', fecha_nacimiento: '', email: '', telefono: '' };
   showModalCrearEstudiante.value = true;
 };
 

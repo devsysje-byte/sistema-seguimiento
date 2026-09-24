@@ -30,7 +30,7 @@ class UserService extends BasePaginadoService
     /** Columnas del perfil aislado expuestas junto al usuario. */
     private const PERFIL_ESTUDIANTE_COLUMNAS = [
         'id_estudiante', 'ci', 'nombres', 'apellidos', 'registro_universitario',
-        'fecha_nacimiento', 'plan_estudios', 'fecha_conclusion_plan', 'promedio_global',
+        'fecha_nacimiento', 'email', 'telefono', 'promedio_global',
     ];
 
     /**
@@ -43,7 +43,7 @@ class UserService extends BasePaginadoService
         return $this->paginar(
             User::query()
                 ->select(self::LISTA_COLUMNAS)
-                ->with('estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,plan_estudios,fecha_conclusion_plan,promedio_global')
+                ->with('estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,fecha_nacimiento,email,telefono,promedio_global')
                 ->where('activo', true)
                 ->orderByDesc('created_at'),
             $this->porPagina($perPage)
@@ -120,7 +120,8 @@ class UserService extends BasePaginadoService
             'ci' => $estudiante->ci,
             'nombres' => $estudiante->nombres,
             'apellidos' => $estudiante->apellidos,
-            'email' => null,
+            'email' => $estudiante->email,
+            'telefono' => $estudiante->telefono,
             'username' => $username,
             'password' => Hash::make($password),
             'rol' => Roles::ESTUDIANTE,

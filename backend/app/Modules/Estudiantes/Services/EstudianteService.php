@@ -11,20 +11,24 @@ use Illuminate\Database\Eloquent\Builder;
  * Casos de uso del perfil de estudiante.
  *
  * Centraliza:
- *  - Gestión ADMINISTRATIVA del perfil aislado: alta de estudiantes y listados
- *    (con o sin cuenta de acceso creada en `users`).
- *  - AUTO-GESTIÓN del estudiante autenticado: consulta de su perfil y
- *    actualización de los campos académicos que mantiene por su cuenta
- *    (`plan_estudios`, `fecha_conclusion_plan`, `promedio_global`). Los datos
- *    personales e institucionales solo los modifica el administrador.
+ *  - REGISTRO del estudiante: el propio aspirante se registra desde el login
+ *    (auto-registro público de su perfil) y el administrador también puede
+ *    crear perfiles (gestión administrativa).
+ *  - Gestión ADMINISTRATIVA del perfil: listados (con o sin cuenta de acceso
+ *    creada en `users` para el CREAR USUARIO).
+ *  - CONSULTA (solo lectura) del perfil del estudiante autenticado.
+ *
+ * El estudiante ya NO actualiza su perfil: una vez generadas sus credenciales
+ * de acceso, solo consulta sus datos y utiliza los módulos de modalidades de
+ * graduación.
  */
 class EstudianteService extends BasePaginadoService
 {
     /** Columnas estrictas expuestas en los listados administrativos. */
     private const COLUMNAS = [
-        'id_estudiante', 'ci', 'nombres', 'apellidos', 'registro_universitario',
-        'fecha_nacimiento', 'plan_estudios', 'fecha_conclusion_plan',
-        'promedio_global', 'created_at', 'updated_at',
+        'id_estudiante', 'ci', 'nombres', 'apellidos', 'fecha_nacimiento',
+        'email', 'telefono', 'registro_universitario', 'promedio_global',
+        'created_at', 'updated_at',
     ];
 
     /**
@@ -43,8 +47,9 @@ class EstudianteService extends BasePaginadoService
     /**
      * Lista paginada de estudiantes SIN cuenta de acceso aún (solo admin).
      *
-     * Alimenta la pantalla de alta de credenciales (CREAR USUARIO): el
-     * administrador selecciona a un estudiante ya registrado en el sistema.
+     * Alimenta la pantalla de alta de credenciales (CREAR USUARIO): la
+     * instancia académica selecciona a un estudiante ya registrado en el
+     * sistema (incluido el auto-registro desde el login).
      *
      * @return array{data: array, meta: array<string, int|bool>}
      */
@@ -57,7 +62,9 @@ class EstudianteService extends BasePaginadoService
     }
 
     /**
-     * Registra administrativamente el perfil aislado del estudiante (solo admin).
+     * Registra el perfil del estudiante (alto administrativo o auto-registro
+     * público desde el login). Las credenciales de acceso se generan después
+     * mediante el flujo CREAR USUARIO.
      */
     public function crear(array $datos): Estudiante
     {
@@ -72,29 +79,6 @@ class EstudianteService extends BasePaginadoService
         $perfil = $user->estudiante;
 
         return $perfil?->load('user:id_usuario,email');
-    }
-
-    /**
-     * Actualiza los campos académicos del estudiante autenticado.
-     *
-     * El perfil debió ser creado previamente por el administrador: si el
-     * estudiante de sesión aún no tiene registro, no puede auto-gestionarlo.
-     *
-     * @throws \DomainException Si el estudiante no tiene perfil registrado.
-     */
-    public function guardarPerfil(User $user, array $datos): Estudiante
-    {
-        $perfil = $user->estudiante;
-
-        if ($perfil === null) {
-            throw new \DomainException(
-                'Tu perfil de estudiante aún no ha sido registrado por el administrador.'
-            );
-        }
-
-        $perfil->update($datos);
-
-        return $perfil->fresh();
     }
 
     /**

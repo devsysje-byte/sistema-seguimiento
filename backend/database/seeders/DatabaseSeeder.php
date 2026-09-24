@@ -42,25 +42,21 @@ class DatabaseSeeder extends Seeder
 
         // Perfiles AISLADOS de estudiantes primero; luego sus cuentas de acceso
         // con username y contraseña autogenerados (dd-mm-aa de la fecha de nacimiento).
+        // El email y teléfono viven en el perfil del estudiante.
         $estudiantes = [
             [
                 'ci' => '7890123', 'nombres' => 'Estudiante', 'apellidos' => 'Prueba',
                 'registro_universitario' => '2020-0001', 'fecha_nacimiento' => '2001-04-10',
-                'plan_estudios' => '2020', 'fecha_conclusion_plan' => '2025-12-15',
-                'promedio_global' => 85.5, 'email' => 'estudiante@example.com',
+                'promedio_global' => 85.5, 'email' => 'estudiante@example.com', 'telefono' => '59170000010',
             ],
             [
                 'ci' => '8901234', 'nombres' => 'Estudiante', 'apellidos' => 'Dos',
                 'registro_universitario' => '2020-0002', 'fecha_nacimiento' => '2002-08-22',
-                'plan_estudios' => '2020', 'fecha_conclusion_plan' => '2025-11-30',
-                'promedio_global' => 78.0, 'email' => 'estudiante2@example.com',
+                'promedio_global' => 78.0, 'email' => 'estudiante2@example.com', 'telefono' => '59170000011',
             ],
         ];
 
         foreach ($estudiantes as $datos) {
-            $email = $datos['email'];
-            unset($datos['email']);
-
             $perfil = Estudiante::updateOrCreate(
                 ['ci' => $datos['ci']],
                 $datos
@@ -74,8 +70,8 @@ class DatabaseSeeder extends Seeder
                     'ci' => $perfil->ci,
                     'nombres' => $perfil->nombres,
                     'apellidos' => $perfil->apellidos,
-                    'email' => $email,
-                    'telefono' => null,
+                    'email' => $perfil->email,
+                    'telefono' => $perfil->telefono,
                     'username' => CredencialesEstudiante::usernameUnico($perfil),
                     'password' => Hash::make($password),
                     'rol' => Roles::ESTUDIANTE,

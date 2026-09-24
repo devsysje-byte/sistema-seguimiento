@@ -40,15 +40,15 @@
           </div>
           <div class="rounded-xl bg-stone-50 p-3">
             <dt class="text-xs text-stone-400 font-semibold uppercase">Promedio</dt>
-            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.promedio_global }}</dd>
+            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.promedio_global ?? '—' }}</dd>
           </div>
           <div class="rounded-xl bg-stone-50 p-3">
-            <dt class="text-xs text-stone-400 font-semibold uppercase">Plan</dt>
-            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.plan_estudios }}</dd>
+            <dt class="text-xs text-stone-400 font-semibold uppercase">Email</dt>
+            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.email || '—' }}</dd>
           </div>
           <div class="rounded-xl bg-stone-50 p-3">
-            <dt class="text-xs text-stone-400 font-semibold uppercase">Conclusión del plan</dt>
-            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.fecha_conclusion_plan }}</dd>
+            <dt class="text-xs text-stone-400 font-semibold uppercase">Teléfono</dt>
+            <dd class="font-semibold text-stone-800">{{ tramite.estudiante.telefono || '—' }}</dd>
           </div>
         </dl>
       </div>

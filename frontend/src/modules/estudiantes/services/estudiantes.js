@@ -2,21 +2,18 @@ import http from '@/core/http/client';
 
 /**
  * Servicio de estudiantes. Encapsula los endpoints del dominio estudiante:
- * la auto-gestión del perfil del estudiante autenticado (consulta y
- * actualización de sus campos académicos) y la gestión administrativa del
- * perfil aislado (alta y listados) que alimenta el panel del admin.
+ * el auto-registro público del estudiante (desde el login), la consulta en
+ * modo lectura de su perfil y la gestión administrativa del perfil (alta y
+ * listados) que alimenta el panel del admin.
  */
 export const estudianteService = {
+    /** Auto-registro del estudiante desde el login (endpoint público). */
+    registro(datos) {
+        return http.post('/estudiantes/registro', datos);
+    },
     /** Devuelve el perfil aislado del estudiante autenticado (o null si no existe). */
     perfil() {
         return http.get('/estudiante/perfil');
-    },
-    /**
-     * Actualiza los campos académicos que el estudiante mantiene por su cuenta
-     * (plan de estudios, fecha de conclusión y promedio global).
-     */
-    guardarPerfil(datos) {
-        return http.put('/estudiante/perfil', datos);
     },
 
     /** Listado paginado de estudiantes (solo admin). */

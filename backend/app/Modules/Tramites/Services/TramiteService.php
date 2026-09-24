@@ -44,7 +44,7 @@ class TramiteService extends BasePaginadoService
     /** Eager-loads del detalle con proyección de columnas (ni contraseñas ni sobrantes). */
     private const DETALLE_CARGAS = [
         'modalidad:id_modalidad,nombre,descripcion,requisitos_minimos',
-        'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,plan_estudios,fecha_conclusion_plan,promedio_global',
+        'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,email,telefono,promedio_global',
         'estudiante.user:id_usuario,nombres,apellidos,email,rol',
         'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,ruta_archivo,tamanio_kb,created_at',
         'estados:id_estado,id_tramite,nombre_estado,descripcion,observaciones,id_usuario_responsable,created_at',

@@ -13,6 +13,7 @@
 import authModule from './auth';
 import layoutModule from './layout';
 import estudiantesModule from './estudiantes';
+import docentesModule from './docentes';
 import notificacionesModule from './notificaciones';
 import tesisModule from './tesis';
 import tramitesModule from './tramites';
@@ -22,6 +23,7 @@ export const modules = [
     authModule,
     layoutModule,
     estudiantesModule,
+    docentesModule,
     notificacionesModule,
     tesisModule,
     tramitesModule,
