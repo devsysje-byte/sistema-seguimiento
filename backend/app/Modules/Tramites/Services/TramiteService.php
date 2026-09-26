@@ -10,6 +10,7 @@ use App\Modules\Tramites\Events\EstadoTramiteCambiado;
 use App\Modules\Tramites\Events\TramiteCreado;
 use App\Modules\Tramites\Events\TramiteRevisado;
 use App\Modules\Tramites\Events\TutorAsignado;
+use App\Modules\Tramites\Exceptions\TransicionNoPermitidaException;
 use App\Support\BasePaginadoService;
 use App\Support\DocumentoAdjuntoService;
 use App\Support\Roles;
@@ -59,6 +60,53 @@ class TramiteService extends BasePaginadoService
         'estudiante.user:id_usuario,nombres,apellidos',
         'tutor:id_usuario,nombres,apellidos',
         'documentos:id_documento,id_tramite,tipo_documento,ruta_archivo',
+    ];
+
+    /**
+     * Módulos del flujo de titulación de la Tesis de Grado y el estado objetivo
+     * al que avanza cada uno (espejo del frontend).
+     *
+     * @var array<string, string>
+     */
+    private const MODULOS_FLUJO = [
+        'perfil_tesis' => 'perfil_aprobado',
+        'aprobacion_tema' => 'tema_aprobado',
+        'tribunal_revisor' => 'tribunal_asignado',
+        'defensa' => 'defensa_aprobada',
+        'reporte' => 'reporte_generado',
+        'publicacion' => 'titulado',
+    ];
+
+    /**
+     * Porcentaje de avance por estado (incluye estados heredados) para saber si
+     * un módulo avanza el flujo o ya fue superado. Espejo del frontend.
+     *
+     * @var array<string, int>
+     */
+    private const PCT_POR_ESTADO = [
+        'solicitud_presentada' => 0,
+        'pendiente_concejo_universitario' => 5,
+        'perfil_rechazado' => 5,
+        'perfil_aprobado' => 20,
+        'tutor_asignado' => 30,
+        'tema_aprobado' => 40,
+        'investigacion_en_desarrollo' => 45,
+        'documento_final_presentado' => 48,
+        'comision_revisora' => 50,
+        'insuficiente' => 50,
+        'correcciones_90_dias' => 50,
+        'suficiente' => 52,
+        'solicitud_fecha_defensa' => 55,
+        'defensa_programada' => 57,
+        'defensa_en_curso' => 62,
+        'tribunal_asignado' => 60,
+        'defensa_aprobada' => 75,
+        'reporte_generado' => 90,
+        'aprobado' => 100,
+        'titulado' => 100,
+        'reprobado' => 75,
+        'reprobado_ausencia' => 75,
+        'rechazado' => 20,
     ];
 
     public function __construct(
@@ -353,6 +401,198 @@ class TramiteService extends BasePaginadoService
         event(new TutorAsignado($tramite, $tutor));
 
         return $this->formatear($tramite);
+    }
+
+    /**
+     * Guarda un módulo del flujo de titulación de la Tesis de Grado.
+     *
+     * Valida los datos del formulario del módulo, los registra en
+     * `hitos.modulos`, asigna el tutor cuando corresponde (módulo de tema) y
+     * avanza el trámite al estado objetivo del módulo a través de la máquina de
+     * estados (incluye puentes con el flujo heredado).
+     *
+     * @return array Trámite formateado (con siguientes_estados y secuencia).
+     *
+     * @throws ValidationException
+     */
+    public function guardarModuloFlujo(int $id, string $modulo, array $datos, User $actor): array
+    {
+        if (! array_key_exists($modulo, self::MODULOS_FLUJO)) {
+            throw ValidationException::withMessages([
+                'datos' => ['El módulo del flujo no es reconocido.'],
+            ]);
+        }
+
+        $tramite = Tramite::with('modalidad')->findOrFail($id);
+
+        if ($tramite->modalidad->nombre !== 'Tesis de Grado') {
+            throw ValidationException::withMessages([
+                'modulo' => ['El flujo de módulos solo aplica a la modalidad Tesis de Grado.'],
+            ]);
+        }
+
+        if (in_array($tramite->estado_actual, TramiteStateService::terminales(), true)) {
+            throw ValidationException::withMessages([
+                'datos' => ['El trámite finalizó; no es posible registrar más módulos.'],
+            ]);
+        }
+
+        // La defensa se registra en DOS pasos: el paso 1 guarda la Resolución de
+        // Aprobación Final y la fecha de la defensa; el paso 2 cierra el módulo
+        // con la nota final. Sin `paso` se interpreta como guardado completo.
+        $paso = (int) ($datos['paso'] ?? 2);
+
+        $this->validarDatosModulo($modulo, $datos, $paso);
+
+        $objetivo = self::MODULOS_FLUJO[$modulo];
+        $pctActual = self::PCT_POR_ESTADO[$tramite->estado_actual] ?? 0;
+        $pctObjetivo = self::PCT_POR_ESTADO[$objetivo] ?? 0;
+
+        // El paso 1 de la defensa solo registra los datos: el trámite avanza al
+        // estado objetivo cuando la nota final se guarda (paso 2).
+        $avanza = ! ($modulo === 'defensa' && $paso === 1);
+        $transiciono = false;
+
+        // El módulo ya fue superado (pct objetivo ≤ actual) no reclama transición;
+        // solo se actualizan los datos guardados del módulo.
+        if ($avanza && $pctObjetivo > $pctActual) {
+            try {
+                $this->stateService->transicionar(
+                    $tramite,
+                    $objetivo,
+                    "Módulo '{$modulo}' del flujo de titulación completado.",
+                    $actor->id_usuario
+                );
+                $transiciono = true;
+            } catch (TransicionNoPermitidaException $e) {
+                throw ValidationException::withMessages([
+                    'datos' => ['No es posible registrar este módulo en el estado actual del trámite.'],
+                ]);
+            }
+        }
+
+        // El control de paso es un mecanismo de guardado, no un dato del módulo.
+        unset($datos['paso']);
+
+        $hitos = $tramite->hitos ?? [];
+        $hitos['modulos'][$modulo] = $datos;
+        $soloHitos = ['hitos' => $hitos];
+        if ($avanza) {
+            $soloHitos['estado_actual'] = $objetivo;
+        }
+
+        // El módulo de tema asigna el tutor designado en el formulario.
+        if ($modulo === 'aprobacion_tema' && ! empty($datos['tutor_id'])) {
+            $tutor = User::find($datos['tutor_id']);
+            if ($tutor === null || $tutor->rol !== Roles::DOCENTE) {
+                throw ValidationException::withMessages([
+                    'datos' => ['El tutor seleccionado no es un docente válido.'],
+                ]);
+            }
+            $soloHitos['id_tutor'] = $tutor->id_usuario;
+        }
+
+        $tramite->update($soloHitos);
+        $tramite->refresh()->load(self::DETALLE_CARGAS);
+
+        // Solo se notifica un cambio de estado si realmente hubo transición;
+        // el paso 1 de la defensa guarda datos sin avanzar el trámite.
+        if ($transiciono) {
+            event(new EstadoTramiteCambiado($tramite, $objetivo, null));
+        }
+
+        return $this->formatear($tramite);
+    }
+
+    /**
+     * Reglas de validación de cada módulo del flujo (espejo del frontend).
+     *
+     * @param  string  $modulo  Identificador del módulo.
+     * @param  array  $datos  Datos enviados desde el formulario del módulo.
+     * @param  int  $paso  Paso del módulo de defensa (1 = resolución + fecha, 2 = nota).
+     *
+     * @throws ValidationException
+     */
+    private function validarDatosModulo(string $modulo, array $datos, int $paso = 2): void
+    {
+        $val = static fn ($v) => is_string($v) && trim($v) !== '';
+        $errores = [];
+
+        switch ($modulo) {
+            case 'perfil_tesis':
+                foreach (['carta_solicitud', 'certificado_conclusion', 'perfil_tesis'] as $tipo) {
+                    $item = $datos['documentos'][$tipo] ?? null;
+                    if (empty($item['marcado'])) {
+                        $errores[] = "Marque la verificación del documento: {$tipo}.";
+                    } elseif (! $val($item['archivo']['nombre'] ?? null)) {
+                        $errores[] = "Adjunte el PDF del documento: {$tipo}.";
+                    }
+                }
+                break;
+
+            case 'aprobacion_tema':
+                if (! $val($datos['numero_resolucion'] ?? null)) {
+                    $errores[] = 'Ingrese el número de Resolución del HCC.';
+                }
+                if (! $val($datos['fecha_resolucion'] ?? null)) {
+                    $errores[] = 'Seleccione la fecha de la Resolución.';
+                }
+                if (! $val($datos['tema_investigacion'] ?? null) || mb_strlen(trim((string) $datos['tema_investigacion'])) < 5) {
+                    $errores[] = 'Ingrese el tema de investigación (mínimo 5 caracteres).';
+                }
+                if (empty($datos['tutor_id'])) {
+                    $errores[] = 'Seleccione el tutor asignado.';
+                }
+                break;
+
+            case 'tribunal_revisor':
+                if (! $val($datos['numero_resolucion'] ?? null)) {
+                    $errores[] = 'Ingrese el número de Resolución del HCC.';
+                }
+                if (! $val($datos['fecha_resolucion'] ?? null)) {
+                    $errores[] = 'Seleccione la fecha de la Resolución.';
+                }
+                foreach (['presidente', 'vocal', 'secretario'] as $rol) {
+                    $miembro = collect($datos['tribunal'] ?? [])->first(fn ($t) => ($t['rol'] ?? null) === $rol);
+                    if (! $val($miembro['nombre'] ?? null)) {
+                        $errores[] = 'Complete el nombre del '.ucfirst($rol).'.';
+                    }
+                }
+                break;
+
+            case 'defensa':
+                if (! $val($datos['numero_resolucion'] ?? null)) {
+                    $errores[] = 'Ingrese el número de Resolución de Aprobación Final.';
+                }
+                if (! $val($datos['fecha_defensa'] ?? null)) {
+                    $errores[] = 'Seleccione la fecha de la defensa.';
+                }
+                if ($paso !== 1) {
+                    $nota = $datos['nota_final'] ?? null;
+                    if ($nota === null || $nota === '') {
+                        $errores[] = 'Ingrese la nota final de la defensa.';
+                    } elseif (! is_numeric($nota) || (float) $nota < 0 || (float) $nota > 100) {
+                        $errores[] = 'La nota debe estar entre 0 y 100.';
+                    }
+                }
+                break;
+
+            case 'reporte':
+                break;
+
+            case 'publicacion':
+                if (! $val($datos['archivo']['nombre'] ?? null) && ! $val($datos['enlace_publico'] ?? null)) {
+                    $errores[] = 'Adjunte el documento final en PDF o ingrese el enlace público.';
+                }
+                break;
+
+            default:
+                $errores[] = 'Módulo no reconocido.';
+        }
+
+        if ($errores !== []) {
+            throw ValidationException::withMessages(['datos' => $errores]);
+        }
     }
 
     /**

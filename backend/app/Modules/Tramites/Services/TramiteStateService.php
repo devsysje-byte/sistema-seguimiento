@@ -44,24 +44,33 @@ class TramiteStateService
             'acta_registrada' => ['aprobado', 'reprobado'],
         ],
         'Tesis de Grado' => [
-            // 1. Fase de solicitud.
-            'solicitud_presentada' => ['pendiente_concejo_universitario', 'rechazado'],
+            // 1. Fase de solicitud. El puente a `perfil_aprobado` permite que
+            //    Kardex registre el módulo de perfil directamente desde la
+            //    solicitud, sin pasar por el estado intermedio del Consejo.
+            'solicitud_presentada' => ['pendiente_concejo_universitario', 'perfil_aprobado', 'perfil_rechazado', 'rechazado'],
             // 2. Evaluación del perfil por el Consejo Universitario.
             'pendiente_concejo_universitario' => ['perfil_aprobado', 'perfil_rechazado'],
-            'perfil_rechazado' => ['pendiente_concejo_universitario', 'rechazado'],
-            // 3. Tutor asignado e investigación en desarrollo (plazo configurable).
-            'perfil_aprobado' => ['tutor_asignado'],
-            'tutor_asignado' => ['investigacion_en_desarrollo'],
-            'investigacion_en_desarrollo' => ['documento_final_presentado'],
-            // 4. Comisión revisora del documento final.
-            'documento_final_presentado' => ['comision_revisora'],
-            'comision_revisora' => ['suficiente', 'insuficiente'],
+            'perfil_rechazado' => ['pendiente_concejo_universitario', 'perfil_aprobado', 'tutor_asignado', 'rechazado'],
+            // 3. Módulos del flujo de titulación gestionados por Kardex. Cada
+            //    módulo se guarda desde su formulario y avanza al estado objetivo.
+            'perfil_aprobado' => ['tema_aprobado', 'tutor_asignado'],
+            // Puente del flujo anterior: tras asignar tutor se puede continuar
+            // por el flujo heredado (investigación) o registrar el tema (nuevo).
+            'tutor_asignado' => ['tema_aprobado', 'investigacion_en_desarrollo'],
+            'tema_aprobado' => ['tribunal_asignado'],
+            'tribunal_asignado' => ['defensa_aprobada', 'solicitud_fecha_defensa'],
+            'defensa_aprobada' => ['reporte_generado'],
+            'reporte_generado' => ['titulado'],
+            // 4. Flujo heredado: investigación, comisión revisora y defensa.
+            'investigacion_en_desarrollo' => ['documento_final_presentado', 'tribunal_asignado'],
+            'documento_final_presentado' => ['comision_revisora', 'tribunal_asignado'],
+            'comision_revisora' => ['suficiente', 'insuficiente', 'tribunal_asignado'],
             'insuficiente' => ['comision_revisora'],
-            // 5. Fase final / defensa.
-            'suficiente' => ['solicitud_fecha_defensa'],
-            'solicitud_fecha_defensa' => ['defensa_programada'],
-            'defensa_programada' => ['defensa_en_curso'],
-            'defensa_en_curso' => ['aprobado', 'correcciones_90_dias'],
+            // Puentes hacia el estado objetivo del módulo de defensa.
+            'suficiente' => ['solicitud_fecha_defensa', 'defensa_aprobada'],
+            'solicitud_fecha_defensa' => ['defensa_programada', 'defensa_aprobada'],
+            'defensa_programada' => ['defensa_en_curso', 'defensa_aprobada'],
+            'defensa_en_curso' => ['aprobado', 'correcciones_90_dias', 'defensa_aprobada'],
             // Tras reprobar la defensa, el estudiante tiene 90 días para corregir
             // y volver a solicitar una fecha; si no, la gestión lo pasa a `reprobado`.
             'correcciones_90_dias' => ['solicitud_fecha_defensa', 'reprobado'],
@@ -93,7 +102,7 @@ class TramiteStateService
      *
      * @var array<int, string>
      */
-    private const TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'];
+    private const TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia', 'titulado'];
 
     /**
      * Estados terminales compartidos del sistema.
@@ -114,9 +123,9 @@ class TramiteStateService
      * Dentro de una transacción de BD registra el nuevo estado en el historial
      * y actualiza el `estado_actual` del trámite.
      *
-     * @return \App\Models\EstadoTramite Registro de historial creado.
+     * @return EstadoTramite Registro de historial creado.
      *
-     * @throws \App\Modules\Tramites\Exceptions\TransicionNoPermitidaException
+     * @throws TransicionNoPermitidaException
      */
     public function transicionar(Tramite $tramite, string $nuevoEstado, string $observaciones, int $usuarioId): EstadoTramite
     {
@@ -134,7 +143,7 @@ class TramiteStateService
             $historial = EstadoTramite::create([
                 'id_tramite' => $tramite->id_tramite,
                 'nombre_estado' => $nuevoEstado,
-                'descripcion' => $tramite->modalidad->nombre . ' - Cambio de estado',
+                'descripcion' => $tramite->modalidad->nombre.' - Cambio de estado',
                 'id_usuario_responsable' => $usuarioId,
                 'observaciones' => $observaciones,
             ]);

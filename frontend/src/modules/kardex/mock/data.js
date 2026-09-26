@@ -12,17 +12,12 @@
 export const SECUENCIAS = {
   'Tesis de Grado': [
     'solicitud_presentada',
-    'pendiente_concejo_universitario',
     'perfil_aprobado',
-    'tutor_asignado',
-    'investigacion_en_desarrollo',
-    'documento_final_presentado',
-    'comision_revisora',
-    'suficiente',
-    'solicitud_fecha_defensa',
-    'defensa_programada',
-    'defensa_en_curso',
-    'aprobado',
+    'tema_aprobado',
+    'tribunal_asignado',
+    'defensa_aprobada',
+    'reporte_generado',
+    'titulado',
   ],
   'Trabajo Dirigido': [
     'solicitud_presentada',
@@ -43,26 +38,31 @@ export const SECUENCIAS = {
   ],
 };
 
-// Estados siguientes permitidos por estado (espejo del backend, Tesis y general).
+// Estados siguientes permitidos por estado (espejo del backend).
 export const SIGUIENTES_POR_ESTADO = {
-  solicitud_presentada: ['pendiente_concejo_universitario'],
+  solicitud_presentada: ['pendiente_concejo_universitario', 'perfil_aprobado', 'perfil_rechazado'],
   pendiente_concejo_universitario: ['perfil_aprobado', 'perfil_rechazado'],
-  perfil_aprobado: ['tutor_asignado'],
-  perfil_rechazado: ['investigacion_en_desarrollo'],
-  tutor_asignado: ['investigacion_en_desarrollo'],
-  investigacion_en_desarrollo: ['documento_final_presentado'],
-  documento_final_presentado: ['comision_revisora'],
-  comision_revisora: ['suficiente', 'insuficiente'],
-  suficiente: ['solicitud_fecha_defensa'],
+  perfil_aprobado: ['tema_aprobado', 'tutor_asignado'],
+  perfil_rechazado: ['perfil_aprobado', 'tutor_asignado'],
+  tutor_asignado: ['tema_aprobado', 'investigacion_en_desarrollo'],
+  tema_aprobado: ['tribunal_asignado', 'investigacion_en_desarrollo'],
+  investigacion_en_desarrollo: ['documento_final_presentado', 'tribunal_asignado'],
+  documento_final_presentado: ['comision_revisora', 'tribunal_asignado'],
+  comision_revisora: ['suficiente', 'insuficiente', 'tribunal_asignado'],
+  suficiente: ['solicitud_fecha_defensa', 'tribunal_asignado', 'defensa_aprobada'],
   insuficiente: ['comision_revisora'],
-  solicitud_fecha_defensa: ['defensa_programada'],
-  defensa_programada: ['defensa_en_curso'],
-  defensa_en_curso: ['aprobado', 'reprobado'],
-  correcciones_90_dias: ['solicitud_fecha_defensa'],
+  solicitud_fecha_defensa: ['defensa_programada', 'defensa_aprobada'],
+  defensa_programada: ['defensa_en_curso', 'defensa_aprobada'],
+  tribunal_asignado: ['defensa_aprobada', 'defensa_programada', 'defensa_en_curso'],
+  defensa_en_curso: ['defensa_aprobada', 'aprobado', 'reprobado'],
+  defensa_aprobada: ['reporte_generado', 'aprobado'],
+  reporte_generado: ['titulado', 'aprobado'],
+  correcciones_90_dias: ['solicitud_fecha_defensa', 'reprobado'],
   examen_programado: ['defensa_en_curso'],
   aprobado: [],
   reprobado: [],
   rechazado: [],
+  titulado: [],
 };
 
 // Catálogo de modalidades activas (misma forma que GET /api/modalidades).
@@ -128,20 +128,39 @@ export const POSTULANTES_MOCK = [
       id_modalidad: 2,
       id_tutor: 5,
       tutor: { id_usuario: 5, nombres: 'Julia', apellidos: 'Paredes Villca', email: 'julia.paredes@upea.edu.bo', telefono: '70011223', rol: 'docente' },
-      estado_actual: 'investigacion_en_desarrollo',
+      estado_actual: 'tema_aprobado',
       observaciones: null,
-      hitos: { perfil_aprobado: '2026-06-10', tutor_asignado: '2026-06-18', limite_presentacion: '2027-06-10' },
+      hitos: {
+        perfil_aprobado: '2026-06-10',
+        tema_aprobado: '2026-06-24',
+        limite_presentacion: '2027-06-10',
+        modulos: {
+          perfil_tesis: {
+            documentos: {
+              carta_solicitud: { marcado: true, archivo: { nombre: 'carta_solicitud_carlos.pdf' } },
+              certificado_conclusion: { marcado: true, archivo: { nombre: 'certificado_conclusion_carlos.pdf' } },
+              perfil_tesis: { marcado: true, archivo: { nombre: 'perfil_tesis_carlos.pdf' } },
+            },
+            observaciones: 'Documentación verificada y aprobada por Kardex.',
+          },
+          aprobacion_tema: {
+            numero_resolucion: 'HCC-0245/2026',
+            fecha_resolucion: '2026-06-24',
+            tema_investigacion: 'Sistemas de riego eficientes para cultivos de altura en el altiplano boliviano.',
+            tutor_id: 5,
+          },
+        },
+      },
       created_at: '2026-05-11T08:00:00.000000Z',
       updated_at: '2026-09-01T12:30:00.000000Z',
       modalidad: { id_modalidad: 2, nombre: 'Tesis de Grado' },
       estudiante: { id_estudiante: 103, ci: '6654321', nombres: 'Carlos Alberto', apellidos: 'Mamani Ticona', registro_universitario: 'RU-2018-0112' },
       estados: [
         { nombre_estado: 'solicitud_presentada', descripcion: 'Solicitud presentada', created_at: '2026-05-11T08:00:00.000000Z' },
-        { nombre_estado: 'pendiente_concejo_universitario', descripcion: 'Consejo Universitario', created_at: '2026-05-14T09:00:00.000000Z' },
         { nombre_estado: 'perfil_aprobado', descripcion: 'Perfil aprobado', created_at: '2026-06-10T10:00:00.000000Z' },
-        { nombre_estado: 'investigacion_en_desarrollo', descripcion: 'Investigación en desarrollo', created_at: '2026-06-18T11:00:00.000000Z' },
+        { nombre_estado: 'tema_aprobado', descripcion: 'Tema aprobado', created_at: '2026-06-24T11:00:00.000000Z' },
       ],
-      siguientes_estados: SIGUIENTES_POR_ESTADO['investigacion_en_desarrollo'],
+      siguientes_estados: SIGUIENTES_POR_ESTADO['tema_aprobado'],
       secuencia: SECUENCIAS['Tesis de Grado'],
     },
   },
@@ -163,9 +182,38 @@ export const POSTULANTES_MOCK = [
       id_modalidad: 2,
       id_tutor: 7,
       tutor: { id_usuario: 7, nombres: 'Elena', apellidos: 'Aguilar Rojas', email: 'elena.aguilar@upea.edu.bo', telefono: '69887766', rol: 'docente' },
-      estado_actual: 'defensa_programada',
+      estado_actual: 'tribunal_asignado',
       observaciones: null,
-      hitos: { perfil_aprobado: '2026-02-08', tutor_asignado: '2026-02-15', limite_presentacion: '2027-02-08' },
+      hitos: {
+        perfil_aprobado: '2026-02-08',
+        tema_aprobado: '2026-02-15',
+        tribunal_asignado: '2026-08-20',
+        modulos: {
+          perfil_tesis: {
+            documentos: {
+              carta_solicitud: { marcado: true, archivo: { nombre: 'carta_solicitud_maria.pdf' } },
+              certificado_conclusion: { marcado: true, archivo: { nombre: 'certificado_conclusion_maria.pdf' } },
+              perfil_tesis: { marcado: true, archivo: { nombre: 'perfil_tesis_maria.pdf' } },
+            },
+            observaciones: '',
+          },
+          aprobacion_tema: {
+            numero_resolucion: 'HCC-0031/2026',
+            fecha_resolucion: '2026-02-15',
+            tema_investigacion: 'Incidencia de la educación digital en el rendimiento académico universitario.',
+            tutor_id: 7,
+          },
+          tribunal_revisor: {
+            numero_resolucion: 'HCC-0158/2026',
+            fecha_resolucion: '2026-08-20',
+            tribunal: [
+              { rol: 'presidente', nombre: 'Dr. Roberto Sánchez Calle' },
+              { rol: 'vocal', nombre: 'Mgr. Julia Paredes Villca' },
+              { rol: 'secretario', nombre: 'Lic. Elena Aguilar Rojas' },
+            ],
+          },
+        },
+      },
       created_at: '2026-01-20T08:00:00.000000Z',
       updated_at: '2026-09-18T09:00:00.000000Z',
       modalidad: { id_modalidad: 2, nombre: 'Tesis de Grado' },
@@ -173,14 +221,10 @@ export const POSTULANTES_MOCK = [
       estados: [
         { nombre_estado: 'solicitud_presentada', descripcion: 'Solicitud presentada', created_at: '2026-01-20T08:00:00.000000Z' },
         { nombre_estado: 'perfil_aprobado', descripcion: 'Perfil aprobado', created_at: '2026-02-08T10:00:00.000000Z' },
-        { nombre_estado: 'investigacion_en_desarrollo', descripcion: 'Investigación en desarrollo', created_at: '2026-02-15T11:00:00.000000Z' },
-        { nombre_estado: 'documento_final_presentado', descripcion: 'Documento final presentado', created_at: '2026-08-30T09:00:00.000000Z' },
-        { nombre_estado: 'comision_revisora', descripcion: 'Comisión Revisora', created_at: '2026-09-02T09:00:00.000000Z' },
-        { nombre_estado: 'suficiente', descripcion: 'Suficiente', created_at: '2026-09-12T09:00:00.000000Z' },
-        { nombre_estado: 'solicitud_fecha_defensa', descripcion: 'Fecha de defensa solicitada', created_at: '2026-09-13T09:00:00.000000Z' },
-        { nombre_estado: 'defensa_programada', descripcion: 'Defensa programada', created_at: '2026-09-18T09:00:00.000000Z' },
+        { nombre_estado: 'tema_aprobado', descripcion: 'Tema aprobado', created_at: '2026-02-15T11:00:00.000000Z' },
+        { nombre_estado: 'tribunal_asignado', descripcion: 'Tribunal asignado', created_at: '2026-08-20T09:00:00.000000Z' },
       ],
-      siguientes_estados: SIGUIENTES_POR_ESTADO['defensa_programada'],
+      siguientes_estados: SIGUIENTES_POR_ESTADO['tribunal_asignado'],
       secuencia: SECUENCIAS['Tesis de Grado'],
     },
   },
@@ -291,8 +335,52 @@ export function asignarTutorMock(tramite, idTutor) {
   return t;
 }
 
+// Estado objetivo de cada módulo del flujo de titulación (espejo del backend).
+const ESTADOS_MODULOS = {
+  perfil_tesis: 'perfil_aprobado',
+  aprobacion_tema: 'tema_aprobado',
+  tribunal_revisor: 'tribunal_asignado',
+  defensa: 'defensa_aprobada',
+  reporte: 'reporte_generado',
+  publicacion: 'titulado',
+};
+
+// Simula POST /tramites/{id}/flujo/{modulo} (guardado de un módulo del flujo).
+export function aplicarModuloMock(tramite, moduloId, datos) {
+  const t = clonar(tramite);
+  const estado = ESTADOS_MODULOS[moduloId];
+  if (!estado) {
+    throw { message: 'El módulo del flujo no es reconocido.' };
+  }
+  const hoy = new Date().toISOString().slice(0, 10);
+  // La defensa se registra en dos pasos. La clave `paso` no se persiste (espejo
+  // del TramiteService): el paso 1 guarda los datos sin transicionar el estado.
+  const paso = Number(datos.paso ?? 2);
+  const { paso: _paso, ...datosGuardar } = datos;
+  t.updated_at = new Date().toISOString();
+  t.hitos = {
+    ...(t.hitos || {}),
+    modulos: { ...(t.hitos?.modulos || {}), [moduloId]: datosGuardar },
+  };
+  if (moduloId === 'defensa' && paso === 1) {
+    return t;
+  }
+  t.estado_actual = estado;
+  t.hitos = { ...t.hitos, [estado]: hoy };
+  if (moduloId === 'aprobacion_tema' && datos.tutor_id) {
+    const tutor = DOCENTES_MOCK.find((d) => d.id_usuario === Number(datos.tutor_id));
+    if (tutor) {
+      t.id_tutor = tutor.id_usuario;
+      t.tutor = { ...tutor };
+    }
+  }
+  t.estados = [...(t.estados || []), { nombre_estado: estado, descripcion: estado, created_at: new Date().toISOString() }];
+  t.siguientes_estados = SIGUIENTES_POR_ESTADO[estado] || [];
+  return t;
+}
+
 // Estados terminales que dejan de considerarse "en curso" en el resumen.
-const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'reprobado_ausencia', 'rechazado'];
+const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'reprobado_ausencia', 'rechazado', 'titulado'];
 
 const esEnCurso = (estado) => !ESTADOS_TERMINALES.includes(estado);
 

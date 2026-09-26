@@ -29,21 +29,24 @@
       <!-- SIN TESIS ACTIVA: fase de solicitud (3 documentos obligatorios) -->
       <!-- ============================================================== -->
       <div v-if="!tesisActiva" class="space-y-6">
-        <!-- Flujo que siguió el trámite hasta su resultado -->
-        <TesisHistorial v-if="ultimaTesisTerminada" :tramite="ultimaTesisTerminada" />
+        <!-- Flujo que siguió el trámite en Kardex hasta su resultado -->
+        <TesisActualizacionesKardex v-if="ultimaTesisTerminada" :tramite="ultimaTesisTerminada" />
 
         <!-- Tesis aprobada: panel terminal, ya no puede iniciar más trámites -->
         <div v-if="tesisAprobada" class="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-6 sm:p-8 text-center">
           <div class="mx-auto w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300 mb-4">
             <AppIcon name="award" :size="34" />
           </div>
-          <h2 class="text-2xl font-extrabold text-emerald-300">¡FELICIDADES! APROBADO</h2>
+          <h2 class="text-2xl font-extrabold text-emerald-300">{{ titulado ? '¡FELICIDADES! TITULADO' : '¡FELICIDADES! APROBADO' }}</h2>
           <p class="mt-2 text-sm font-medium text-emerald-400 max-w-md mx-auto">
-            Tu tesis de grado fue aprobada. Has culminado tu modalidad de titulación y
-            ya no puedes realizar más solicitudes de trámite.
+            {{
+              titulado
+                ? 'Tu trámite de titulación concluyó con éxito: estás titulado. Ya no puedes realizar más solicitudes de trámite.'
+                : 'Tu tesis de grado fue aprobada. Has culminado tu modalidad de titulación y ya no puedes realizar más solicitudes de trámite.'
+            }}
           </p>
           <p v-if="ultimaTesisTerminada" class="mt-1 text-xs text-emerald-500">
-            Sustentación
+            {{ titulado ? 'Titulación' : 'Sustentación' }}
             <template v-if="ultimaTesisTerminada.hitos?.fecha_defensa">
               aprobada el {{ formatoFechaLarga(ultimaTesisTerminada.hitos.fecha_defensa) }}.
             </template>
@@ -97,7 +100,7 @@
               </div>
 
               <!-- Resumen de fases del flujo -->
-              <div class="mt-6 grid sm:grid-cols-5 gap-2">
+              <div class="mt-6 grid sm:grid-cols-7 gap-2">
                 <div v-for="fase in FASES_TESIS" :key="fase.id"
                      class="rounded-xl px-3 py-3 ring-1 ring-white/10 bg-white/5 text-center">
                   <AppIcon :name="fase.icon" :size="18" class="mx-auto text-orange-300 mb-1" />
@@ -172,7 +175,7 @@
           </p>
 
           <!-- Indicador de fase actual -->
-          <div class="mt-5 grid sm:grid-cols-5 gap-2">
+          <div class="mt-5 grid sm:grid-cols-7 gap-2">
             <div v-for="fase in FASES_TESIS" :key="fase.id"
                  class="rounded-xl px-3 py-3 ring-1 transition text-center"
                  :class="estadoFase(fase).contenedor">
@@ -182,8 +185,8 @@
           </div>
         </div>
 
-        <!-- Flujo seguido por el trámite hasta su estado actual -->
-        <TesisHistorial :tramite="tramite" />
+        <!-- Flujo seguido por Kardex: todo lo que se registró en el trámite -->
+        <TesisActualizacionesKardex :tramite="tramite" />
 
         <!-- Alerta de perfil rechazado + reenvío -->
         <div v-if="tramite.estado_actual === 'perfil_rechazado'"
@@ -412,10 +415,12 @@
 //   - Sin tesis activa: formulario de solicitud con los 3 documentos
 //     obligatorios (Nota de Solicitud, Certificado de Notas, Perfil de Tesis).
 //   - Con tesis activa: seguimiento del flujo oficial (estado, fase, hitos,
-//     cuenta regresiva del plazo, fecha de defensa y documentos) y la opción de
-//     reenviar el perfil si el Consejo lo rechazó. La línea de tiempo (historial)
-//     ya no se muestra aquí: la gestiona el personal (Kardex) en sus paneles.
-import { ref, computed, onMounted } from 'vue';
+//     cuenta regresiva del plazo, fecha de defensa y documentos), el detalle de
+//     cada actualización registrada por Kardex y la opción de reenviar el perfil
+//     si el Consejo lo rechazó. El trámite se sondea periódicamente para que el
+//     estudiante vea los cambios de estado que Kardex vaya registrando sin
+//     tener que recargar la página.
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { EstadoBadge, useTramitesStore, formatoEstado, ESTADOS_TERMINALES } from '@/modules/tramites';
 import { useEstudianteStore } from '@/modules/estudiantes';
@@ -426,9 +431,12 @@ import { AppShell } from '@/modules/layout';
 import AppIcon from '@/ui/AppIcon.vue';
 import UiModal from '@/ui/UiModal.vue';
 import CountdownTesis from '../components/CountdownTesis.vue';
-import TesisHistorial from '../components/TesisHistorial.vue';
+import TesisActualizacionesKardex from '../components/TesisActualizacionesKardex.vue';
 import { useTesisStore } from '../stores/tesis';
 import { FASES_TESIS, DESCRIPCION_ESTADO, faseDe, countdownDe, puedeSolicitarFechaDefensa, reoptarInfo } from '../utils/flujo';
+
+// Cada cuánto se consulta el trámite para detectar avances de Kardex.
+const INTERVALO_SEGUIMIENTO = 30000;
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -463,7 +471,10 @@ const ultimaTesisTerminada = computed(() => (tesisTerminada.value ? tramite.valu
 
 // Resultado terminal: aprobada no permite más trámites; reprobada aplica la
 // regla de re-opción de modalidad (90 días de corrección / 365 días máximos).
-const tesisAprobada = computed(() => tesisTerminada.value && tramite.value?.estado_actual === 'aprobado');
+const tesisAprobada = computed(() =>
+  tesisTerminada.value && ['aprobado', 'titulado'].includes(tramite.value?.estado_actual)
+);
+const titulado = computed(() => tramite.value?.estado_actual === 'titulado');
 const tesisReprobada = computed(() =>
   tesisTerminada.value && ['reprobado', 'reprobado_ausencia'].includes(tramite.value?.estado_actual)
 );
@@ -498,6 +509,11 @@ const faltantes = computed(() =>
     .map(([, etiqueta]) => etiqueta)
 );
 
+// Seguimiento en segundo plano: temporizador del sondeo y último estado visto.
+let temporizadorSeguimiento = null;
+let sincronizando = false;
+let ultimoEstadoVisto = null;
+
 onMounted(async () => {
   cargando.value = true;
   try {
@@ -509,7 +525,51 @@ onMounted(async () => {
   } finally {
     cargando.value = false;
   }
+
+  ultimoEstadoVisto = tramite.value?.estado_actual || null;
+  iniciarSeguimiento();
 });
+
+onUnmounted(() => {
+  if (temporizadorSeguimiento) clearInterval(temporizadorSeguimiento);
+  document.removeEventListener('visibilitychange', alCambiarVisibilidad);
+});
+
+/**
+ * Arranca el sondeo periódico del trámite para que el estudiante vea los
+ * avances que Kardex registre sin recargar la página. La escucha de
+ * `visibilitychange` sincroniza de inmediato al volver a la pestaña.
+ */
+function iniciarSeguimiento() {
+  if (temporizadorSeguimiento) return;
+  temporizadorSeguimiento = setInterval(sincronizarTramite, INTERVALO_SEGUIMIENTO);
+  document.addEventListener('visibilitychange', alCambiarVisibilidad);
+}
+
+/** Sincroniza al regresar a la pestaña solo si estaba oculta. */
+function alCambiarVisibilidad() {
+  if (document.visibilityState === 'visible') sincronizarTramite();
+}
+
+/**
+ * Consulta el trámite activo y avisa cuando Kardex cambió su estado. La carga
+ * es silenciosa: no mueve el indicador de carga ni descarta lo ya mostrado si
+ * la petición falla, y no se solapa si la anterior sigue en curso.
+ */
+async function sincronizarTramite() {
+  if (sincronizando || document.visibilityState === 'hidden') return;
+  sincronizando = true;
+  try {
+    await tramitesStore.cargarTramiteActivo(true);
+    const estado = tramite.value?.estado_actual || null;
+    if (estado && ultimoEstadoVisto && estado !== ultimoEstadoVisto) {
+      toastStore.info(`Kardex actualizó tu tesis: ${formatoEstado(estado)}.`);
+    }
+    ultimoEstadoVisto = estado;
+  } finally {
+    sincronizando = false;
+  }
+}
 
 /** Asocia un archivo seleccionado a su tipo de documento obligatorio. */
 function handleArchivo(event, tipo) {
@@ -539,6 +599,7 @@ async function enviarSolicitud() {
     toastStore.success('Solicitud de tesis enviada. Queda pendiente del Consejo Universitario.');
     archivos.value = { nota_solicitud: null, certificado_notas: null, perfil_tesis: null };
     await tramitesStore.cargarTramiteActivo();
+    ultimoEstadoVisto = tramite.value?.estado_actual || null;
   } catch (error) {
     toastStore.error('Error al enviar: ' + (error.response?.data?.message || 'Verifique los datos'));
   }
@@ -555,6 +616,7 @@ async function enviarReenvio() {
   try {
     const { data } = await tesisStore.reenviarPerfil(tramite.value.id_tramite, formData);
     tramitesStore.tramiteActivo = data;
+    ultimoEstadoVisto = tramite.value?.estado_actual || null;
     mostrarReenvio.value = false;
     archivoReenvio.value = null;
     observacionesReenvio.value = '';
@@ -580,6 +642,7 @@ async function enviarReenvioDocumento() {
   try {
     const { data } = await tesisStore.reenviarDocumento(tramite.value.id_tramite, formData);
     tramitesStore.tramiteActivo = data;
+    ultimoEstadoVisto = tramite.value?.estado_actual || null;
     mostrarReenvioDocumento.value = false;
     archivoReenvioDocumento.value = null;
     observacionesReenvioDocumento.value = '';
@@ -599,6 +662,7 @@ async function enviarSolicitudFecha() {
       fechaSugerida.value || null
     );
     tramitesStore.tramiteActivo = data;
+    ultimoEstadoVisto = tramite.value?.estado_actual || null;
     fechaSugerida.value = '';
     toastStore.success('Solicitud de fecha de defensa enviada. Kardex o Secretaría la programará.');
   } catch (error) {

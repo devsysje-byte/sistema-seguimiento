@@ -9,10 +9,21 @@ import { authService } from '../services/auth';
  */
 export const useAuthStore = defineStore('auth', {
     // Estado inicial: restaura la sesión desde localStorage si existía.
-    state: () => ({
-        user: JSON.parse(localStorage.getItem('user')) || null,
-        token: localStorage.getItem('token') || null,
-    }),
+    // Un valor corrupto (JSON inválido/truncado de una sesión antigua) no debe
+    // lanzar una excepción aquí: eso tumba el montaje de TODA la aplicación.
+    state: () => {
+        let user = null;
+        try {
+            const raw = localStorage.getItem('user');
+            user = raw ? JSON.parse(raw) : null;
+        } catch {
+            user = null;
+        }
+        return {
+            user,
+            token: localStorage.getItem('token') || null,
+        };
+    },
     getters: {
         // true si el usuario autenticado tiene rol admin.
         isAdmin: (state) => state.user?.rol === 'admin',

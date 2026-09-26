@@ -3,9 +3,9 @@
 namespace App\Modules\Tramites\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Modules\Tramites\Http\Requests\AsignarTutorRequest;
 use App\Modules\Tramites\Http\Requests\CrearTramiteRequest;
+use App\Modules\Tramites\Http\Requests\GuardarModuloFlujoRequest;
 use App\Modules\Tramites\Http\Requests\RevisarTramiteRequest;
 use App\Modules\Tramites\Http\Requests\TransicionarTramiteRequest;
 use App\Modules\Tramites\Services\TramiteService;
@@ -22,9 +22,7 @@ use Illuminate\Http\Request;
  */
 class TramiteController extends Controller
 {
-    public function __construct(private readonly TramiteService $tramiteService)
-    {
-    }
+    public function __construct(private readonly TramiteService $tramiteService) {}
 
     /**
      * GET /api/estudiante/tramite-activo
@@ -121,6 +119,27 @@ class TramiteController extends Controller
     {
         return response()->json(
             $this->tramiteService->asignarTutor($id, $request->validated()['id_tutor'])
+        );
+    }
+
+    /**
+     * POST /api/tramites/{id}/flujo/{modulo} (roles de gestión)
+     *
+     * Guarda un módulo del flujo de titulación: valida y registra sus datos en
+     * `hitos.modulos` y avanza el trámite al estado objetivo del módulo.
+     */
+    public function guardarModuloFlujo(GuardarModuloFlujoRequest $request, int $id, string $modulo): JsonResponse
+    {
+        $validated = $request->validated();
+
+        return response()->json(
+            $this->tramiteService->guardarModuloFlujo(
+                $id,
+                $modulo,
+                $validated['datos'],
+                $request->user()
+            ),
+            201
         );
     }
 

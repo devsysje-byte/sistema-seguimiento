@@ -14,7 +14,7 @@ Route::middleware('auth:sanctum')->group(function () {
 // /tramites/{id} para que el comodín no capture "pendientes"/"estadisticas"
 // (provocaría TypeError en show(int $id) → HTTP 500).
 // Paneles de gestión (roles de gestión).
-Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION)])->group(function () {
+Route::middleware(['auth:sanctum', 'role:'.implode(',', Roles::GESTION)])->group(function () {
     Route::get('/tramites/pendientes', [TramiteController::class, 'pendientes']);
     Route::get('/tramites/concluidos', [TramiteController::class, 'concluidos']);
     Route::get('/tramites/estadisticas', [TramiteController::class, 'estadisticas']);
@@ -23,12 +23,13 @@ Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION)])->gro
 });
 
 // Transición de estados: la realiza la gestión del trámite (secretaría/kardex).
-Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION)])->group(function () {
+Route::middleware(['auth:sanctum', 'role:'.implode(',', Roles::GESTION)])->group(function () {
     Route::post('/tramites/{id}/transicionar', [TramiteController::class, 'transicionar']);
+    Route::post('/tramites/{id}/flujo/{modulo}', [TramiteController::class, 'guardarModuloFlujo']);
 });
 
 // Panel del docente tutor.
-Route::middleware(['auth:sanctum', 'role:' . Roles::DOCENTE])->group(function () {
+Route::middleware(['auth:sanctum', 'role:'.Roles::DOCENTE])->group(function () {
     Route::get('/tutorias', [TramiteController::class, 'tutorias']);
 });
 

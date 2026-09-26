@@ -108,6 +108,15 @@
           Se muestra su flujo actual y puede actualizar su estado desde aquí.
         </div>
 
+        <template v-if="esFlujoPorModulos">
+          <FlujoTitulacion
+            :tramite="kardexStore.tramite"
+            :docentes="docentes"
+            @guardado="sincronizarEstado"
+          />
+        </template>
+
+        <template v-else>
         <!-- Estado actual del flujo -->
         <div class="card p-5">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -263,6 +272,7 @@
             {{ kardexStore.errorMessage }}
           </p>
         </div>
+        </template>
       </template>
     </template>
   </div>
@@ -280,9 +290,11 @@ import { fechaLegible, iniciales } from '@/modules/kardex/utils/formato';
 import { TimelineTramite, EstadoBadge, formatoEstado, ESTADOS_TERMINALES, useTramitesStore } from '@/modules/tramites';
 import { DESCRIPCION_ESTADO, countdownDe } from '@/modules/tesis';
 import { DOCENTES_MOCK } from '@/modules/kardex/mock/data';
+import { esFlujoTitulacion as esFlujoDeModulos } from '@/modules/tesis/utils/flujoTitulacion';
 import { useToastStore } from '@/core/stores/toast';
 import AppIcon from '@/ui/AppIcon.vue';
 import EmptyState from '@/ui/EmptyState.vue';
+import FlujoTitulacion from '../components/flujo/FlujoTitulacion.vue';
 
 const kardexStore = useKardexStore();
 const toastStore = useToastStore();
@@ -304,6 +316,9 @@ const docentes = computed(() =>
 const conPasoTutor = computed(() =>
   kardexStore.tramite?.secuencia?.includes('tutor_asignado') || false,
 );
+
+// true cuando el trámite usa el flujo de titulación por módulos (Tesis de Grado).
+const esFlujoPorModulos = computed(() => esFlujoDeModulos(kardexStore.tramite));
 
 // Descripción legible del estado actual (flujo oficial de tesis).
 const descripcionEstado = computed(() =>

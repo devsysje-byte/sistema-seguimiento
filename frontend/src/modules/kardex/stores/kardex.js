@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { kardexService } from '../services/kardex';
 import { tramitesService } from '@/modules/tramites/services/tramites';
-import { MODALIDADES_MOCK, buscarMock, consultarMock, asignarMock, transicionarMock, asignarTutorMock, resumenMock } from '../mock/data';
+import { MODALIDADES_MOCK, buscarMock, consultarMock, asignarMock, transicionarMock, asignarTutorMock, resumenMock, aplicarModuloMock } from '../mock/data';
 
 // Modalidades que el KARDEX puede asignar a un postulante.
 export const MODALIDADES_ASIGNABLES = ['Tesis de Grado', 'Trabajo Dirigido', 'Examen de Grado'];
@@ -156,6 +156,7 @@ export const useKardexStore = defineStore('kardex', {
         /**
          * Consulta el flujo actual del postulante (trámite más reciente).
          *
+         * @param {string} identificador CI o R.U.
          * @returns {Promise<Object|null>} Respuesta `{ postulante, tramite }`.
          */
         async consultar(identificador) {
@@ -246,6 +247,39 @@ export const useKardexStore = defineStore('kardex', {
                     error?.response?.data?.message ||
                     error?.response?.data?.errors?.id_tutor?.[0] ||
                     'No se pudo asignar el tutor.';
+                return null;
+            } finally {
+                this.cargando = false;
+            }
+        },
+        /**
+         * Guarda un módulo del flujo de titulación: registra los datos del
+         * formulario en `hitos.modulos`, avanza el estado del trámite al estado
+         * objetivo del módulo y refresca el trámite del postulante. En modo
+         * simulado muta el trámite local de demostración.
+         *
+         * @param {string} moduloId Identificador del módulo (perfil_tesis, ...).
+         * @param {Object} datos    Datos validados del formulario del módulo.
+         * @returns {Promise<Object|null>} Trámite actualizado.
+         */
+        async guardarModuloFlujo(moduloId, datos) {
+            this.cargando = true;
+            this.errorMessage = null;
+            try {
+                if (!this.tramite) return null;
+                if (this.simulado) {
+                    const actualizado = aplicarModuloMock(this.tramite, moduloId, datos);
+                    this.tramite = actualizado;
+                    return this.tramite;
+                }
+                const { data } = await kardexService.guardarModuloFlujo(this.tramite.id_tramite, moduloId, datos);
+                this.tramite = data;
+                return this.tramite;
+            } catch (error) {
+                this.errorMessage =
+                    error?.response?.data?.message ||
+                    error?.response?.data?.errors?.datos?.[0] ||
+                    'No se pudo guardar el módulo del flujo.';
                 return null;
             } finally {
                 this.cargando = false;

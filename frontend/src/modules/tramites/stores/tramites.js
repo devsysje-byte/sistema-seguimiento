@@ -59,17 +59,21 @@ export const useTramitesStore = defineStore('tramites', {
         /**
          * Carga el trámite activo del estudiante desde GET /api/estudiante/tramite-activo.
          *
+         * @param {boolean} [silencioso=false] En modo silencioso (seguimiento en
+         *        segundo plano) no mueve el indicador de carga ni descarta el
+         *        último trámite conocido si la petición falla, para que un fallo
+         *        puntual de red no vacíe la vista del estudiante.
          * @returns {Promise<Object|null>} Trámite activo o null si no existe.
          */
-        async cargarTramiteActivo() {
-            this.cargandoTramite = true;
+        async cargarTramiteActivo(silencioso = false) {
+            if (!silencioso) this.cargandoTramite = true;
             try {
                 const { data } = await tramitesService.tramiteActivo();
                 this.tramiteActivo = data?.id_tramite ? data : null;
             } catch (error) {
-                this.tramiteActivo = null;
+                if (!silencioso) this.tramiteActivo = null;
             } finally {
-                this.cargandoTramite = false;
+                if (!silencioso) this.cargandoTramite = false;
             }
             return this.tramiteActivo;
         },

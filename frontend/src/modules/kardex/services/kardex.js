@@ -28,6 +28,10 @@ export const kardexService = {
     consultar(identificador) {
         return http.get('/kardex/postulantes/consultar', { params: { identificador } });
     },
+    /** Guarda un módulo del flujo de titulación y avanza el estado del trámite. */
+    guardarModuloFlujo(id, modulo, datos) {
+        return http.post(`/tramites/${id}/flujo/${modulo}`, { datos });
+    },
     /** Resumen estadístico del dashboard (modalidades, estudiantes y tutores). */
     resumen() {
         return http.get('/kardex/resumen');

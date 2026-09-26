@@ -7,7 +7,7 @@
 // ============================================================================
 
 // Estados que cierran el flujo de un trámite (no permiten avanzar).
-export const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'];
+export const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia', 'titulado'];
 
 // Estados considerados de éxito/aprobación con tono verde.
 export const ESTADOS_OK = [
@@ -15,6 +15,10 @@ export const ESTADOS_OK = [
   'suficiente',
   'perfil_aprobado',
   'tema_aprobado',
+  'tribunal_asignado',
+  'defensa_aprobada',
+  'reporte_generado',
+  'titulado',
   'monografia_aprobada',
   'conformidad_tutor',
 ];
@@ -35,7 +39,9 @@ export const ETIQUETAS_DOCUMENTO = {
   nota_solicitud: 'Nota de Solicitud',
   certificado_notas: 'Certificado de Notas',
   carta_solicitud: 'Carta de Solicitud',
+  certificado_conclusion: 'Certificado de Conclusión de Estudios',
   perfil_tesis: 'Perfil de Tesis de Grado',
+  documento_final: 'Documento Final',
 };
 
 /**
@@ -129,7 +135,7 @@ export function progresoEstado(tramite) {
  * @returns {{label: string, tone: string}} Etiqueta y clases de color.
  */
 export function statusGlobal(estado) {
-  if (estado === 'aprobado') return { label: 'Aprobado', tone: toneEstado(estado).soft };
+  if (estado === 'aprobado' || estado === 'titulado') return { label: 'Aprobado', tone: toneEstado(estado).soft };
   if (ESTADOS_ERROR.includes(estado)) return { label: 'Rechazado', tone: toneEstado(estado).soft };
   return { label: 'En Proceso', tone: 'bg-white/5 text-orange-200 border-white/20' };
 }

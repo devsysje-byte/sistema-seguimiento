@@ -20,6 +20,10 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
+        // html2pdf.js usa internamente html2canvas, que no soporta los colores
+        // oklch()/oklab() de Tailwind v4 y lanza "unsupported color function".
+        // html2canvas-pro es un fork con la misma API que SÍ los parsea.
+        'html2canvas': 'html2canvas-pro',
       },
     },
     server: {
