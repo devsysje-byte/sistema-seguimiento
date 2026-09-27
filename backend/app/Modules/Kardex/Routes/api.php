@@ -6,7 +6,7 @@ use App\Support\Roles;
 // Dashboard de KARDEX (roles de gestión académica).
 // Registro de postulantes (búsqueda por CI/RU, asignación de modalidad y
 // generación automática de credenciales) y consulta del flujo de trámites.
-Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION)])->group(function () {
+Route::middleware(['auth:sanctum', 'role:'.implode(',', Roles::GESTION)])->group(function () {
     // Busca un postulante por CI o registro universitario.
     Route::post('/kardex/postulantes/buscar', [KardexController::class, 'buscar']);
 
@@ -19,4 +19,8 @@ Route::middleware(['auth:sanctum', 'role:' . implode(',', Roles::GESTION)])->gro
 
     // Resumen estadístico del dashboard (modalidades, estudiantes y tutores).
     Route::get('/kardex/resumen', [KardexController::class, 'resumen']);
+
+    // Verifica la unicidad del título de una tesis de grado: indica si ya existe
+    // otro trámite con el mismo título y lista los trabajos más parecidos.
+    Route::get('/kardex/titulos-tesis', [KardexController::class, 'verificarTitulo']);
 });

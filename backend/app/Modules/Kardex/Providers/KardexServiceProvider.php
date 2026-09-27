@@ -2,6 +2,8 @@
 
 namespace App\Modules\Kardex\Providers;
 
+use App\Modules\Kardex\Services\KardexService;
+use App\Modules\Kardex\Services\VerificacionTituloService;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -15,7 +17,8 @@ class KardexServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(\App\Modules\Kardex\Services\KardexService::class);
+        $this->app->singleton(KardexService::class);
+        $this->app->singleton(VerificacionTituloService::class);
     }
 
     public function boot(): void

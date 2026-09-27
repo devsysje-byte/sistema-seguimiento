@@ -379,9 +379,74 @@ export function aplicarModuloMock(tramite, moduloId, datos) {
   return t;
 }
 
+// Simula GET /kardex/titulos-tesis (verificación de unicidad del título).
+// Espejo del VerificacionTituloService del backend: normaliza el texto y puntúa
+// la similitud combinando coincidencia de cadena y solapamiento de palabras.
+export function verificarTituloMock(titulo, excluirTramite = null) {
+  const consulta = String(titulo || '').trim();
+  const normalizado = normalizarTitulo(consulta);
+
+  const titulos = POSTULANTES_MOCK
+    .map((p) => ({
+      id_tramite: p.tramite?.id_tramite,
+      titulo: p.tramite?.hitos?.modulos?.aprobacion_tema?.tema_investigacion,
+      estado_actual: p.tramite?.estado_actual,
+      modalidad: p.tramite?.modalidad?.nombre,
+      estudiante: {
+        nombres: p.nombres,
+        apellidos: p.apellidos,
+        ci: p.ci,
+        registro_universitario: p.registro_universitario,
+      },
+      created_at: (p.tramite?.created_at || '').slice(0, 10),
+    }))
+    .filter((t) => t.titulo && t.id_tramite !== excluirTramite);
+
+  if (!normalizado) {
+    return { consulta, unico: true, total: 0, coincidencias: [] };
+  }
+
+  const UMBRAL_SIMILAR = 55;
+  const coincidencias = titulos
+    .map((t) => {
+      const candidato = normalizarTitulo(t.titulo);
+      const exacto = candidato === normalizado;
+      return { ...t, exacto, similitud: exacto ? 100 : similitudTitulos(normalizado, candidato) };
+    })
+    .filter((t) => t.exacto || t.similitud >= UMBRAL_SIMILAR)
+    .sort((a, b) => b.similitud - a.similitud)
+    .slice(0, 20)
+    .map((t) => ({ ...t, nivel: t.exacto ? 'exacto' : 'similar' }));
+
+  return {
+    consulta,
+    unico: !coincidencias.some((t) => t.exacto),
+    total: coincidencias.length,
+    coincidencias,
+  };
+}
+
+function normalizarTitulo(texto) {
+  return String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function similitudTitulos(consulta, candidato) {
+  if (!consulta || !candidato) return 0;
+  const palabrasConsulta = consulta.split(' ');
+  const palabrasCandidato = candidato.split(' ');
+  const comunes = palabrasConsulta.filter((p) => palabrasCandidato.includes(p)).length;
+  const dice = (2 * comunes) / (palabrasConsulta.length + palabrasCandidato.length);
+  return Math.round(dice * 100);
+}
+
 // Estados terminales que dejan de considerarse "en curso" en el resumen.
 const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'reprobado_ausencia', 'rechazado', 'titulado'];
-
 const esEnCurso = (estado) => !ESTADOS_TERMINALES.includes(estado);
 
 // Simula GET /kardex/resumen (resumen estadístico del dashboard).

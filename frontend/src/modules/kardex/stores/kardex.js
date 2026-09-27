@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { kardexService } from '../services/kardex';
 import { tramitesService } from '@/modules/tramites/services/tramites';
-import { MODALIDADES_MOCK, buscarMock, consultarMock, asignarMock, transicionarMock, asignarTutorMock, resumenMock, aplicarModuloMock } from '../mock/data';
+import { MODALIDADES_MOCK, buscarMock, consultarMock, asignarMock, transicionarMock, asignarTutorMock, resumenMock, aplicarModuloMock, verificarTituloMock } from '../mock/data';
 
 // Modalidades que el KARDEX puede asignar a un postulante.
 export const MODALIDADES_ASIGNABLES = ['Tesis de Grado', 'Trabajo Dirigido', 'Examen de Grado'];
@@ -21,6 +21,8 @@ export const useKardexStore = defineStore('kardex', {
         credenciales: null,         // { generadas, ya_existia, username, password }.
         tramite: null,              // Trámite actual del postulante (consulta/asignación).
         resumen: null,              // Resumen estadístico del dashboard (modalidades/estudiantes/tutores).
+        verificacionTitulo: null,   // Resultado de verificar la unicidad de un título de tesis.
+        verificandoTitulo: false,   // true mientras se verifica un título.
         simulado: false,            // true cuando los datos provienen del respaldo demo.
         cargando: false,            // true mientras se ejecuta una petición.
         errorMessage: null,         // Mensaje del último error mostrado en la vista.
@@ -284,6 +286,38 @@ export const useKardexStore = defineStore('kardex', {
             } finally {
                 this.cargando = false;
             }
+        },
+        /**
+         * Verifica la unicidad de un título de tesis de grado: indica si ya
+         * existe otro trámite con el mismo título y lista los trabajos más
+         * parecidos. En modo simulado usa el respaldo de demostración.
+         *
+         * @param {string} titulo           Título a verificar.
+         * @param {number|null} excluirTramite Trámite a omitir de la comparación.
+         * @returns {Promise<Object|null>} Verificación `{ consulta, unico, total, coincidencias }`.
+         */
+        async verificarTitulo(titulo, excluirTramite = null) {
+            this.verificandoTitulo = true;
+            this.errorMessage = null;
+            try {
+                const { data } = await kardexService.verificarTituloTesis(titulo, excluirTramite);
+                this.simulado = false;
+                this.verificacionTitulo = data.verificacion;
+                return data.verificacion;
+            } catch (error) {
+                if (this._manejarError(error) === null && this.simulado) {
+                    this.verificacionTitulo = verificarTituloMock(titulo, excluirTramite);
+                    return this.verificacionTitulo;
+                }
+                this.verificacionTitulo = null;
+                return null;
+            } finally {
+                this.verificandoTitulo = false;
+            }
+        },
+        /** Limpia la verificación de título. */
+        limpiarVerificacionTitulo() {
+            this.verificacionTitulo = null;
         },
         /** Limpia el estado de la búsqueda/consulta actual. */
         limpiar() {

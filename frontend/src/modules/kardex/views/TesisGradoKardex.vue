@@ -11,6 +11,125 @@
       </div>
     </div>
 
+    <!-- Barra de verificación del título de tesis -->
+    <form class="card p-4 sm:p-5" @submit.prevent="verificarTitulo">
+      <label class="label" for="filtro-titulo">Verificar título de tesis de grado</label>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1">
+          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+            <AppIcon name="file-text" :size="18" />
+          </span>
+          <input
+            id="filtro-titulo"
+            v-model="tituloTesis"
+            type="text"
+            class="input pl-10"
+            placeholder="Ej: Sistemas de riego eficientes para cultivos de altura"
+            autocomplete="off"
+          />
+        </div>
+        <button
+          type="submit"
+          class="btn-primary shrink-0 justify-center"
+          :disabled="!tituloTesis.trim() || kardexStore.verificandoTitulo"
+        >
+          <AppIcon v-if="kardexStore.verificandoTitulo" name="loader" :size="18" class="animate-spin" />
+          <AppIcon v-else name="shield" :size="18" />
+          <span class="uppercase tracking-wide">Verificar</span>
+        </button>
+      </div>
+      <p class="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
+        <AppIcon name="info" :size="13" />
+        Comprueba si el título ya fue registrado en otro trámite o si existen tesis de grado similares.
+      </p>
+    </form>
+
+    <!-- Resultado de la verificación del título -->
+    <div v-if="kardexStore.verificacionTitulo" class="card p-5">
+      <div class="flex flex-wrap items-start gap-3">
+        <div
+          class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          :class="[
+            tituloDuplicado ? 'bg-red-500/20 text-red-400' : '',
+            !tituloDuplicado && tituloHaySimilares ? 'bg-amber-500/20 text-amber-300' : '',
+            !tituloDuplicado && !tituloHaySimilares ? 'bg-emerald-500/20 text-emerald-300' : '',
+          ]"
+        >
+          <AppIcon :name="tituloDuplicado ? 'x-circle' : tituloHaySimilares ? 'alert-triangle' : 'check-circle'" :size="20" />
+        </div>
+        <div class="min-w-0 flex-1">
+          <h3 class="font-bold text-white uppercase">Resultado de la verificación</h3>
+          <p class="text-sm mt-0.5" :class="[
+            tituloDuplicado ? 'text-red-300' : '',
+            !tituloDuplicado && tituloHaySimilares ? 'text-amber-200' : '',
+            !tituloDuplicado && !tituloHaySimilares ? 'text-emerald-200' : '',
+          ]">
+            <template v-if="tituloDuplicado">
+              Ya existe un trabajo registrado con <strong>exactamente este título</strong>. Verifique el registro antes de aprobar el tema.
+            </template>
+            <template v-else-if="tituloHaySimilares">
+              No hay títulos idénticos, pero se encontraron
+              <strong>{{ kardexStore.verificacionTitulo.total }} {{ kardexStore.verificacionTitulo.total === 1 ? 'tesis similar' : 'tesis similares' }}</strong>.
+              Revise si existe algún riesgo de duplicidad.
+            </template>
+            <template v-else>
+              El título está <strong>disponible</strong>: no se encontraron trabajos iguales ni similares.
+            </template>
+          </p>
+        </div>
+        <button class="btn-ghost shrink-0" @click="kardexStore.limpiarVerificacionTitulo()">
+          <AppIcon name="x" :size="16" />
+          Limpiar
+        </button>
+      </div>
+
+      <!-- Coincidencias encontradas -->
+      <ul v-if="kardexStore.verificacionTitulo.coincidencias.length" class="mt-4 space-y-2.5">
+        <li
+          v-for="c in kardexStore.verificacionTitulo.coincidencias"
+          :key="c.id_tramite"
+          class="rounded-xl bg-white/5 border border-white/10 p-3.5"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span
+                  class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider rounded-full px-2.5 py-1"
+                  :class="c.exacto ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'"
+                >
+                  <AppIcon :name="c.exacto ? 'x-circle' : 'alert-triangle'" :size="12" />
+                  {{ c.exacto ? 'Duplicado' : `${c.similitud}% similar` }}
+                </span>
+                <EstadoBadge :estado="c.estado_actual" :upper="true" />
+              </div>
+
+              <p class="mt-2 text-sm font-semibold text-white">{{ c.titulo }}</p>
+
+              <div class="flex flex-wrap gap-2 mt-1.5">
+                <span class="inline-flex items-center gap-1.5 text-xs bg-white/5 border border-white/10 text-slate-300 rounded-full px-2.5 py-1">
+                  <AppIcon name="user" :size="12" /> {{ c.estudiante.nombres }} {{ c.estudiante.apellidos }}
+                </span>
+                <span class="inline-flex items-center gap-1.5 text-xs bg-white/5 border border-white/10 text-slate-300 rounded-full px-2.5 py-1">
+                  <AppIcon name="file-text" :size="12" /> CI: {{ c.estudiante.ci }}
+                </span>
+                <span v-if="c.modalidad" class="inline-flex items-center gap-1.5 text-xs bg-white/5 border border-white/10 text-slate-300 rounded-full px-2.5 py-1">
+                  <AppIcon name="layers" :size="12" /> {{ c.modalidad }}
+                </span>
+                <span v-if="c.created_at" class="inline-flex items-center gap-1.5 text-xs bg-white/5 border border-white/10 text-slate-300 rounded-full px-2.5 py-1">
+                  <AppIcon name="calendar" :size="12" /> {{ fechaLegible(c.created_at) }}
+                </span>
+              </div>
+            </div>
+
+            <button class="btn-warm shrink-0" @click="consultarCoincidencia(c)">
+              <AppIcon name="search" :size="16" />
+              Ver trámite
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
     <!-- Barra de filtro por CI/RU -->
     <form class="card p-4 sm:p-5" @submit.prevent="buscar">
       <label class="label" for="filtro-ci-ru">Filtrar por CI/RU</label>
@@ -81,6 +200,18 @@
             <AppIcon name="x" :size="16" />
             Limpiar
           </button>
+        </div>
+
+        <!-- Verificación rápida del título registrado en el módulo de tema -->
+        <div v-if="tituloRegistrado" class="mt-4 pt-4 border-t border-white/10">
+          <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Tema de investigación registrado</p>
+          <div class="mt-2 flex flex-col sm:flex-row sm:items-center gap-3">
+            <p class="text-sm text-white font-semibold min-w-0 flex-1">{{ tituloRegistrado }}</p>
+            <button class="btn-warm shrink-0 justify-center" @click="verificarTituloRegistrado">
+              <AppIcon name="shield" :size="16" />
+              <span class="uppercase tracking-wide">Verificar unicidad</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -301,6 +432,7 @@ const toastStore = useToastStore();
 const tramitesStore = useTramitesStore();
 
 const identificador = ref('');
+const tituloTesis = ref('');
 const nuevoEstado = ref(null);
 const observaciones = ref('');
 const tutorSeleccionado = ref('');
@@ -334,9 +466,24 @@ const terminal = computed(() => ESTADOS_TERMINALES.includes(kardexStore.tramite?
 // Cuenta regresiva (plazo de presentación / corrección) si aplica.
 const countdown = computed(() => countdownDe(kardexStore.tramite));
 
+// Tema de investigación ya registrado en el módulo de aprobación de tema.
+const tituloRegistrado = computed(
+  () => kardexStore.tramite?.hitos?.modulos?.aprobacion_tema?.tema_investigacion || '',
+);
+
+// true cuando la verificación encontró otro trámite con el mismo título.
+const tituloDuplicado = computed(
+  () => Boolean(kardexStore.verificacionTitulo && !kardexStore.verificacionTitulo.unico),
+);
+
+// true cuando la verificación encontró títulos parecidos (pero no idénticos).
+const tituloHaySimilares = computed(
+  () => Boolean(kardexStore.verificacionTitulo && kardexStore.verificacionTitulo.unico
+    && kardexStore.verificacionTitulo.total > 0),
+);
+
 // Hitos (fechas clave) registrados en el trámite.
-const HITOS_LABEL = {
-  perfil_aprobado: 'Perfil aprobado',
+const HITOS_LABEL = {  perfil_aprobado: 'Perfil aprobado',
   tutor_asignado: 'Tutor asignado',
   investigacion_en_desarrollo: 'Investigación en desarrollo',
   documento_final_presentado: 'Documento final presentado',
@@ -375,6 +522,32 @@ const buscar = async () => {
   if (resultado) sincronizarEstado();
 };
 
+/**
+ * Verifica la unicidad del título capturado en la barra de filtro, excluyendo el
+ * trámite cargado (así un postulante no aparece como coincidencia consigo mismo).
+ */
+const verificarTitulo = async () => {
+  if (!tituloTesis.value.trim() || kardexStore.verificandoTitulo) return;
+  await kardexStore.verificarTitulo(
+    tituloTesis.value.trim(),
+    kardexStore.tramite?.id_tramite || null,
+  );
+};
+
+/** Verifica el tema ya registrado en el trámite del postulante consultado. */
+const verificarTituloRegistrado = () => {
+  if (!tituloRegistrado.value) return;
+  tituloTesis.value = tituloRegistrado.value;
+  verificarTitulo();
+  document.querySelector('#filtro-titulo')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+/** Carga en la barra de CI/RU el postulante de una coincidencia encontrada. */
+const consultarCoincidencia = async (coincidencia) => {
+  identificador.value = coincidencia.estudiante.ci;
+  await buscar();
+};
+
 /** Actualiza el estado del trámite. */
 const actualizar = async () => {
   if (!nuevoEstado.value || kardexStore.cargando || !kardexStore.tramite) return;
@@ -400,7 +573,6 @@ const reiniciar = () => {
   observaciones.value = '';
   tutorSeleccionado.value = '';
 };
-
 /** Asigna (o reasigna) el tutor seleccionado al trámite. */
 const asignarTutor = async (idTutor) => {
   if (!kardexStore.tramite || !idTutor || kardexStore.cargando) return;

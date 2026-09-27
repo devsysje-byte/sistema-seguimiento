@@ -32,6 +32,15 @@ export const kardexService = {
     guardarModuloFlujo(id, modulo, datos) {
         return http.post(`/tramites/${id}/flujo/${modulo}`, { datos });
     },
+    /**
+     * Verifica la unicidad de un título de tesis de grado.
+     *
+     * @param {string} titulo          Título a verificar.
+     * @param {number} [excluirTramite] Trámite a omitir de la comparación.
+     */
+    verificarTituloTesis(titulo, excluirTramite = null) {
+        return http.get('/kardex/titulos-tesis', { params: { titulo, excluir_tramite: excluirTramite || undefined } });
+    },
     /** Resumen estadístico del dashboard (modalidades, estudiantes y tutores). */
     resumen() {
         return http.get('/kardex/resumen');
