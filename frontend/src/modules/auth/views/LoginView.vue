@@ -1,159 +1,133 @@
-<template>
-  <!-- Fondo de pantalla completa con gradiente moderno (Azul predominante + toques cálidos) -->
-  <div class="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-900 relative overflow-hidden">
-    
-    <!-- Resplandor cálido de fondo (Naranja/Rojo) -->
+﻿<template>
+  <div class="min-h-screen relative flex items-center justify-center px-4 py-10 overflow-hidden bg-gradient-to-br from-primary via-primary to-primary">
     <div class="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-orange-600 rounded-full blur-[120px] opacity-30 pointer-events-none"></div>
     <div class="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-red-600 rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
-    
-    <!-- Gradiente base azul oscuro -->
-    <div class="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary pointer-events-none"></div>
+    <div class="absolute inset-0 opacity-[0.06] pointer-events-none" style="background-image: radial-gradient(circle, #ffffff 1px, transparent 1px); background-size: 26px 26px;"></div>
 
-    <!-- Título del Sistema (Parte Superior) -->
-    <div class="absolute top-8 left-0 right-0 text-center z-10">
-      <h1 class="text-2xl md:text-3xl font-extrabold text-white drop-shadow-md tracking-tight">
-        Sistema de Seguimiento
-      </h1>
-      <p class="text-sm md:text-base text-orange-200 font-medium mt-1">
-        Modalidad de Titulación
-      </p>
-    </div>
-
-    <!-- Tarjeta principal del Login -->
-    <div class="w-full max-w-sm relative z-10 mt-16">
-      
-      <!-- Icono superior de Usuario con líneas decorativas -->
-      <div class="flex items-center justify-center mb-10 relative">
-        <!-- Línea izquierda -->
-        <div class="h-[1px] bg-white/20 flex-1 mr-4"></div>
-        
-        <!-- Círculo con icono (Usando el gradiente cálido) -->
-        <div class="w-24 h-24 rounded-full flex items-center justify-center bg-orange shadow-lg shadow-orange-900/40 shrink-0 border border-white/10">
-          <AppIcon name="user" :size="40" class="text-white" />
+    <div class="relative z-10 w-full max-w-md">
+      <div class="flex flex-col items-center text-center mb-8">
+        <div class="w-14 h-14 rounded-2xl bg-orange flex items-center justify-center text-white shadow-lg shadow-orange-900/40 ring-1 ring-white/20">
+          <AppIcon name="graduation" :size="28" />
         </div>
-        
-        <!-- Línea derecha -->
-        <div class="h-[1px] bg-white/20 flex-1 ml-4"></div>
+        <h1 class="mt-4 text-2xl font-extrabold text-white tracking-tight">SSMTECO</h1>
+        <p class="mt-1 text-sm text-slate-400">Seguimiento de Modalidades de Graduación</p>
       </div>
 
-      <!-- ================= VISTA DE LOGIN ================= -->
-      <template v-if="modo === 'login'">
-        <form @submit.prevent="handleLogin" class="space-y-5">
-          
-          <!-- Input Usuario -->
-          <div class="flex items-stretch rounded-lg overflow-hidden shadow-md group">
-            <div class="bg-white/10 border border-white/10 border-r-0 flex items-center justify-center w-12 shrink-0 group-focus-within:bg-orange-500/20 transition-colors">
-              <AppIcon name="user" :size="20" class="text-orange-200" />
-            </div>
-            <input 
-              id="username" 
-              v-model="username" 
-              type="text" 
-              class="w-full bg-slate-800/80 text-white placeholder-slate-400 px-4 py-3.5 focus:outline-none focus:bg-slate-800 focus:ring-1 focus:ring-orange-500 transition-all" 
-              placeholder="USUARIO" 
-              autocomplete="username" 
-              required
-            >
-          </div>
+      <div class="relative card p-7 sm:p-8 overflow-hidden">
+        <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange to-transparent"></div>
 
-          <!-- Input Contraseña (con icono de candado) -->
-
-          <div class="flex items-stretch rounded-lg overflow-hidden shadow-md group">
-            <div class="bg-white/10 border border-white/10 border-r-0 flex items-center justify-center w-12 shrink-0 group-focus-within:bg-orange-500/20 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-orange-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-            <input 
-              id="password" 
-              v-model="password" 
-              type="password" 
-              class="w-full bg-slate-800/80 text-white placeholder-slate-400 px-4 py-3.5 focus:outline-none focus:bg-slate-800 focus:ring-1 focus:ring-orange-500 transition-all" 
-              placeholder="********" 
-              required
-            >
-          </div>
-
-          <!-- Botón Login (Degradado Naranja/Rojo para máximo contraste) -->
-          <button type="submit" :disabled="ingresando" class="w-full bg-orange text-white font-bold py-3.5 rounded-lg shadow-lg shadow-orange-900/30 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 mt-4">
-            <AppIcon v-if="ingresando" name="loader" :size="17" class="animate-spin" />
-            <span v-else>LOGIN</span>
-          </button>
-        </form>
-
-        <!-- Enlaces inferiores (Remember / Forgot) -->
-        <div class="flex items-center justify-between text-xs text-slate-300 mt-6 px-1">
-          <label class="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
-            <input type="checkbox" class="w-4 h-4 rounded border-slate-500 bg-transparent text-orange-500 focus:ring-orange-400 focus:ring-offset-0">
-            <span>Remember me</span>
-          </label>
-         <!-- <a href="#" class="italic hover:text-orange-300 transition-colors">Forgot your password?</a> -->
-        </div>
-
-        <!-- Botón para ir a Registro -->
-        <div class="mt-8 text-center border-t border-white/10 pt-6">
-          <p class="text-xs text-slate-400 mb-2">¿No tienes cuenta?</p>
-          <button 
-            type="button" 
-            @click="modo = 'registro'" 
-            class="text-sm font-semibold text-orange-400 hover:text-orange-300 transition-colors underline decoration-orange-500/30 underline-offset-4"
-          >
-            REGISTRARSE
-          </button>
-        </div>
-      </template>
-
-      <!-- ================= VISTA DE REGISTRO ================= -->
-      <template v-else>
-        <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl">
-          <h2 class="text-xl font-bold text-white mb-4 text-center">Crea tu cuenta</h2>
-          
-          <form @submit.prevent="registrarEstudiante" class="space-y-3">
-            <input v-model="reg.nombres" class="w-full bg-slate-800/80 text-white placeholder-slate-400 rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm border border-white/5" placeholder="Nombres" required>
-            <input v-model="reg.apellidos" class="w-full bg-slate-800/80 text-white placeholder-slate-400 rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm border border-white/5" placeholder="Apellidos" required>
-            
-            <div class="grid grid-cols-2 gap-3">
-              <input v-model="reg.ci" class="w-full bg-slate-800/80 text-white placeholder-slate-400 rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm border border-white/5" placeholder="CI" required>
-              <input v-model="reg.registro_universitario" class="w-full bg-slate-800/80 text-white placeholder-slate-400 rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm border border-white/5" placeholder="Reg. Univ." required>
+        <Transition name="page" mode="out-in">
+          <div :key="modo">
+            <div class="text-center mb-7">
+              <div class="mx-auto w-12 h-12 rounded-2xl bg-orange-500/15 border border-orange-500/30 text-orange-300 flex items-center justify-center">
+                <AppIcon :name="modo === 'login' ? 'shield' : 'user-plus'" :size="22" />
+              </div>
+              <h2 class="mt-3 text-lg font-extrabold text-white">{{ titulo }}</h2>
+              <p class="mt-1 text-sm text-slate-400 leading-relaxed">{{ subtitulo }}</p>
             </div>
 
-            <div>
-              <label class="block text-xs text-slate-400 mb-1 ml-1">Fecha de Nacimiento</label>
-              <input v-model="reg.fecha_nacimiento" type="date" class="w-full bg-slate-800/80 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm border border-white/5 [color-scheme:dark]" required :max="hoy">
+            <form v-if="modo === 'login'" @submit.prevent="handleLogin" class="space-y-4">
+              <div>
+                <label class="label" for="username">Usuario</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 pointer-events-none">
+                    <AppIcon name="user" :size="18" />
+                  </span>
+                  <input id="username" ref="usernameInput" v-model="username" type="text" class="input pl-11" placeholder="Nombre_CI" autocomplete="username" required>
+                </div>
+              </div>
+
+              <div>
+                <label class="label" for="password">Contraseña</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 pointer-events-none">
+                    <AppIcon name="shield" :size="18" />
+                  </span>
+                  <input id="password" v-model="password" :type="showPassword ? 'text' : 'password'" class="input pl-11 pr-11" placeholder="••••••••" required>
+                  <button type="button" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-orange-400 transition-colors" @click="showPassword = !showPassword">
+                    <AppIcon :name="showPassword ? 'eye-off' : 'eye'" :size="19" />
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" :disabled="ingresando" class="btn-primary w-full py-3.5 mt-2">
+                <AppIcon v-if="ingresando" name="loader" :size="17" class="animate-spin" />
+                <AppIcon v-else name="send" :size="16" />
+                {{ ingresando ? 'Ingresando...' : 'Ingresar' }}
+              </button>
+            </form>
+
+            <form v-else @submit.prevent="registrarEstudiante" class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="label">Nombres</label>
+                  <input v-model="reg.nombres" class="input" placeholder="Nombre(s)" required>
+                </div>
+                <div>
+                  <label class="label">Apellidos</label>
+                  <input v-model="reg.apellidos" class="input" placeholder="Apellido(s)" required>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="label">CI</label>
+                  <input v-model="reg.ci" class="input" placeholder="1234567" required>
+                </div>
+                <div>
+                  <label class="label">Registro Universitario</label>
+                  <input v-model="reg.registro_universitario" class="input" placeholder="2020-0001" required>
+                </div>
+              </div>
+
+              <div>
+                <label class="label">Fecha de Nacimiento</label>
+                <p class="text-xs text-slate-500 -mt-1 mb-1">Se usa para generar la contraseña inicial (dd-mm-aaaa).</p>
+                <input v-model="reg.fecha_nacimiento" type="date" class="input" required :max="hoy">
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="label">Email</label>
+                  <input v-model="reg.email" type="email" class="input" placeholder="correo@upea.bo">
+                </div>
+                <div>
+                  <label class="label">Teléfono</label>
+                  <input v-model="reg.telefono" class="input" placeholder="59170000000">
+                </div>
+              </div>
+
+              <button type="submit" :disabled="registrando" class="btn-primary w-full py-3.5 mt-2">
+                <AppIcon v-if="registrando" name="loader" :size="17" class="animate-spin" />
+                <AppIcon v-else name="user-plus" :size="16" />
+                {{ registrando ? 'Registrando...' : 'Registrarme' }}
+              </button>
+            </form>
+
+            <div class="mt-7 pt-6 border-t border-white/10 text-center">
+              <p class="text-sm text-slate-400">
+                {{ modo === 'login' ? '¿Aún no tienes cuenta de estudiante?' : '¿Ya tienes una cuenta registrada?' }}
+              </p>
+              <button
+                type="button"
+                class="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors"
+                @click="cambiarModo(modo === 'login' ? 'registro' : 'login')"
+              >
+                {{ modo === 'login' ? 'Regístrate aquí' : 'Ingresa a tu cuenta' }}
+                <AppIcon name="send" :size="15" />
+              </button>
             </div>
-
-            <input v-model="reg.email" type="email" class="w-full bg-slate-800/80 text-white placeholder-slate-400 rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm border border-white/5" placeholder="Email">
-            <input v-model="reg.telefono" class="w-full bg-slate-800/80 text-white placeholder-slate-400 rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm border border-white/5" placeholder="Teléfono">
-
-            <button type="submit" :disabled="registrando" class="w-full bg-orange text-white font-bold py-3.5 rounded-lg shadow-lg shadow-orange-900/30 active:scale-[0.98] transition-all duration-200 mt-2 flex items-center justify-center gap-2">
-              <AppIcon v-if="registrando" name="loader" :size="17" class="animate-spin" />
-              <span v-else>REGISTRARSE</span>
-            </button>
-          </form>
-
-          <!-- Botón para volver al Login -->
-          <div class="mt-6 text-center border-t border-white/10 pt-4">
-            <button 
-              type="button" 
-              @click="modo = 'login'" 
-              class="text-sm text-slate-400 hover:text-white transition-colors"
-            >
-              Volver al Login
-            </button>
           </div>
-        </div>
-      </template>
+        </Transition>
+      </div>
 
-    </div>
-
-    <!-- Copyright con el año en curso (Parte Inferior) -->
-    <div class="absolute bottom-6 left-0 right-0 text-center z-10">
-      <p class="text-xs text-slate-500">
-        © {{ new Date().getFullYear() }} Sistema de Seguimiento de Titulación. Todos los derechos reservados.
+      <p class="mt-6 text-center text-xs text-slate-500">
+        <p class="text-xs text-slate-500">
+        © {{ new Date().getFullYear() }} Instituto de Investigaciones Economicas. Todos los derechos reservados.
+      </p>
       </p>
     </div>
 
-    <!-- Modal de Error (Mantenido igual) -->
     <Teleport to="body">
       <Transition name="modal">
         <div
@@ -164,13 +138,19 @@
           ref="modalOverlay"
         >
           <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" @click="closeErrorModal"></div>
-          <div class="relative w-full max-w-sm bg-slate-800 border border-white/10 rounded-2xl shadow-2xl p-8 text-center">
-            <div class="mx-auto w-14 h-14 rounded-full bg-red-900/50 flex items-center justify-center mb-5 border border-red-500/30">
+
+          <div class="relative w-full max-w-sm card p-8 text-center">
+            <div class="mx-auto w-14 h-14 rounded-full bg-red-500/20 flex items-center justify-center mb-5">
               <AppIcon name="alert-triangle" :size="28" class="text-red-400" />
             </div>
+
             <h3 class="text-lg font-bold text-white">Error</h3>
-            <p class="mt-2 text-sm text-slate-300 leading-relaxed">{{ errorMessage }}</p>
-            <button @click="closeErrorModal" class="mt-6 w-full py-2.5 rounded-xl bg-white text-slate-900 text-sm font-semibold hover:bg-slate-100 active:scale-[0.98] transition-all duration-200">
+            <p class="mt-2 text-sm text-slate-400 leading-relaxed">{{ errorMessage }}</p>
+
+            <button
+              @click="closeErrorModal"
+              class="mt-6 w-full py-2.5 rounded-xl bg-orange text-white text-sm font-semibold shadow-lg shadow-orange-900/30 hover:opacity-90 active:scale-[0.98] transition-all duration-200"
+            >
               Intentar de nuevo
             </button>
           </div>
@@ -181,31 +161,53 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+// Vista de inicio de sesión / auto-registro, centrada en la pantalla.
+// Muestra dos modos: "Ingresar" (usuario/contraseña) y "Registrarse" (el
+// estudiante crea su perfil aislado). Tras el auto-registro el estudiante
+// recibe usuario y contraseña generados por la instancia académica (CREAR
+// USUARIO) y ya no edita su perfil: solo consulta sus datos y las modalidades,
+// por eso la vista salta sola al formulario de Ingreso para que pueda entrar.
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { useToastStore } from '@/core/stores/toast';
 import { homeForRol } from '../guards';
 import { estudianteService } from '@/modules/estudiantes/services/estudiantes';
 import AppIcon from '@/ui/AppIcon.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 
-const modo = ref('login'); // 'login' o 'registro'
+// Modo activo del panel: 'login' o 'registro'.
+const modo = ref('login');
+
+// Encabezado del card según el modo activo.
+const titulo = computed(() => (modo.value === 'login' ? 'Bienvenido' : 'Crea tu cuenta de estudiante'));
+const subtitulo = computed(() => (modo.value === 'login'
+  ? 'Ingresa con tus credenciales para continuar.'
+  : 'Regístrate y la Dirección de Carrera generará tu usuario y contraseña.'));
+
+// Campos del formulario y controles de UI (login).
 const username = ref('');
 const password = ref('');
-const ingresando = ref(false);
-const showErrorModal = ref(false);
-const errorMessage = ref('');
+const showPassword = ref(false);   // Alterna visibilidad de la contraseña.
+const ingresando = ref(false);     // true mientras se procesa el login.
+const showErrorModal = ref(false); // Controla el modal de error.
+const errorMessage = ref('');      // Mensaje de error a mostrar.
+const usernameInput = ref(null);   // Input de usuario (enfocado tras el registro).
 
+// Formulario de auto-registro del estudiante.
 const reg = ref({ ci: '', nombres: '', apellidos: '', registro_universitario: '', fecha_nacimiento: '', email: '', telefono: '' });
 const registrando = ref(false);
 const hoy = new Date().toISOString().slice(0, 10);
 
+/** Cierra el modal de error. */
 const closeErrorModal = () => {
   showErrorModal.value = false;
 };
 
+// Cierra el modal con la tecla Escape.
 const onKeydown = (event) => {
   if (event.key === 'Escape' && showErrorModal.value) {
     closeErrorModal();
@@ -215,11 +217,21 @@ const onKeydown = (event) => {
 onMounted(() => window.addEventListener('keydown', onKeydown));
 onUnmounted(() => window.removeEventListener('keydown', onKeydown));
 
+/** Abre el modal de error con el mensaje indicado. */
 const openErrorModal = (message) => {
   errorMessage.value = message;
   showErrorModal.value = true;
 };
 
+/** Cambia entre los modos 'login' y 'registro'. */
+const cambiarModo = (nuevo) => {
+  modo.value = nuevo;
+};
+
+/**
+ * Autentica con POST /api/login. Si el login es exitoso redirige según el rol;
+ * en caso de error muestra un modal con el mensaje devuelto por la API.
+ */
 const handleLogin = async () => {
   ingresando.value = true;
   try {
@@ -230,21 +242,28 @@ const handleLogin = async () => {
       openErrorModal(result || 'Credenciales incorrectas.');
     }
   } catch (err) {
+    // Error de red / servidor no disponible.
     openErrorModal('No se pudo conectar con el servidor. Inténtalo de nuevo.');
   } finally {
     ingresando.value = false;
   }
 };
 
+/**
+ * Registra al estudiante vía POST /api/estudiantes/registro. Al completarse
+ * limpia el formulario, avisa con un toast y salta automáticamente al modo
+ * 'login' para que ingrese con las credenciales generadas por la instancia
+ * académica, enfocando el campo de usuario.
+ */
 const registrarEstudiante = async () => {
   registrando.value = true;
   try {
     await estudianteService.registro(reg.value);
-    // Al registrarse exitosamente, volvemos al login
-    alert('¡Registro exitoso! La Dirección de Carrera generará tus credenciales. Por favor, inicia sesión.');
-    modo.value = 'login';
-    // Limpiar el formulario de registro
     reg.value = { ci: '', nombres: '', apellidos: '', registro_universitario: '', fecha_nacimiento: '', email: '', telefono: '' };
+    toastStore.success('¡Registro exitoso! Tu perfil fue creado. Ingresa con las credenciales generadas por la Dirección de Carrera.');
+    modo.value = 'login';
+    await nextTick();
+    usernameInput.value?.focus();
   } catch (err) {
     const errData = err.response?.data;
     let mensaje = errData?.message;

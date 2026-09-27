@@ -24,16 +24,34 @@ http.interceptors.request.use((config) => {
     return config;
 });
 
-// Interceptor de respuesta: cuando una petición distinta al login devuelve 401,
-// limpia las credenciales locales y redirige a la pantalla de login.
+// Endpoints públicos: un 401 aquí significa "credenciales incorrectas", no
+// "sesión caducada", así que NO deben destructurar la sesión local.
+const RUTAS_PUBLICAS = ['/login', '/estudiantes/registro'];
+
+const esRutaPublica = (url = '') => RUTAS_PUBLICAS.some((ruta) => url.includes(ruta));
+
+// Interceptor de respuesta: cuando una petición autenticada devuelve 401, la
+// sesión ya no es válida. Se limpian las credenciales y se vuelve al login con
+// el router (navegación SPA) en lugar de recargar la página entera: un
+// `window.location.href` abortaba las peticiones en vuelo y dejaba la pantalla
+// en blanco durante el primer render tras autenticarse.
 http.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401 && error.config?.url !== '/login') {
+        if (error.response?.status === 401 && !esRutaPublica(error.config?.url)) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             localStorage.removeItem('perfilEstudiante');
-            window.location.href = '/login';
+            // Importación diferida: el router importa los módulos que importe
+            // este cliente, así que una importación estática crearía un ciclo.
+            import('@/router')
+                .then(({ default: router }) => {
+                    if (router.currentRoute.value.path !== '/login') {
+                        return router.replace({ path: '/login' });
+                    }
+                    return undefined;
+                })
+                .catch(() => {});
         }
         return Promise.reject(error);
     }

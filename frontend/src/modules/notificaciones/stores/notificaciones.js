@@ -42,6 +42,7 @@ export const useNotificacionesStore = defineStore('notificaciones', {
                 const { data } = await notificacionesService.index();
                 this.items = data.notificaciones;
                 this.noLeidas = data.no_leidas;
+                this._ts.notificaciones = Date.now();
             } catch (error) {
                 // Ante un error, degrada el estado a "sin notificaciones".
                 this.items = [];
@@ -49,7 +50,6 @@ export const useNotificacionesStore = defineStore('notificaciones', {
             } finally {
                 this.cargando = false;
             }
-            this._ts.notificaciones = Date.now();
             return { items: this.items, noLeidas: this.noLeidas };
         },
         /**

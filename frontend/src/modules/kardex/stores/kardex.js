@@ -60,12 +60,12 @@ export const useKardexStore = defineStore('kardex', {
             try {
                 const { data } = await kardexService.modalidades();
                 this.modalidades = Array.isArray(data) ? data : [];
+                this._ts.modalidades = Date.now();
             } catch (error) {
                 if (this._manejarError(error) === null && !this.errorMessage) {
                     this.modalidades = [...MODALIDADES_MOCK];
                 }
             }
-            this._ts.modalidades = Date.now();
         },
         /**
          * Carga el resumen estadístico del dashboard desde GET /kardex/resumen.
@@ -77,12 +77,12 @@ export const useKardexStore = defineStore('kardex', {
                 const { data } = await kardexService.resumen();
                 this.simulado = false;
                 this.resumen = data.resumen;
+                this._ts.resumen = Date.now();
             } catch (error) {
                 if (this._manejarError(error) === null && !this.errorMessage) {
                     this.resumen = resumenMock();
                 }
             }
-            this._ts.resumen = Date.now();
             return this.resumen;
         },
         /**

@@ -54,7 +54,7 @@
               <tr v-for="doc in docentesFiltrados" :key="doc.id_docente" class="hover:bg-orange-500/5 transition">
                 <td class="td">
                   <div class="flex items-center gap-3">
-                    <Avatar :nombres="doc.nombre" :apellidos="doc.apellidos" size="10" />
+                    <Avatar :nombres="doc.nombre || ''" :apellidos="doc.apellidos || ''" :size="10" />
                     <p class="font-semibold text-white">{{ doc.nombre }} {{ doc.apellidos }}</p>
                   </div>
                 </td>

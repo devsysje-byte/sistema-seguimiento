@@ -1,15 +1,8 @@
 /**
  * Guardias de navegación del dominio de autenticación.
- *
- * Viven en el módulo auth porque son su política: exigen sesión y restringen el
- * acceso según rol. El router central (composición raíz) solo las instala.
  */
 import { useAuthStore } from '../stores/auth';
 
-/**
- * Ruta inicial por rol tras iniciar sesión (o al redirigir por permisos).
- * Única fuente de verdad: LoginView y las guardias la comparten.
- */
 export const HOME_BY_ROL = {
   admin: '/admin',
   estudiante: '/estudiante',
@@ -19,41 +12,56 @@ export const HOME_BY_ROL = {
   docente: '/docente',
 };
 
-/**
- * Devuelve la ruta inicial del rol indicado (por defecto el portal del
- * estudiante).
- *
- * @param {string} rol Rol del usuario autenticado.
- * @returns {string} Ruta de destino.
- */
 export function homeForRol(rol) {
   return HOME_BY_ROL[rol] || '/estudiante';
 }
 
 /**
  * Instala las guardias globales de navegación en el router de la aplicación.
- *
- * - Si la ruta requiere auth y no hay sesión → /login.
- * - Si la ruta es exclusiva de administración y no es admin → redirige.
- * - Si la ruta restringe roles y el rol no está incluido → redirige a la ruta
- *   inicial del propio rol.
- *
- * @param {import('vue-router').Router} router Router de la aplicación.
  */
 export function registerAuthGuards(router) {
-  router.beforeEach((to) => {
+  router.beforeEach(async (to) => {
     const authStore = useAuthStore();
 
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-      return { path: '/login' };
+    // 1. Redirección si intenta ir a /login teniendo sesión activa
+    if (to.path === '/login' && authStore.isAuthenticated) {
+      try {
+        const sesionValida = await authStore.validarSesion();
+        if (sesionValida) {
+          return { path: homeForRol(authStore.user?.rol) };
+        }
+      } catch {
+        authStore.limpiarSesion();
+      }
     }
 
+    // 2. Validación de rutas protegidas (con control de timeout/excepción)
+    if (to.meta.requiresAuth) {
+      let sesionValida = false;
+      try {
+        sesionValida = await authStore.validarSesion();
+      } catch (error) {
+        console.error('[Guard] Error al revalidar la sesión:', error);
+        sesionValida = false;
+      }
+
+      if (!sesionValida) {
+        authStore.limpiarSesion();
+        return { path: '/login', query: { redirect: to.fullPath } };
+      }
+    }
+
+    // 3. Control de acceso por rol 'admin'
     if (to.meta.requiresAdmin && !authStore.isAdmin) {
       return { path: homeForRol(authStore.user?.rol) };
     }
 
-    if (to.meta.roles && !to.meta.roles.includes(authStore.user?.rol)) {
-      return { path: homeForRol(authStore.user?.rol) };
+    // 4. Control de acceso por lista de roles explícitos
+    if (to.meta.roles && Array.isArray(to.meta.roles)) {
+      const userRol = authStore.user?.rol;
+      if (!to.meta.roles.includes(userRol)) {
+        return { path: homeForRol(userRol) };
+      }
     }
 
     return true;

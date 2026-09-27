@@ -23,7 +23,7 @@
 
         <div class="ml-auto flex items-center gap-3">
           <div class="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-            <Avatar :nombres="authStore.user?.nombres" :apellidos="authStore.user?.apellidos" size="8" />
+            <Avatar :nombres="authStore.user?.nombres || ''" :apellidos="authStore.user?.apellidos || ''" :size="8" />
             <div class="leading-tight">
               <p class="text-sm font-semibold text-white">
                 {{ authStore.user?.nombres }} {{ authStore.user?.apellidos }}
@@ -155,9 +155,9 @@ const esActivo = (to) => {
 const abrirMenu = () => { abierto.value = true; };
 
 /** Cierra la sesión y redirige al login. */
-const cerrarSesion = () => {
-    authStore.logout();
-    window.location.href = '/login';
+const cerrarSesion = async () => {
+    await authStore.logout();
+    router.replace('/login');
 };
 </script>
 

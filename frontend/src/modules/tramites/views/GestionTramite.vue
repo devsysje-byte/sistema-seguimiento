@@ -16,6 +16,15 @@
       Cargando trámite...
     </div>
 
+    <div v-else-if="errorCarga" class="card p-8 text-center">
+      <AppIcon name="alert-triangle" :size="28" class="mx-auto text-orange-300 mb-3" />
+      <p class="text-white font-semibold">{{ errorCarga }}</p>
+      <button class="btn-ghost mt-4" @click="volver">
+        <AppIcon name="arrow-left" :size="16" />
+        Volver
+      </button>
+    </div>
+
     <div v-else-if="tramite" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div class="card p-6">
         <h3 class="font-bold text-white mb-4 inline-flex items-center gap-2">
@@ -25,7 +34,7 @@
           Datos del Postulante
         </h3>
         <div class="flex items-center gap-4">
-          <Avatar :nombres="tramite.estudiante.user.nombres" :apellidos="tramite.estudiante.user.apellidos" size="14" />
+          <Avatar :nombres="tramite.estudiante?.user?.nombres || ''" :apellidos="tramite.estudiante?.user?.apellidos || ''" :size="14" />
           <div>
             <p class="text-lg font-bold text-white">
               {{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}
@@ -80,7 +89,7 @@
             Tutor Asignado
           </h3>
           <div v-if="tramite.tutor" class="flex items-center gap-3">
-            <Avatar :nombres="tramite.tutor.nombres" :apellidos="tramite.tutor.apellidos" size="12" />
+            <Avatar :nombres="tramite.tutor?.nombres || ''" :apellidos="tramite.tutor?.apellidos || ''" :size="12" />
             <div>
               <p class="font-semibold text-white">{{ tramite.tutor.nombres }} {{ tramite.tutor.apellidos }}</p>
               <p class="text-xs text-slate-400">{{ tramite.tutor.email }}</p>
@@ -297,6 +306,7 @@ const toastStore = useToastStore();
 // Estado del trámite cargado y de las acciones en curso.
 const tramite = ref(null);
 const cargando = ref(false);            // true mientras se carga el trámite.
+const errorCarga = ref('');             // Mensaje de error si el trámite no se pudo cargar.
 const ejecutando = ref(false);          // true al ejecutar una transición.
 const siguientesEstados = ref([]);      // Estados permitidos desde el actual.
 const nuevoEstado = ref('');            // Estado destino seleccionado.
@@ -332,8 +342,9 @@ const cargarTramite = async () => {
     tramite.value = data;
     siguientesEstados.value = data.siguientes_estados || [];
   } catch (error) {
-    toastStore.error('Error al cargar el trámite: ' + (error.response?.data?.message || 'Verifique el acceso'));
-    volver();
+    const mensaje = error.response?.data?.message || 'Verifique el acceso';
+    toastStore.error('Error al cargar el trámite: ' + mensaje);
+    errorCarga.value = mensaje;
   } finally {
     cargando.value = false;
   }

@@ -16,17 +16,6 @@ export function fechaLegible(iso) {
 }
 
 /**
- * Convierte una fecha ISO a DD-MM-AAAA (formato de credenciales).
- *
- * @param {string|null} iso Fecha ISO-8601 o null.
- * @returns {string} Fecha en formato dd-mm-aaaa o '' si no hay fecha.
- */
-export function fechaCredencial(iso) {
-  const fecha = String(iso || '').slice(0, 10);
-  return fecha ? fecha.split('-').reverse().join('-') : '';
-}
-
-/**
  * Iniciales del postulante para el avatar.
  *
  * @param {Object} p Postulante con `nombres` y `apellidos`.

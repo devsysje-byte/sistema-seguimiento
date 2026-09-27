@@ -51,10 +51,10 @@ export const useTramitesStore = defineStore('tramites', {
             try {
                 const { data } = await tramitesService.modalidades();
                 this.modalidades = data;
+                this._ts.modalidades = Date.now();
             } catch (error) {
                 this.modalidades = [];
             }
-            this._ts.modalidades = Date.now();
         },
         /**
          * Carga el trámite activo del estudiante desde GET /api/estudiante/tramite-activo.
@@ -146,10 +146,10 @@ export const useTramitesStore = defineStore('tramites', {
             try {
                 const { data } = await tramitesService.estadisticas();
                 this.estadisticas = data;
+                this._ts.estadisticas = Date.now();
             } catch (error) {
                 this.estadisticas = { totales: { aprobados: 0, reprobados: 0, total: 0 }, porModalidad: [] };
             }
-            this._ts.estadisticas = Date.now();
             return this.estadisticas;
         },
         /**
@@ -177,10 +177,10 @@ export const useTramitesStore = defineStore('tramites', {
             try {
                 const { data } = await tramitesService.tutorias();
                 this.tutorias = data.data;
+                this._ts.tutorias = Date.now();
             } catch (error) {
                 this.tutorias = [];
             }
-            this._ts.tutorias = Date.now();
         },
         /**
          * Carga la lista de docentes activos desde GET /api/usuarios/docentes.
@@ -193,10 +193,10 @@ export const useTramitesStore = defineStore('tramites', {
             try {
                 const { data } = await tramitesService.docentes();
                 this.docentes = data;
+                this._ts.docentes = Date.now();
             } catch (error) {
                 this.docentes = [];
             }
-            this._ts.docentes = Date.now();
         },
         /**
          * Asigna (o reasigna) el tutor de un trámite vía

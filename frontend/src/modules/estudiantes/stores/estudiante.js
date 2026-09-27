@@ -42,11 +42,11 @@ export const useEstudianteStore = defineStore('estudiante', {
                 } else {
                     localStorage.removeItem('perfilEstudiante');
                 }
+                this._ts.perfil = Date.now();
             } catch (error) {
                 this.perfilEstudiante = null;
                 localStorage.removeItem('perfilEstudiante');
             }
-            this._ts.perfil = Date.now();
             return this.perfilEstudiante;
         },
     },

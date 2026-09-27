@@ -32,6 +32,40 @@ export const useAuthStore = defineStore('auth', {
     },
     actions: {
         /**
+         * Limpia el estado en memoria y el almacenamiento local de la sesión.
+         *
+         * @returns {void}
+         */
+        limpiarSesion() {
+            this.token = null;
+            this.user = null;
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('perfilEstudiante');
+        },
+        /**
+         * Garantiza que la sesión sea utilizable antes de entrar a una ruta
+         * protegida. Si hay token pero el usuario no está resuelto en memoria,
+         * lo revalida contra GET /api/me en lugar de confiar solo en
+         * localStorage (un token revocado o un `user` corrupto deben
+         * comprobarse contra la API).
+         *
+         * @returns {Promise<boolean>} true si la sesión es utilizable.
+         */
+        async validarSesion() {
+            if (!this.token) return false;
+            if (this.user) return true;
+            try {
+                const { data } = await authService.me();
+                this.user = data;
+                localStorage.setItem('user', JSON.stringify(data));
+                return true;
+            } catch {
+                this.limpiarSesion();
+                return false;
+            }
+        },
+        /**
          * Inicia sesión con username y contraseña contra POST /api/login.
          *
          * @param {string} username Usuario de acceso (autogenerado en estudiantes).
@@ -59,10 +93,7 @@ export const useAuthStore = defineStore('auth', {
          */
         async logout() {
             try { await authService.logout(); } catch(e){}
-            this.token = null; this.user = null;
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('perfilEstudiante');
+            this.limpiarSesion();
         }
     }
 });

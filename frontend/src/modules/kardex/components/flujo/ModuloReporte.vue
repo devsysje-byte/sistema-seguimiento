@@ -22,7 +22,7 @@
         </button>
         <button class="btn-warm px-4 !py-2" :disabled="cargando || generando" @click="descargarActual">
           <AppIcon name="download" :size="15" />
-          Descargar de nuevo
+          Descargar Reoporte
         </button>
       </div>
     </div>

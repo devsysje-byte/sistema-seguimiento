@@ -42,7 +42,7 @@
           <div class="p-5 flex-1 flex flex-col">
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3">
-                <Avatar :nombres="tramite.estudiante.user.nombres" :apellidos="tramite.estudiante.user.apellidos" size="12" />
+                <Avatar :nombres="tramite.estudiante?.user?.nombres || ''" :apellidos="tramite.estudiante?.user?.apellidos || ''" :size="12" />
                 <div>
                   <h4 class="text-lg font-bold text-white leading-tight">
                     {{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}
@@ -96,7 +96,7 @@
           <div class="relative h-2 bg-gradient-to-r from-emerald-500/60 to-red-600/60"></div>
           <div class="p-5 flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-              <Avatar :nombres="tramite.estudiante.user.nombres" :apellidos="tramite.estudiante.user.apellidos" size="10" />
+              <Avatar :nombres="tramite.estudiante?.user?.nombres || ''" :apellidos="tramite.estudiante?.user?.apellidos || ''" :size="10" />
               <div>
                 <h4 class="font-bold text-white">{{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}</h4>
                 <p class="text-sm text-slate-400">{{ tramite.modalidad.nombre }}</p>

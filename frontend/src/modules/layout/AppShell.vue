@@ -52,7 +52,7 @@
             <div class="ml-auto flex items-center gap-3">
               <NotificationBell />
               <div class="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-                <Avatar :nombres="authStore.user?.nombres" :apellidos="authStore.user?.apellidos" size="8" />
+                <Avatar :nombres="authStore.user?.nombres || ''" :apellidos="authStore.user?.apellidos || ''" :size="8" />
                 <span class="text-sm font-semibold text-slate-300">
                   {{ authStore.user?.nombres }} {{ authStore.user?.apellidos }}
                 </span>
@@ -135,8 +135,8 @@ const isActive = (to) => {
 };
 
 /** Cierra la sesión y redirige a la pantalla de login. */
-const logout = () => {
-  authStore.logout();
-  window.location.href = '/login';
+const logout = async () => {
+  await authStore.logout();
+  router.replace('/login');
 };
 </script>

@@ -91,7 +91,7 @@
               >
                 <td class="td">
                   <div class="flex items-center gap-3">
-                    <Avatar :nombres="user.nombres" :apellidos="user.apellidos" size="10" />
+                    <Avatar :nombres="user.nombres || ''" :apellidos="user.apellidos || ''" :size="10" />
                     <div>
                       <p class="font-semibold text-white">{{ user.nombres }} {{ user.apellidos }}</p>
                       <p class="text-xs text-slate-400">CI: {{ user.ci }} · @{{ user.username }}</p>
@@ -382,7 +382,6 @@
 // datos de contacto) y dar de baja usuarios. La "Alta Manual" cubre roles de
 // gestión que no son estudiantes.
 import { ref, computed, onMounted } from 'vue';
-import { useAuthStore } from '@/modules/auth';
 import { usuariosService } from '../services/usuarios';
 import { estudianteService } from '@/modules/estudiantes/services/estudiantes';
 import { rolLabel, ROLE_LABELS } from '@/core/roles';
@@ -396,7 +395,6 @@ import { EstadisticasModalidades } from '@/modules/tramites';
 import UiModal from '@/ui/UiModal.vue';
 import EmptyState from '@/ui/EmptyState.vue';
 
-const authStore = useAuthStore();
 const toastStore = useToastStore();
 
 // Estado de la matriz de usuarios y de la UI.
@@ -469,10 +467,6 @@ const fetchUsers = async () => {
     users.value = data.data;
   } catch (error) {
     console.error('Error al cargar la matriz de usuarios:', error);
-    if (error.response?.status === 401) {
-      authStore.logout();
-      window.location.href = '/login';
-    }
   } finally {
     cargando.value = false;
   }

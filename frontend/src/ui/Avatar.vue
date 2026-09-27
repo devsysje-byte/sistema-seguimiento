@@ -1,7 +1,7 @@
 <template>
   <span
     class="inline-flex items-center justify-center rounded-full bg-orange text-white font-bold uppercase select-none"
-    :class="[sizeClasses[size] || sizeClasses[10], extra]"
+    :class="[sizeClasses[sizeClave] || sizeClasses[10], extra]"
   >
     {{ iniciales }}
   </span>
@@ -16,7 +16,12 @@ import { computed } from 'vue';
 const props = defineProps({
   nombres: { type: String, default: '' },
   apellidos: { type: String, default: '' },
-  size: { type: Number, default: 10 },        // Clave de tamaño (8, 10, 12, 14, 16).
+  // Acepta Number o String para tolerar tanto :size="8" como size="8".
+  size: {
+    type: [Number, String],
+    default: 10,                              // Clave de tamaño (8, 10, 12, 14, 16).
+    validator: (v) => [8, 10, 12, 14, 16].includes(Number(v)),
+  },
   extra: { type: [String, Array], default: '' },
 });
 
@@ -28,6 +33,9 @@ const sizeClasses = {
   14: 'w-14 h-14 text-lg',
   16: 'w-16 h-16 text-xl',
 };
+
+// Normaliza el tamaño a número para indexar el mapa de clases.
+const sizeClave = computed(() => Number(props.size) || 10);
 
 // Iniciales (primera letra de nombres + apellidos); '?' si no hay datos.
 const iniciales = computed(() => {

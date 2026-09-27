@@ -53,7 +53,7 @@
                       <span class="text-xs text-slate-400">#{{ tramite.id_tramite }}</span>
                     </div>
                     <div class="flex items-center gap-2.5 mt-2">
-                      <Avatar :nombres="tramite.estudiante.user.nombres" :apellidos="tramite.estudiante.user.apellidos" size="10" />
+                      <Avatar :nombres="tramite.estudiante?.user?.nombres || ''" :apellidos="tramite.estudiante?.user?.apellidos || ''" :size="10" />
                       <div>
                         <p class="font-semibold text-white text-sm leading-tight">
                           {{ tramite.estudiante.user.nombres }} {{ tramite.estudiante.user.apellidos }}
