@@ -37,9 +37,16 @@ export const kardexService = {
      *
      * @param {string} titulo          Título a verificar.
      * @param {number} [excluirTramite] Trámite a omitir de la comparación.
+     * @param {number} [excluirEstudiante] Estudiante cuyos trámites se omiten.
      */
-    verificarTituloTesis(titulo, excluirTramite = null) {
-        return http.get('/kardex/titulos-tesis', { params: { titulo, excluir_tramite: excluirTramite || undefined } });
+    verificarTituloTesis(titulo, excluirTramite = null, excluirEstudiante = null) {
+        return http.get('/kardex/titulos-tesis', {
+            params: {
+                titulo,
+                excluir_tramite: excluirTramite || undefined,
+                excluir_estudiante: excluirEstudiante || undefined,
+            },
+        });
     },
     /** Resumen estadístico del dashboard (modalidades, estudiantes y tutores). */
     resumen() {

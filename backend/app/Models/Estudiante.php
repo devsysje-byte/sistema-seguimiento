@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -19,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class Estudiante extends Model
 {
+    use HasFactory;
+
     protected $primaryKey = 'id_estudiante';
 
     protected $fillable = [
@@ -37,8 +40,8 @@ class Estudiante extends Model
     /**
      * Relación opcional con la cuenta de acceso del estudiante.
      *
-     * Es la relación inversa de `User::estudiante()`: un estudiante puede
-     * tener (o no) una cuenta creada en `users`.
+     * Es la relación inversa de `User::estudiante()`: la cuenta se vincula
+     * mediante `users.estudiante_id`, no mediante una columna en `estudiantes`.
      *
      * @return HasOne Cuenta `\App\Models\User`
      *                vinculada a este perfil (o null si aún no tiene cuenta).

@@ -6,6 +6,7 @@ use App\Models\EstadoTramite;
 use App\Models\Modalidad;
 use App\Models\Tramite;
 use App\Models\User;
+use App\Modules\Kardex\Services\VerificacionTituloService;
 use App\Modules\Tramites\Events\EstadoTramiteCambiado;
 use App\Modules\Tramites\Events\TramiteCreado;
 use App\Modules\Tramites\Events\TramiteRevisado;
@@ -46,7 +47,7 @@ class TramiteService extends BasePaginadoService
     private const DETALLE_CARGAS = [
         'modalidad:id_modalidad,nombre,descripcion,requisitos_minimos',
         'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,email,telefono,promedio_global',
-        'estudiante.user:id_usuario,nombres,apellidos,email,rol',
+        'estudiante.user:id_usuario,estudiante_id,nombres,apellidos,email,rol',
         'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,ruta_archivo,tamanio_kb,created_at',
         'estados:id_estado,id_tramite,nombre_estado,descripcion,observaciones,id_usuario_responsable,created_at',
         'estados.responsable:id_usuario,nombres,apellidos,rol',
@@ -57,14 +58,14 @@ class TramiteService extends BasePaginadoService
     private const LISTA_CARGAS = [
         'modalidad:id_modalidad,nombre',
         'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,promedio_global',
-        'estudiante.user:id_usuario,nombres,apellidos',
+        'estudiante.user:id_usuario,estudiante_id,nombres,apellidos',
         'tutor:id_usuario,nombres,apellidos',
         'documentos:id_documento,id_tramite,tipo_documento,ruta_archivo',
     ];
 
     /**
      * Módulos del flujo de titulación de la Tesis de Grado y el estado objetivo
-     * al que avanza cada uno (espejo del frontend).
+     * al que avanza cada uno al aprobarse (espejo del frontend).
      *
      * @var array<string, string>
      */
@@ -76,6 +77,20 @@ class TramiteService extends BasePaginadoService
         'reporte' => 'reporte_generado',
         'publicacion' => 'titulado',
     ];
+
+    /**
+     * Estado al que pasa el trámite cuando KARDEX RECHAZA el perfil: el flujo
+     * queda a la espera de que el estudiante presente otro perfil con un título
+     * diferente.
+     */
+    private const PERFIL_RECHAZADO = 'perfil_rechazado';
+
+    /**
+     * Módulos que admiten una decisión de aprobación o rechazo.
+     *
+     * @var array<int, string>
+     */
+    private const MODULOS_DECISION = ['perfil_tesis'];
 
     /**
      * Porcentaje de avance por estado (incluye estados heredados) para saber si
@@ -112,6 +127,7 @@ class TramiteService extends BasePaginadoService
     public function __construct(
         private readonly TramiteStateService $stateService,
         private readonly DocumentoAdjuntoService $documentos,
+        private readonly VerificacionTituloService $verificacionTitulo,
     ) {}
 
     /**
@@ -411,6 +427,12 @@ class TramiteService extends BasePaginadoService
      * avanza el trámite al estado objetivo del módulo a través de la máquina de
      * estados (incluye puentes con el flujo heredado).
      *
+     * El módulo del PERFIL es el único que admite una decisión: con
+     * `accion: rechazar` el trámite pasa a `perfil_rechazado` y queda a la
+     * espera de que el estudiante presente otro perfil con un título diferente;
+     * con `accion: aprobar` (por defecto) avanza a `perfil_aprobado` y solo si
+     * el título propuesto no está repetido en otro trabajo de grado.
+     *
      * @return array Trámite formateado (con siguientes_estados y secuencia).
      *
      * @throws ValidationException
@@ -442,9 +464,12 @@ class TramiteService extends BasePaginadoService
         // con la nota final. Sin `paso` se interpreta como guardado completo.
         $paso = (int) ($datos['paso'] ?? 2);
 
-        $this->validarDatosModulo($modulo, $datos, $paso);
+        // Módulos con decisión: el perfil se aprueba o se rechaza.
+        $rechaza = $this->rechazaModulo($modulo, $datos);
 
-        $objetivo = self::MODULOS_FLUJO[$modulo];
+        $this->validarDatosModulo($modulo, $datos, $paso, $rechaza, $tramite);
+
+        $objetivo = $rechaza ? self::PERFIL_RECHAZADO : self::MODULOS_FLUJO[$modulo];
         $pctActual = self::PCT_POR_ESTADO[$tramite->estado_actual] ?? 0;
         $pctObjetivo = self::PCT_POR_ESTADO[$objetivo] ?? 0;
 
@@ -453,14 +478,19 @@ class TramiteService extends BasePaginadoService
         $avanza = ! ($modulo === 'defensa' && $paso === 1);
         $transiciono = false;
 
-        // El módulo ya fue superado (pct objetivo ≤ actual) no reclama transición;
-        // solo se actualizan los datos guardados del módulo.
-        if ($avanza && $pctObjetivo > $pctActual) {
+        // El rechazo es una decisión de reversión (mismo nivel de avance que el
+        // estado actual), por lo que se ejecuta siempre; el resto de módulos
+        // solo transicionan si aún no fueron superados.
+        $debeTransicionar = $avanza && ($pctObjetivo > $pctActual || $rechaza);
+
+        if ($debeTransicionar) {
             try {
                 $this->stateService->transicionar(
                     $tramite,
                     $objetivo,
-                    "Módulo '{$modulo}' del flujo de titulación completado.",
+                    $rechaza
+                        ? $this->observacionDeRechazo($datos)
+                        : "Módulo '{$modulo}' del flujo de titulación completado.",
                     $actor->id_usuario
                 );
                 $transiciono = true;
@@ -471,12 +501,21 @@ class TramiteService extends BasePaginadoService
             }
         }
 
-        // El control de paso es un mecanismo de guardado, no un dato del módulo.
-        unset($datos['paso']);
+        // `paso` y `accion` son controles del formulario, no datos del módulo.
+        unset($datos['paso'], $datos['accion']);
 
         $hitos = $tramite->hitos ?? [];
-        $hitos['modulos'][$modulo] = $datos;
         $soloHitos = ['hitos' => $hitos];
+
+        // Al rechazar el perfil se conserva lo que el estudiante presentó (su
+        // título y los documentos ya verificados): solo se registra la decisión.
+        if (! $rechaza) {
+            $modulos = $hitos['modulos'] ?? [];
+            $modulos[$modulo] = array_replace($modulos[$modulo] ?? [], $datos);
+            $hitos['modulos'] = $modulos;
+            $soloHitos['hitos'] = $hitos;
+        }
+
         if ($avanza) {
             $soloHitos['estado_actual'] = $objetivo;
         }
@@ -498,29 +537,81 @@ class TramiteService extends BasePaginadoService
         // Solo se notifica un cambio de estado si realmente hubo transición;
         // el paso 1 de la defensa guarda datos sin avanzar el trámite.
         if ($transiciono) {
-            event(new EstadoTramiteCambiado($tramite, $objetivo, null));
+            event(new EstadoTramiteCambiado($tramite, $objetivo, $rechaza ? ($datos['observaciones'] ?? null) : null));
         }
 
         return $this->formatear($tramite);
     }
 
     /**
+     * Indica si KARDEX está rechazando (en lugar de aprobar) el módulo enviado.
+     *
+     * @param  string  $modulo  Identificador del módulo.
+     * @param  array<string, mixed>  $datos  Datos del formulario del módulo.
+     */
+    private function rechazaModulo(string $modulo, array $datos): bool
+    {
+        if (! in_array($modulo, self::MODULOS_DECISION, true)) {
+            return false;
+        }
+
+        return ($datos['accion'] ?? 'aprobar') === 'rechazar';
+    }
+
+    /**
+     * Observación con la que se registra el rechazo del perfil: la que KARDEX
+     * escribió (obligatoria) o un texto por defecto que explica la causa.
+     *
+     * @param  array<string, mixed>  $datos  Datos del formulario del módulo.
+     */
+    private function observacionDeRechazo(array $datos): string
+    {
+        $observacion = trim((string) ($datos['observaciones'] ?? ''));
+
+        return $observacion !== ''
+            ? $observacion
+            : 'Perfil de tesis rechazado por KARDEX.';
+    }
+
+    /**
      * Reglas de validación de cada módulo del flujo (espejo del frontend).
      *
      * @param  string  $modulo  Identificador del módulo.
-     * @param  array  $datos  Datos enviados desde el formulario del módulo.
+     * @param  array<string, mixed>  $datos  Datos enviados desde el formulario del módulo.
      * @param  int  $paso  Paso del módulo de defensa (1 = resolución + fecha, 2 = nota).
+     * @param  bool  $rechaza  true cuando KARDEX rechaza el módulo en lugar de aprobarlo.
+     * @param  Tramite|null  $tramite  Trámite que se está procesando (para no
+     *                                 comparar el título consigo mismo).
      *
      * @throws ValidationException
      */
-    private function validarDatosModulo(string $modulo, array $datos, int $paso = 2): void
+    private function validarDatosModulo(string $modulo, array $datos, int $paso = 2, bool $rechaza = false, ?Tramite $tramite = null): void
     {
         $val = static fn ($v) => is_string($v) && trim($v) !== '';
         $errores = [];
 
         switch ($modulo) {
             case 'perfil_tesis':
-                foreach (['carta_solicitud', 'certificado_conclusion', 'perfil_tesis'] as $tipo) {
+                // Rechazar el perfil exige el motivo: es lo que el estudiante
+                // verá en su flujo para corregir y volver a presentar.
+                if ($rechaza) {
+                    if (! $val($datos['observaciones'] ?? null)) {
+                        $errores[] = 'Indique la observación del rechazo del perfil.';
+                    }
+                    break;
+                }
+
+                $titulo = trim((string) ($datos['titulo'] ?? ''));
+                if ($titulo === '') {
+                    $errores[] = 'Ingrese el título de tesis presentado por el estudiante.';
+                } elseif ($this->verificacionTitulo->duplicado($titulo, $tramite?->id_tramite, $tramite?->id_estudiante) !== null) {
+                    $errores[] = 'Ya existe un trabajo de grado registrado con el mismo título de tesis. '
+                        .'Rechace el perfil para que el estudiante presente un título diferente.';
+                }
+
+                // Los documentos verificados son los que el estudiante adjuntó
+                // en su solicitud (ver `config/tesis.php`).
+                foreach (['nota_solicitud', 'certificado_notas', 'perfil_tesis'] as $tipo) {
                     $item = $datos['documentos'][$tipo] ?? null;
                     if (empty($item['marcado'])) {
                         $errores[] = "Marque la verificación del documento: {$tipo}.";

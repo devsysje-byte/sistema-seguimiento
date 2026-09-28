@@ -9,10 +9,12 @@ use Illuminate\Support\Str;
 /**
  * Verificación de unicidad del título de una tesis de grado.
  *
- * KARDEX necesita confirmar, antes de aprobar un tema, que la tesis no repita
- * (ni se parezca demasiado a) otro trabajo ya registrado. El título vive en el
- * módulo de flujo `aprobacion_tema` (`hitos.modulos.aprobacion_tema.tema_investigacion`),
- * por lo que la búsqueda se hace sobre el JSON `hitos` de los trámites.
+ * KARDEX necesita confirmar, antes de aprobar un perfil, que la tesis no repita
+ * (ni se parezca demasiado a) otro trabajo ya registrado. El título lo presenta
+ * el estudiante junto con su perfil (`hitos.modulos.perfil_tesis.titulo`) y se
+ * confirma luego en el módulo de aprobación del tema
+ * (`hitos.modulos.aprobacion_tema.tema_investigacion`), por lo que la búsqueda
+ * se hace sobre el JSON `hitos` de los trámites.
  *
  * Estrategia en dos pasos para no cargar la tabla completa:
  *  1. Prefiltro barato en SQL con los términos significativos del título
@@ -64,9 +66,12 @@ class VerificacionTituloService
      * @param  string  $titulo  Título a verificar.
      * @param  int|null  $excluirTramite  Trámite a omitir (para no comparar
      *                                    consigo mismo al re-verificar).
+     * @param  int|null  $excluirEstudiante  Estudiante cuyos trámites anteriores
+     *                                       se omiten (re-presentación del
+     *                                       perfil por el mismo estudiante).
      * @return array{consulta: string, unico: bool, total: int, coincidencias: array<int, array<string, mixed>>}
      */
-    public function verificar(string $titulo, ?int $excluirTramite = null): array
+    public function verificar(string $titulo, ?int $excluirTramite = null, ?int $excluirEstudiante = null): array
     {
         $consulta = trim($titulo);
         $normalizado = $this->normalizar($consulta);
@@ -87,6 +92,7 @@ class VerificacionTituloService
             ->with(self::CARGAS)
             ->whereNotNull('hitos')
             ->when($excluirTramite !== null, fn (Builder $q) => $q->where('id_tramite', '!=', $excluirTramite))
+            ->when($excluirEstudiante !== null, fn (Builder $q) => $q->where('id_estudiante', '!=', $excluirEstudiante))
             ->where(function (Builder $sub) use ($terminos) {
                 foreach ($terminos as $termino) {
                     $sub->orWhereRaw('LOWER(tramites.hitos) LIKE ?', ['%'.addcslashes($termino, '%_\\').'%']);
@@ -140,11 +146,54 @@ class VerificacionTituloService
     }
 
     /**
-     * Extrae el título de tesis registrado en el módulo de aprobación de tema.
+     * Devuelve el primer trabajo cuyo título es IDÉNTICO al indicado.
+     *
+     * Es la comprobación que bloquea tanto la aprobación de un perfil por parte
+     * de KARDEX como la re-presentación de un título repetido por el estudiante.
+     *
+     * @param  string  $titulo  Título a comprobar.
+     * @param  int|null  $excluirTramite  Trámite a omitir.
+     * @param  int|null  $excluirEstudiante  Estudiante cuyos trámites se omiten.
+     * @return array<string, mixed>|null Coincidencia exacta o null si el título es único.
+     */
+    public function duplicado(string $titulo, ?int $excluirTramite = null, ?int $excluirEstudiante = null): ?array
+    {
+        $verificacion = $this->verificar($titulo, $excluirTramite, $excluirEstudiante);
+
+        foreach ($verificacion['coincidencias'] as $coincidencia) {
+            if ($coincidencia['exacto']) {
+                return $coincidencia;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Compara dos títulos con la misma normalización de la verificación, para
+     * saber si se trata del mismo título escrito de otra forma.
+     */
+    public function esIgual(string $titulo, string $otro): bool
+    {
+        $normalizado = $this->normalizar($titulo);
+
+        return $normalizado !== '' && $normalizado === $this->normalizar($otro);
+    }
+
+    /**
+     * Extrae el título de tesis registrado en el trámite.
+     *
+     * El título propuesto por el estudiante vive en el módulo de perfil
+     * (`perfil_tesis.titulo`); si el trámite aún no lo registra, se recurre al
+     * tema confirmado por KARDEX en el módulo de aprobación del tema.
      */
     private function tituloDe(Tramite $tramite): ?string
     {
-        $titulo = $tramite->hitos['modulos']['aprobacion_tema']['tema_investigacion'] ?? null;
+        $modulos = $tramite->hitos['modulos'] ?? [];
+
+        $titulo = $modulos['perfil_tesis']['titulo']
+            ?? $modulos['aprobacion_tema']['tema_investigacion']
+            ?? null;
 
         return is_string($titulo) && trim($titulo) !== '' ? trim($titulo) : null;
     }

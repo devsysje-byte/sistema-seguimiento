@@ -10,21 +10,20 @@ use App\Modules\Tramites\Events\EstadoTramiteCambiado;
  *
  * Notifica al estudiante y al tutor (si existe) del avance de un trámite. Para
  * la modalidad Tesis de Grado personaliza el mensaje al estudiante en los
- * estados clave del flujo (veredicto suficiente, correcciones de 90 días,
- * aprobación y reprobación de la defensa).
+ * estados clave del flujo (rechazo del perfil, veredicto suficiente,
+ * correcciones de 90 días, aprobación y reprobación de la defensa).
  */
 class NotificarEstadoCambiado
 {
     public function handle(EstadoTramiteCambiado $event): void
     {
         $event->tramite->loadMissing('estudiante.user', 'modalidad');
-
         $estudiante = $event->tramite->estudiante;
         $cuentaEstudiante = $estudiante?->user;
 
         if ($estudiante && $cuentaEstudiante) {
             $mensaje = ($event->tramite->modalidad->nombre ?? null) === 'Tesis de Grado'
-                ? static::mensajeTesis($event->nuevoEstado)
+                ? static::mensajeTesis($event)
                 : null;
 
             if ($mensaje) {
@@ -62,9 +61,14 @@ class NotificarEstadoCambiado
      *
      * @return array{tipo:string, titulo:string, mensaje:string}|null
      */
-    private static function mensajeTesis(string $estado): ?array
+    private static function mensajeTesis(EstadoTramiteCambiado $event): ?array
     {
-        return match ($estado) {
+        return match ($event->nuevoEstado) {
+            'perfil_rechazado' => [
+                'tipo' => 'tesis_perfil_rechazado',
+                'titulo' => 'Perfil de tesis rechazado',
+                'mensaje' => 'Kardex rechazó su perfil de tesis. '.static::detalleRechazo($event),
+            ],
             'suficiente' => [
                 'tipo' => 'tesis_resultado',
                 'titulo' => '¡Trabajo Aprobado!',
@@ -87,5 +91,18 @@ class NotificarEstadoCambiado
             ],
             default => null,
         };
+    }
+
+    /**
+     * Explicación que acompaña al rechazo del perfil: la observación que KARDEX
+     * registró o, si no la escribió, el motivo por defecto.
+     */
+    private static function detalleRechazo(EstadoTramiteCambiado $event): string
+    {
+        $observacion = trim((string) $event->observaciones);
+
+        return $observacion !== ''
+            ? $observacion.' Debe presentar su perfil nuevamente con un título de tesis diferente.'
+            : 'Debe presentar su perfil nuevamente con un título de tesis diferente.';
     }
 }

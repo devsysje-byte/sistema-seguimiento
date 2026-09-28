@@ -1,6 +1,11 @@
 <?php
+
 namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Modelo Eloquent de la tabla `tramites`.
@@ -12,8 +17,12 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Tramite extends Model
 {
+    use HasFactory;
+
     protected $primaryKey = 'id_tramite';
+
     protected $table = 'tramites';
+
     protected $fillable = ['id_estudiante', 'id_modalidad', 'id_tutor', 'estado_actual', 'observaciones', 'hitos'];
 
     /**
@@ -28,42 +37,57 @@ class Tramite extends Model
     /**
      * Relación inversa con el estudiante solicitante del trámite.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo Estudiante `\App\Models\Estudiante`
-     *         propietario del trámite.
+     * @return BelongsTo Estudiante `\App\Models\Estudiante`
+     *                   propietario del trámite.
      */
-    public function estudiante() { return $this->belongsTo(Estudiante::class, 'id_estudiante', 'id_estudiante'); }
+    public function estudiante()
+    {
+        return $this->belongsTo(Estudiante::class, 'id_estudiante', 'id_estudiante');
+    }
 
     /**
      * Relación inversa con la modalidad de titulación del trámite.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo Modalidad `\App\Models\Modalidad`
-     *         a la que pertenece el trámite.
+     * @return BelongsTo Modalidad `\App\Models\Modalidad`
+     *                   a la que pertenece el trámite.
      */
-    public function modalidad() { return $this->belongsTo(Modalidad::class, 'id_modalidad', 'id_modalidad'); }
+    public function modalidad()
+    {
+        return $this->belongsTo(Modalidad::class, 'id_modalidad', 'id_modalidad');
+    }
 
     /**
      * Relación inversa con el docente tutor asignado al trámite.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo Usuario tutor `\App\Models\User`
-     *         (rol docente), `null` si aún no se asignó.
+     * @return BelongsTo Usuario tutor `\App\Models\User`
+     *                   (rol docente), `null` si aún no se asignó.
      */
-    public function tutor() { return $this->belongsTo(User::class, 'id_tutor', 'id_usuario'); }
+    public function tutor()
+    {
+        return $this->belongsTo(User::class, 'id_tutor', 'id_usuario');
+    }
 
     /**
      * Relación uno a muchos con los documentos adjuntos del trámite.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany Documentos `\App\Models\DocumentoAdjunto`
-     *         subidos para este trámite.
+     * @return HasMany Documentos `\App\Models\DocumentoAdjunto`
+     *                 subidos para este trámite.
      */
-    public function documentos() { return $this->hasMany(DocumentoAdjunto::class, 'id_tramite', 'id_tramite'); }
+    public function documentos()
+    {
+        return $this->hasMany(DocumentoAdjunto::class, 'id_tramite', 'id_tramite');
+    }
 
     /**
      * Relación uno a muchos con el historial de estados del trámite (línea de tiempo).
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany Registros `\App\Models\EstadoTramite`
-     *         que componen la línea de tiempo del trámite.
+     * @return HasMany Registros `\App\Models\EstadoTramite`
+     *                 que componen la línea de tiempo del trámite.
      */
-    public function estados() { return $this->hasMany(EstadoTramite::class, 'id_tramite', 'id_tramite'); }
+    public function estados()
+    {
+        return $this->hasMany(EstadoTramite::class, 'id_tramite', 'id_tramite');
+    }
 
     /**
      * Indica si un usuario es el estudiante propietario de este trámite.

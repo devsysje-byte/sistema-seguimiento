@@ -10,6 +10,14 @@ import routes from './router/tesis.routes';
 
 export { useTesisStore } from './stores/tesis';
 export { FASES_TESIS, DESCRIPCION_ESTADO, faseDe, countdownDe, puedeSolicitarFechaDefensa, reoptarInfo } from './utils/flujo';
+export {
+    MODULOS_FLUJO_TITULACION,
+    MOTIVO_TITULO_REPETIDO,
+    esFlujoTitulacion,
+    modulosTitulacion,
+    tituloPerfilTesis,
+    rechazoPerfilTesis,
+} from './utils/flujoTitulacion';
 
 export default {
     nombre: 'tesis',

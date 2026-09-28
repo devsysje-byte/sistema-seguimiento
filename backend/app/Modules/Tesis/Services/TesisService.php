@@ -5,6 +5,7 @@ namespace App\Modules\Tesis\Services;
 use App\Models\Modalidad;
 use App\Models\Tramite;
 use App\Models\User;
+use App\Modules\Kardex\Services\VerificacionTituloService;
 use App\Modules\Tesis\Events\FechaDefensaSolicitada;
 use App\Modules\Tramites\Events\EstadoTramiteCambiado;
 use App\Modules\Tramites\Services\TramiteService;
@@ -20,8 +21,9 @@ use Illuminate\Validation\ValidationException;
  * Casos de uso del lado del ESTUDIANTE en el Módulo de Tesis de Grado.
  *
  * Encapsula el flujo oficial del estudiante independiente del resto de
- * modalidades: presentación de la solicitud con los 3 documentos obligatorios
- * y reenvío del perfil tras su rechazo. Reutiliza el motor genérico de trámites
+ * modalidades: presentación de la solicitud con el título de tesis y los 3
+ * documentos obligatorios, y reenvío del perfil (con un título nuevo) tras su
+ * rechazo. Reutiliza el motor genérico de trámites
  * (TramiteService/TramiteStateService) sin modificar su contrato.
  */
 class TesisService
@@ -30,6 +32,9 @@ class TesisService
 
     /** Documentos oficiales de la fase de solicitud. */
     public const DOC_PERFIL = 'perfil_tesis';
+
+    /** Módulo del flujo de titulación donde se registra el perfil y su título. */
+    private const MODULO_PERFIL = 'perfil_tesis';
 
     /** Documento final presentado a la Comisión Revisora (y sus correcciones). */
     public const DOC_FINAL = 'documento_final';
@@ -44,8 +49,8 @@ class TesisService
         private readonly TramiteService $tramiteService,
         private readonly TramiteStateService $stateService,
         private readonly DocumentoAdjuntoService $documentos,
-    ) {
-    }
+        private readonly VerificacionTituloService $verificacionTitulo,
+    ) {}
 
     /**
      * Estado al que vuelve un perfil corregido y reenviado.
@@ -66,9 +71,9 @@ class TesisService
      * `solicitud_fecha_defensa`, registra el hito y notifica a los roles de
      * gestión vía evento de dominio para que programen la defensa.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException Si no es su trámite.
-     * @throws \Illuminate\Validation\ValidationException Si el trámite no es de
-     *                                                    tesis o no está en un estado habilitado.
+     * @throws AuthorizationException Si no es su trámite.
+     * @throws ValidationException Si el trámite no es de
+     *                             tesis o no está en un estado habilitado.
      */
     public function solicitarFechaDefensa(int $id, User $user, ?string $fechaSugerida): array
     {
@@ -124,7 +129,7 @@ class TesisService
     /**
      * Asegura que el trámite pertenezca a la modalidad Tesis de Grado.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     private function verificarEsTesis(Tramite $tramite): void
     {
@@ -136,17 +141,26 @@ class TesisService
     }
 
     /**
-     * Crea la solicitud de Tesis de Grado con los 3 documentos obligatorios.
+     * Crea la solicitud de Tesis de Grado con el título propuesto y los 3
+     * documentos obligatorios.
      *
-     * @throws \DomainException Si la modalidad Tesis no está configurada o el
-     *                          estudiante ya tiene una tesis en curso.
+     * El título se registra en el módulo de perfil del flujo de titulación
+     * (`hitos.modulos.perfil_tesis.titulo`) para que KARDEX pueda verificar su
+     * unicidad antes de aprobar el perfil. Si ya existe un trabajo de otro
+     * postulante con el mismo título, la solicitud no se crea: el estudiante
+     * debe proponer otro.
+     *
+     * @throws \DomainException Si la modalidad Tesis no está configurada, el
+     *                          estudiante ya tiene una tesis en curso, el
+     *                          título está repetido o no cumple los plazos de
+     *                          re-opción.
      */
     public function crearSolicitud(array $validated, User $user): Tramite
     {
         $modalidad = Modalidad::where('nombre', self::MODALIDAD)->where('activo', true)->first();
 
         if (! $modalidad) {
-            throw new \DomainException('La modalidad ' . self::MODALIDAD . ' no está configurada en el sistema.');
+            throw new \DomainException('La modalidad '.self::MODALIDAD.' no está configurada en el sistema.');
         }
 
         $estudiante = $user->estudiante;
@@ -154,6 +168,8 @@ class TesisService
         if (! $estudiante) {
             throw new \DomainException('Debe completar su perfil de estudiante primero.');
         }
+
+        $titulo = trim((string) ($validated['titulo'] ?? ''));
 
         $ultimo = Tramite::where('id_estudiante', $estudiante->id_estudiante)
             ->where('id_modalidad', $modalidad->id_modalidad)
@@ -174,7 +190,7 @@ class TesisService
 
                 throw new \DomainException(
                     'Debe esperar a que se cumplan los plazos reglamentarios para volver a presentar su solicitud'
-                    . ($proxima ? " (habilitado a partir del {$proxima})." : '.')
+                    .($proxima ? " (habilitado a partir del {$proxima})." : '.')
                 );
             }
         }
@@ -188,28 +204,93 @@ class TesisService
             throw new \DomainException('Ya tiene una tesis de grado en curso. Avanza desde el seguimiento de su trámite.');
         }
 
-        return $this->tramiteService->crear(
+        // Los trámites anteriores del propio estudiante no cuentan como duplicado:
+        // solo se compara contra lo registrado por otros postulantes.
+        $duplicado = $this->verificacionTitulo->duplicado($titulo, null, (int) $estudiante->id_estudiante);
+
+        if ($duplicado !== null) {
+            throw new \DomainException($this->mensajeTituloRepetido($duplicado));
+        }
+
+        $tramite = $this->tramiteService->crear(
             [
                 'id_modalidad' => (int) $modalidad->id_modalidad,
                 'documentos' => collect($validated['documentos'] ?? [])->values()->all(),
             ],
             $user
         );
+
+        $this->registrarTituloPerfil($tramite, $titulo);
+
+        return $tramite;
     }
 
     /**
-     * Reenvía el perfil corregido después de un rechazo del Consejo.
+     * Registra el título propuesto por el estudiante en el módulo de perfil.
      *
-     * Registra el nuevo documento (si se subió), vuelve la solicitud a
-     * evaluación del Consejo y dispara el evento de dominio para notificar.
+     * Se conserva en `hitos.modulos.perfil_tesis.titulo` aunque KARDEX todavía
+     * no haya aprobado el perfil: es el título que la verificación de unicidad
+     * compara y el que el estudiante debe corregir si su perfil es rechazado.
+     */
+    private function registrarTituloPerfil(Tramite $tramite, string $titulo): void
+    {
+        $hitos = $tramite->hitos ?? [];
+        $modulos = $hitos['modulos'] ?? [];
+        $perfil = $modulos[self::MODULO_PERFIL] ?? [];
+
+        $perfil['titulo'] = $titulo;
+        $perfil['titulo_actualizado'] = Carbon::now()->toDateString();
+
+        $modulos[self::MODULO_PERFIL] = $perfil;
+        $hitos['modulos'] = $modulos;
+
+        $tramite->update(['hitos' => $hitos]);
+    }
+
+    /**
+     * Título de tesis registrado en el módulo de perfil del trámite (o null si
+     * el trámite aún no lo tiene).
+     */
+    private function tituloDePerfil(Tramite $tramite): ?string
+    {
+        $titulo = $tramite->hitos['modulos'][self::MODULO_PERFIL]['titulo'] ?? null;
+
+        return is_string($titulo) && trim($titulo) !== '' ? trim($titulo) : null;
+    }
+
+    /**
+     * Mensaje que ve el estudiante cuando su título ya está registrado.
      *
+     * @param  array<string, mixed>  $duplicado  Coincidencia exacta devuelta por la verificación.
+     */
+    private function mensajeTituloRepetido(array $duplicado): string
+    {
+        $autor = trim(($duplicado['estudiante']['nombres'] ?? '').' '.($duplicado['estudiante']['apellidos'] ?? ''));
+
+        return 'Ya existe un trabajo de grado registrado con el mismo título de tesis.'
+            .($autor !== '' ? " Corresponde al trabajo de {$autor}." : '')
+            .' Presente su perfil con un título diferente.';
+    }
+
+    /**
+     * Reenvía el perfil corregido después de su rechazo.
+     *
+     * El estudiante debe presentar un título de tesis (nuevo frente al que fue
+     * rechazado): es el que KARDEX verificará antes de volver a aprobar el
+     * perfil. Se registra el nuevo documento (si se subió), se guarda el título
+     * en el módulo de perfil, la solicitud vuelve a evaluación de KARDEX y se
+     * dispara el evento de dominio para notificar.
+     *
+     * @param  string  $titulo  Título de tesis propuesto en la corrección.
      * @return array Trámite formateado para el seguimiento del estudiante.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException Si no es su trámite.
-     * @throws \Illuminate\Validation\ValidationException Si el trámite no es de
-     *                                                    tesis o no está rechazado.
+     * @throws AuthorizationException Si no es su trámite.
+     * @throws ValidationException Si el trámite no es de
+     *                             tesis, no está
+     *                             rechazado o el título
+     *                             está repetido.
      */
-    public function reenviar(int $id, User $user, ?UploadedFile $perfil, ?string $observaciones): array
+    public function reenviar(int $id, User $user, ?UploadedFile $perfil, ?string $titulo, ?string $observaciones): array
     {
         $tramite = Tramite::with('modalidad')->findOrFail($id);
 
@@ -221,13 +302,35 @@ class TesisService
 
         if ($tramite->estado_actual !== 'perfil_rechazado') {
             throw ValidationException::withMessages([
-                'estado' => 'Solo puede reenviar el perfil cuando el Consejo Universitario lo rechazó.',
+                'estado' => 'Solo puede reenviar el perfil cuando KARDEX lo rechazó.',
+            ]);
+        }
+
+        $titulo = trim((string) $titulo);
+
+        // El título corregido debe ser distinto del que KARDEX rechazó: reenviar
+        // el mismo título no corrige nada y dejaría el perfil en el mismo punto.
+        $tituloRechazado = $this->tituloDePerfil($tramite);
+
+        if ($tituloRechazado !== null && $this->verificacionTitulo->esIgual($titulo, $tituloRechazado)) {
+            throw ValidationException::withMessages([
+                'titulo' => 'El título es el mismo queKARDEX rechazó. Presente su perfil con un título de tesis diferente.',
+            ]);
+        }
+
+        // El título corregido no puede repetir el de otro trabajo de grado: el
+        // propio trámite queda excluido para no compararse consigo mismo.
+        $duplicado = $this->verificacionTitulo->duplicado($titulo, (int) $tramite->id_tramite);
+
+        if ($duplicado !== null) {
+            throw ValidationException::withMessages([
+                'titulo' => $this->mensajeTituloRepetido($duplicado),
             ]);
         }
 
         $nuevoEstado = $this->estadoReenvio();
 
-        DB::transaction(function () use ($tramite, $user, $perfil, $observaciones, $nuevoEstado) {
+        DB::transaction(function () use ($tramite, $user, $perfil, $titulo, $observaciones, $nuevoEstado) {
             if ($perfil) {
                 $this->documentos->guardar(
                     $tramite->id_tramite,
@@ -236,6 +339,8 @@ class TesisService
                     self::DOC_PERFIL,
                 );
             }
+
+            $this->registrarTituloPerfil($tramite, $titulo);
 
             $this->stateService->transicionar(
                 $tramite,
@@ -270,10 +375,10 @@ class TesisService
      *
      * @return array Trámite formateado para el seguimiento del estudiante.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException Si no es su trámite.
-     * @throws \Illuminate\Validation\ValidationException Si el trámite no es de
-     *                                                    tesis o no está calificado
-     *                                                    como insuficiente.
+     * @throws AuthorizationException Si no es su trámite.
+     * @throws ValidationException Si el trámite no es de
+     *                             tesis o no está calificado
+     *                             como insuficiente.
      */
     public function reenviarDocumentoFinal(int $id, User $user, ?UploadedFile $documento, ?string $observaciones): array
     {

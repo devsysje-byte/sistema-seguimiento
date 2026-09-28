@@ -109,6 +109,28 @@
               </div>
 
               <form @submit.prevent="enviarSolicitud" class="mt-7 grid sm:grid-cols-2 gap-5">
+                <div class="sm:col-span-2">
+                  <label class="label" for="titulo-tesis">Título de tesis de grado · obligatorio</label>
+                  <div class="relative">
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                      <AppIcon name="file-text" :size="18" />
+                    </span>
+                    <input
+                      id="titulo-tesis"
+                      v-model="tituloSolicitud"
+                      type="text"
+                      class="input pl-10"
+                      placeholder="Ej: Sistemas de riego eficientes para cultivos de altura en el altiplano boliviano"
+                      autocomplete="off"
+                    />
+                  </div>
+                  <p class="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
+                    <AppIcon name="info" :size="13" />
+                    KARDEX verificará que el título no esté repetido en otro trabajo de grado
+                    antes de aprobar tu perfil.
+                  </p>
+                </div>
+
                 <div v-for="(ruta, tipo) in tesisStore.config.tipos_documento" :key="tipo">
                   <label class="label">{{ ruta }} (PDF) · obligatorio</label>
                   <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivos[tipo] ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40']">
@@ -130,11 +152,15 @@
                     <AppIcon name="info" :size="14" />
                     Faltan subir: {{ faltantes.join(', ') }}
                   </p>
+                  <p v-else-if="!tituloValido" class="text-xs text-slate-400 inline-flex items-center gap-1.5">
+                    <AppIcon name="info" :size="14" />
+                    Ingrese el título de su tesis (mínimo 10 caracteres).
+                  </p>
                   <p v-else class="text-xs font-semibold text-emerald-300 inline-flex items-center gap-1.5">
                     <AppIcon name="check" :size="14" />
                     Documentación completa para enviar.
                   </p>
-                  <button type="submit" class="btn-primary px-6 py-2.5 shrink-0" :disabled="tesisStore.enviando || faltantes.length > 0">
+                  <button type="submit" class="btn-primary px-6 py-2.5 shrink-0" :disabled="tesisStore.enviando || faltantes.length > 0 || !tituloValido">
                     <AppIcon v-if="tesisStore.enviando" name="loader" :size="15" class="animate-spin" />
                     <AppIcon v-else name="send" :size="15" />
                     {{ tesisStore.enviando ? 'Enviando...' : 'Enviar Solicitud' }}
@@ -174,6 +200,12 @@
             {{ descripcionEstado }}
           </p>
 
+          <!-- Título de tesis vigente (el último presentado por el estudiante) -->
+          <div v-if="tituloVigente" class="mt-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3">
+            <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Título de tesis presentado</p>
+            <p class="mt-0.5 text-sm text-white font-semibold">{{ tituloVigente }}</p>
+          </div>
+
           <!-- Indicador de fase actual -->
           <div class="mt-5 grid sm:grid-cols-7 gap-2">
             <div v-for="fase in FASES_TESIS" :key="fase.id"
@@ -193,11 +225,28 @@
              class="rounded-xl bg-red-900/50 border border-red-500/30 p-5 flex items-start gap-3 text-red-400">
           <AppIcon name="x-circle" :size="20" class="mt-0.5 shrink-0" />
           <div class="flex-1">
-            <p class="font-bold text-sm">El Consejo Universitario rechazó tu perfil de tesis.</p>
-            <p class="text-sm mt-1">Corrige las observaciones indicadas y reenvía tu perfil para una nueva evaluación.</p>
-            <button class="mt-3 btn-warm px-5 py-2.5" @click="mostrarReenvio = true">
+            <p class="font-bold text-sm">KARDEX rechazó tu perfil de tesis.</p>
+            <p class="text-sm mt-1">
+              No puedes avanzar a la siguiente etapa hasta que tu perfil sea aceptado.
+              Corrige lo indicado y vuelve a presentarlo con un título de tesis diferente.
+            </p>
+
+            <div v-if="rechazoPerfil?.titulo" class="mt-3 rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5">
+              <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Título rechazado</p>
+              <p class="mt-0.5 text-sm text-slate-200 font-semibold">{{ rechazoPerfil.titulo }}</p>
+            </div>
+
+            <div v-if="rechazoPerfil?.observacion" class="mt-2 rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5">
+              <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+                Observación de KARDEX
+                <span v-if="rechazoPerfil.fecha">· {{ formatoFechaLarga(rechazoPerfil.fecha) }}</span>
+              </p>
+              <p class="mt-0.5 text-sm text-slate-200 italic">“{{ rechazoPerfil.observacion }}”</p>
+            </div>
+
+            <button class="mt-3 btn-warm px-5 py-2.5" @click="abrirReenvio">
               <AppIcon name="pencil" :size="15" />
-              Reenviar Perfil Corregido
+              Presentar Perfil Corregido
             </button>
           </div>
         </div>
@@ -334,12 +383,39 @@
     </template>
 
     <!-- Modal de reenvío del perfil -->
-    <UiModal v-model="mostrarReenvio" title="Reenviar Perfil Corregido" max-width="520px">
+    <UiModal v-model="mostrarReenvio" title="Presentar Perfil Corregido" max-width="520px">
       <form @submit.prevent="enviarReenvio" class="space-y-5">
         <p class="text-sm text-slate-400">
-          Adjunta la versión corregida del perfil de tesis (PDF opcional). Si solo
-          vas a reenviarlo sin cambios, puedes dejarlo vacío.
+          KARDEX rechazó tu perfil. Presenta nuevamente el perfil con un
+          <strong class="text-slate-200">título de tesis diferente</strong> al rechazado y
+          adjunta la versión corregida en PDF.
         </p>
+        <div v-if="rechazoPerfil?.titulo">
+          <label class="label">Título rechazado por KARDEX</label>
+          <p class="input !bg-white/5 !text-slate-400 cursor-not-allowed truncate" :title="rechazoPerfil.titulo">
+            {{ rechazoPerfil.titulo }}
+          </p>
+        </div>
+        <div>
+          <label class="label" for="titulo-reenvio">Nuevo título de tesis · obligatorio</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+              <AppIcon name="file-text" :size="18" />
+            </span>
+            <input
+              id="titulo-reenvio"
+              v-model="tituloReenvio"
+              type="text"
+              class="input pl-10"
+              placeholder="Ej: Modelo predictivo de demanda eléctrica en campuses universitarios"
+              autocomplete="off"
+            />
+          </div>
+          <p class="mt-2 text-xs text-slate-400">
+            Mínimo 10 caracteres. No puede coincidir con el título rechazado ni con otro
+            trabajo de grado ya registrado.
+          </p>
+        </div>
         <div>
           <label class="label">Perfil de Tesis corregido (PDF)</label>
           <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivoReenvio ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40']">
@@ -361,10 +437,10 @@
         </div>
         <div class="flex justify-end gap-2 pt-1">
           <button type="button" class="btn-ghost px-4 py-2.5" @click="mostrarReenvio = false">Cancelar</button>
-          <button type="submit" class="btn-primary px-5 py-2.5" :disabled="tesisStore.enviando">
+          <button type="submit" class="btn-primary px-5 py-2.5" :disabled="tesisStore.enviando || !tituloValido">
             <AppIcon v-if="tesisStore.enviando" name="loader" :size="15" class="animate-spin" />
             <AppIcon v-else name="send" :size="15" />
-            {{ tesisStore.enviando ? 'Enviando...' : 'Reenviar Perfil' }}
+            {{ tesisStore.enviando ? 'Enviando...' : 'Enviar Perfil Corregido' }}
           </button>
         </div>
       </form>
@@ -434,6 +510,7 @@ import CountdownTesis from '../components/CountdownTesis.vue';
 import TesisActualizacionesKardex from '../components/TesisActualizacionesKardex.vue';
 import { useTesisStore } from '../stores/tesis';
 import { FASES_TESIS, DESCRIPCION_ESTADO, faseDe, countdownDe, puedeSolicitarFechaDefensa, reoptarInfo } from '../utils/flujo';
+import { rechazoPerfilTesis, tituloPerfilTesis } from '../utils/flujoTitulacion';
 
 // Cada cuánto se consulta el trámite para detectar avances de Kardex.
 const INTERVALO_SEGUIMIENTO = 30000;
@@ -447,10 +524,13 @@ const toastStore = useToastStore();
 
 // Estado del formulario de solicitud.
 const archivos = ref({ nota_solicitud: null, certificado_notas: null, perfil_tesis: null });
+// Título de tesis de grado presentado por el estudiante (KARDEX verifica su unicidad).
+const tituloSolicitud = ref('');
 // Modal de reenvío del perfil rechazado.
 const mostrarReenvio = ref(false);
 const archivoReenvio = ref(null);
 const observacionesReenvio = ref('');
+const tituloReenvio = ref('');
 // Modal de reenvío del documento final calificado como insuficiente.
 const mostrarReenvioDocumento = ref(false);
 const archivoReenvioDocumento = ref(null);
@@ -508,6 +588,24 @@ const faltantes = computed(() =>
     .filter(([tipo]) => !archivos.value[tipo])
     .map(([, etiqueta]) => etiqueta)
 );
+
+// Un título es válido si tiene la extensión mínima exigida por el backend.
+const tituloValido = computed(() => (tituloReenvio.value || tituloSolicitud.value).trim().length >= 10);
+
+// Título rechazado y observación del último rechazo de perfil de Kardex.
+const rechazoPerfil = computed(() => rechazoPerfilTesis(tramite.value));
+
+// Título vigente del trámite (el registrado con el perfil, sea el aceptado o el
+// que está en revisión tras un reenvío).
+const tituloVigente = computed(() => tituloPerfilTesis(tramite.value));
+
+/** Abre el modal de reenvío con el título rechazado a la vista. */
+function abrirReenvio() {
+  tituloReenvio.value = '';
+  archivoReenvio.value = null;
+  observacionesReenvio.value = '';
+  mostrarReenvio.value = true;
+}
 
 // Seguimiento en segundo plano: temporizador del sondeo y último estado visto.
 let temporizadorSeguimiento = null;
@@ -578,17 +676,24 @@ function handleArchivo(event, tipo) {
 }
 
 /**
- * Envía la solicitud de tesis con los 3 documentos como FormData multipart.
+ * Envía la solicitud de tesis con el título y los 3 documentos como FormData
+ * multipart. El título queda registrado en el perfil para que Kardex verifique
+ * su unicidad antes de aprobarlo.
  */
 async function enviarSolicitud() {
   if (faltantes.value.length) {
     toastStore.warning('Debe adjuntar los 3 documentos obligatorios.');
     return;
   }
+  if (tituloSolicitud.value.trim().length < 10) {
+    toastStore.warning('Ingrese el título de su tesis (mínimo 10 caracteres).');
+    return;
+  }
 
   const formData = new FormData();
   const tipos = Object.keys(tesisStore.config.tipos_documento);
 
+  formData.append('titulo', tituloSolicitud.value.trim());
   tipos.forEach((tipo, index) => {
     formData.append(`documentos[${index}][archivo]`, archivos.value[tipo]);
     formData.append(`documentos[${index}][tipo]`, tipo);
@@ -598,6 +703,7 @@ async function enviarSolicitud() {
     await tesisStore.crearSolicitud(formData);
     toastStore.success('Solicitud de tesis enviada. Queda pendiente del Consejo Universitario.');
     archivos.value = { nota_solicitud: null, certificado_notas: null, perfil_tesis: null };
+    tituloSolicitud.value = '';
     await tramitesStore.cargarTramiteActivo();
     ultimoEstadoVisto = tramite.value?.estado_actual || null;
   } catch (error) {
@@ -606,10 +712,17 @@ async function enviarSolicitud() {
 }
 
 /**
- * Reenvía el perfil corregido tras su rechazo por el Consejo.
+ * Reenvía el perfil corregido con un título diferente al rechazado. El trámite
+ * vuelve a la cola de revisión de Kardex.
  */
 async function enviarReenvio() {
+  if (tituloReenvio.value.trim().length < 10) {
+    toastStore.warning('Ingrese el nuevo título de tesis (mínimo 10 caracteres).');
+    return;
+  }
+
   const formData = new FormData();
+  formData.append('titulo', tituloReenvio.value.trim());
   if (archivoReenvio.value) formData.append('perfil', archivoReenvio.value);
   formData.append('observaciones', observacionesReenvio.value || '');
 
@@ -620,6 +733,7 @@ async function enviarReenvio() {
     mostrarReenvio.value = false;
     archivoReenvio.value = null;
     observacionesReenvio.value = '';
+    tituloReenvio.value = '';
     toastStore.success('Perfil reenviado. Queda pendiente del Consejo Universitario.');
   } catch (error) {
     toastStore.error('Error al reenviar: ' + (error.response?.data?.message || 'Verifique los datos'));

@@ -8,8 +8,10 @@ use App\Modules\Tesis\Http\Requests\ReenviarPerfilRequest;
 use App\Modules\Tesis\Http\Requests\SolicitarFechaDefensaRequest;
 use App\Modules\Tesis\Http\Requests\SolicitudTesisRequest;
 use App\Modules\Tesis\Services\TesisService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Controlador del flujo del estudiante en el Módulo de Tesis de Grado.
@@ -20,9 +22,7 @@ use Illuminate\Http\Request;
  */
 class TesisController extends Controller
 {
-    public function __construct(private readonly TesisService $tesisService)
-    {
-    }
+    public function __construct(private readonly TesisService $tesisService) {}
 
     /**
      * POST /api/tesis/solicitud
@@ -50,14 +50,18 @@ class TesisController extends Controller
                 $id,
                 $request->user(),
                 $validated['perfil'] ?? null,
+                $validated['titulo'] ?? '',
                 $validated['observaciones'] ?? null
             );
 
             return response()->json($tramite);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             return response()->json(['message' => 'No autorizado'], 403);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['message' => $e->validator->errors()->first()], 422);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => $e->validator->errors()->first(),
+                'errors' => $e->errors(),
+            ], 422);
         }
     }
 
@@ -77,9 +81,9 @@ class TesisController extends Controller
             );
 
             return response()->json($tramite);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             return response()->json(['message' => 'No autorizado'], 403);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json(['message' => $e->validator->errors()->first()], 422);
         }
     }
@@ -99,9 +103,9 @@ class TesisController extends Controller
             );
 
             return response()->json($tramite);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             return response()->json(['message' => 'No autorizado'], 403);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json(['message' => $e->validator->errors()->first()], 422);
         }
     }

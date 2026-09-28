@@ -84,6 +84,7 @@ class KardexController extends Controller
             'verificacion' => $this->titulos->verificar(
                 $validated['titulo'],
                 isset($validated['excluir_tramite']) ? (int) $validated['excluir_tramite'] : null,
+                isset($validated['excluir_estudiante']) ? (int) $validated['excluir_estudiante'] : null,
             ),
         ]);
     }

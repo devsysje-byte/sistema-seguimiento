@@ -294,19 +294,20 @@ export const useKardexStore = defineStore('kardex', {
          *
          * @param {string} titulo           Título a verificar.
          * @param {number|null} excluirTramite Trámite a omitir de la comparación.
+         * @param {number|null} excluirEstudiante Estudiante cuyos trámites se omiten.
          * @returns {Promise<Object|null>} Verificación `{ consulta, unico, total, coincidencias }`.
          */
-        async verificarTitulo(titulo, excluirTramite = null) {
+        async verificarTitulo(titulo, excluirTramite = null, excluirEstudiante = null) {
             this.verificandoTitulo = true;
             this.errorMessage = null;
             try {
-                const { data } = await kardexService.verificarTituloTesis(titulo, excluirTramite);
+                const { data } = await kardexService.verificarTituloTesis(titulo, excluirTramite, excluirEstudiante);
                 this.simulado = false;
                 this.verificacionTitulo = data.verificacion;
                 return data.verificacion;
             } catch (error) {
                 if (this._manejarError(error) === null && this.simulado) {
-                    this.verificacionTitulo = verificarTituloMock(titulo, excluirTramite);
+                    this.verificacionTitulo = verificarTituloMock(titulo, excluirTramite, excluirEstudiante);
                     return this.verificacionTitulo;
                 }
                 this.verificacionTitulo = null;

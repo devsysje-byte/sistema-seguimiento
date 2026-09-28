@@ -39,9 +39,9 @@ export const useTesisStore = defineStore('tesis', {
             return this.config;
         },
         /**
-         * Presenta la solicitud con los 3 documentos obligatorios.
+         * Presenta la solicitud con el título de tesis y los 3 documentos obligatorios.
          *
-         * @param {FormData} formData Documentos `documentos[...]` (nota, certificado, perfil).
+         * @param {FormData} formData `titulo` y documentos `documentos[...]` (nota, certificado, perfil).
          * @returns {Promise<Object>} Trámite creado.
          */
         async crearSolicitud(formData) {
@@ -56,10 +56,10 @@ export const useTesisStore = defineStore('tesis', {
             }
         },
         /**
-         * Reenvía el perfil corregido tras su rechazo.
+         * Reenvía el perfil corregido con un título diferente al rechazado.
          *
          * @param {number|string} id Identificador del trámite de tesis.
-         * @param {FormData|null} formData FormData con `perfil` y `observaciones`.
+         * @param {FormData|null} formData FormData con `titulo`, `perfil` y `observaciones`.
          * @returns {Promise<Object>} Trámite actualizado.
          */
         async reenviarPerfil(id, formData) {

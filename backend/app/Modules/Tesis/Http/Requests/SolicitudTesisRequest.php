@@ -8,8 +8,10 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * Validación de la fase de solicitud del Módulo de Tesis de Grado.
  *
- * Exige que el estudiante adjunte OBLIGATORIAMENTE los 3 documentos oficiales:
- * Nota de Solicitud, Certificado de Notas y Perfil de Tesis de Grado.
+ * Exige que el estudiante proponga el título de su tesis (es el que KARDEX
+ * verificará antes de aprobar el perfil) y que adjunte OBLIGATORIAMENTE los 3
+ * documentos oficiales: Nota de Solicitud, Certificado de Notas y Perfil de
+ * Tesis de Grado.
  */
 class SolicitudTesisRequest extends FormRequest
 {
@@ -26,9 +28,10 @@ class SolicitudTesisRequest extends FormRequest
         $tipos = array_keys(config('tesis.tipos_documento', []));
 
         return [
+            'titulo' => ['required', 'string', 'min:10', 'max:255'],
             'documentos' => ['required', 'array', 'min:3'],
             'documentos.*.archivo' => ['required', 'file', 'mimes:pdf', 'max:5120'],
-            'documentos.*.tipo' => ['required', 'string', 'in:' . implode(',', $tipos)],
+            'documentos.*.tipo' => ['required', 'string', 'in:'.implode(',', $tipos)],
         ];
     }
 
@@ -49,7 +52,7 @@ class SolicitudTesisRequest extends FormRequest
             if (! empty($faltantes)) {
                 $validator->errors()->add(
                     'documentos',
-                    'Son obligatorios los 3 documentos: ' . implode(', ', $faltantes) . '.'
+                    'Son obligatorios los 3 documentos: '.implode(', ', $faltantes).'.'
                 );
             }
         });

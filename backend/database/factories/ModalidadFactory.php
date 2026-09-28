@@ -1,0 +1,34 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Models\Modalidad;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<Modalidad>
+ */
+class ModalidadFactory extends Factory
+{
+    public function definition(): array
+    {
+        return [
+            'nombre' => fake()->unique()->randomElement([
+                'Tesis de Grado',
+                'Examen de Grado',
+                'Trabajo Dirigido',
+                'Excelencia Académica',
+            ]),
+            'descripcion' => fake()->sentence(),
+            'duracion_maxima_meses' => 12,
+            'requisitos_minimos' => fake()->sentence(),
+            'activo' => true,
+        ];
+    }
+
+    /** Modalidad de Tesis de Grado (la del flujo de titulación por módulos). */
+    public function tesis(): static
+    {
+        return $this->state(fn (array $attributes) => ['nombre' => 'Tesis de Grado']);
+    }
+}

@@ -6,10 +6,11 @@ use App\Support\Roles;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validación del reenvío del perfil rechazado por el Consejo Universitario.
+ * Validación del reenvío del perfil rechazado por KARDEX.
  *
- * El estudiante puede reenviar la versión corregida del perfil (PDF opcional:
- * si deja el anterior, basta con un mensaje) y vuelve a quedar en evaluación.
+ * El estudiante debe volver a presentar un título de tesis (el que KARDEX
+ * volverá a verificar) y, opcionalmente, la versión corregida del perfil en
+ * PDF: si conserva el documento anterior, basta con el título.
  */
 class ReenviarPerfilRequest extends FormRequest
 {
@@ -24,6 +25,7 @@ class ReenviarPerfilRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'titulo' => ['required', 'string', 'min:10', 'max:255'],
             'perfil' => ['nullable', 'file', 'mimes:pdf', 'max:5120'],
             'observaciones' => ['nullable', 'string', 'max:500'],
         ];

@@ -52,11 +52,23 @@ const PCT_POR_ESTADO = {
 export const ESTADOS_ERROR_TITULACION = ['rechazado', 'reprobado', 'reprobado_ausencia', 'perfil_rechazado', 'insuficiente'];
 
 // Documentos verificados en el módulo de perfil (checkboxes con PDF adjunto).
+// Son los mismos tipos que el estudiante adjunta en su solicitud
+// (`config/tesis.php`), para que KARDEX revise lo realmente presentado.
 export const DOCUMENTOS_PERFIL = [
-  { tipo: 'carta_solicitud', etiqueta: 'Carta de Solicitud' },
-  { tipo: 'certificado_conclusion', etiqueta: 'Certificado de Conclusión de Estudios' },
-  { tipo: 'perfil_tesis', etiqueta: 'Perfil de Tesis' },
+  { tipo: 'nota_solicitud', etiqueta: 'Nota de Solicitud' },
+  { tipo: 'certificado_notas', etiqueta: 'Certificado de Notas' },
+  { tipo: 'perfil_tesis', etiqueta: 'Perfil de Tesis de Grado' },
 ];
+
+// Título de tesis presentado por el estudiante con su perfil.
+export const MODULO_PERFIL = 'perfil_tesis';
+
+// Motivo que KARDEX registra al rechazar un perfil por título repetido. Es el
+// texto que ve el estudiante en su flujo, por lo que debe explicar que debe
+// presentar otro perfil con un título diferente.
+export const MOTIVO_TITULO_REPETIDO =
+  'Existen trabajos de grado registrados con el mismo título de tesis. '
+  + 'Debe presentar su perfil nuevamente con un título de tesis diferente.';
 
 // Roles del tribunal revisor (lista dinámica del módulo 3).
 export const ROLES_TRIBUNAL = ['presidente', 'vocal', 'secretario'];
@@ -102,6 +114,50 @@ export function estadoBadgeTitulacion(tramite) {
 /** Datos guardados de un módulo (desde hitos.modulos). */
 export function datosDeModulo(tramite, moduloId) {
   return tramite?.hitos?.modulos?.[moduloId] || null;
+}
+
+/**
+ * Título de tesis propuesto por el estudiante para su perfil.
+ *
+ * Es el texto que KARDEX verifica contra los demás trabajos antes de aprobar
+ * el perfil; si el trámite aún no registró título, se recurre al tema
+ * confirmado en el módulo de aprobación del tema.
+ *
+ * @param {Object|null} tramite Trámite de Tesis de Grado.
+ * @returns {string} Título presentado (cadena vacía si aún no hay).
+ */
+export function tituloPerfilTesis(tramite) {
+  const titulo = datosDeModulo(tramite, MODULO_PERFIL)?.titulo
+    || tramite?.hitos?.modulos?.aprobacion_tema?.tema_investigacion
+    || '';
+  return String(titulo).trim();
+}
+
+/**
+ * Último rechazo del perfil registrado por KARDEX.
+ *
+ * El motivo queda en el historial de estados del trámite (`observaciones`), que
+ * es lo que el estudiante consulta en su seguimiento; la fecha se toma del
+ * hito correspondiente.
+ *
+ * @param {Object|null} tramite Trámite de Tesis de Grado.
+ * @returns {{fecha: string|null, observacion: string, titulo: string}|null}
+ *          Rechazo del perfil o null si nunca fue rechazado.
+ */
+export function rechazoPerfilTesis(tramite) {
+  const delHistorial = (tramite?.estados || [])
+    .filter((e) => e.nombre_estado === 'perfil_rechazado')
+    .map((e) => ({ ...e, fecha: String(e.created_at || '').slice(0, 10) }))
+    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+    .pop();
+
+  if (!delHistorial) return null;
+
+  return {
+    fecha: delHistorial.fecha || tramite?.hitos?.perfil_rechazado || null,
+    observacion: String(delHistorial.observaciones || '').trim(),
+    titulo: tituloPerfilTesis(tramite),
+  };
 }
 
 /**
@@ -197,6 +253,7 @@ function camposDeModulo(moduloId, datos, tramite) {
   switch (moduloId) {
     case 'perfil_tesis':
       return filas([
+        { etiqueta: 'Título de tesis', valor: datos.titulo },
         ...DOCUMENTOS_PERFIL.map((d) => {
           const item = datos.documentos?.[d.tipo];
           if (!item) return { etiqueta: d.etiqueta, valor: null };
@@ -299,6 +356,10 @@ export function actualizacionesKardex(tramite) {
 /**
  * Valida los datos de un módulo antes de guardar.
  *
+ * El perfil es el módulo con decisión: con `accion: rechazar` solo exige la
+ * observación (el motivo que verá el estudiante) y con `accion: aprobar` valida
+ * el título presentado y los 3 documentos verificados.
+ *
  * La defensa se registra en dos pasos: `paso: 1` valida solo la Resolución de
  * Aprobación Final y la fecha de la defensa; `paso: 2` (o sin `paso`, guardado
  * completo) exige además la nota final.
@@ -313,6 +374,17 @@ export function validarModulo(moduloId, datos = {}) {
 
   switch (moduloId) {
     case 'perfil_tesis': {
+      if (datos.accion === 'rechazar') {
+        if (!val(datos.observaciones)) {
+          errores.push('Indique la observación del rechazo del perfil.');
+        }
+        break;
+      }
+
+      if (!val(datos.titulo) || String(datos.titulo).trim().length < 10) {
+        errores.push('Ingrese el título de tesis presentado por el estudiante (mínimo 10 caracteres).');
+      }
+
       const docs = datos.documentos || {};
       for (const d of DOCUMENTOS_PERFIL) {
         const item = docs[d.tipo];

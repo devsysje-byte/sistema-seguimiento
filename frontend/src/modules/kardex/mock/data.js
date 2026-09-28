@@ -136,9 +136,11 @@ export const POSTULANTES_MOCK = [
         limite_presentacion: '2027-06-10',
         modulos: {
           perfil_tesis: {
+            titulo: 'Sistemas de riego eficientes para cultivos de altura en el altiplano boliviano',
+            titulo_actualizado: '2026-05-11',
             documentos: {
-              carta_solicitud: { marcado: true, archivo: { nombre: 'carta_solicitud_carlos.pdf' } },
-              certificado_conclusion: { marcado: true, archivo: { nombre: 'certificado_conclusion_carlos.pdf' } },
+              nota_solicitud: { marcado: true, archivo: { nombre: 'nota_solicitud_carlos.pdf' } },
+              certificado_notas: { marcado: true, archivo: { nombre: 'certificado_notas_carlos.pdf' } },
               perfil_tesis: { marcado: true, archivo: { nombre: 'perfil_tesis_carlos.pdf' } },
             },
             observaciones: 'Documentación verificada y aprobada por Kardex.',
@@ -190,9 +192,11 @@ export const POSTULANTES_MOCK = [
         tribunal_asignado: '2026-08-20',
         modulos: {
           perfil_tesis: {
+            titulo: 'Incidencia de la educación digital en el rendimiento académico universitario',
+            titulo_actualizado: '2026-01-20',
             documentos: {
-              carta_solicitud: { marcado: true, archivo: { nombre: 'carta_solicitud_maria.pdf' } },
-              certificado_conclusion: { marcado: true, archivo: { nombre: 'certificado_conclusion_maria.pdf' } },
+              nota_solicitud: { marcado: true, archivo: { nombre: 'nota_solicitud_maria.pdf' } },
+              certificado_notas: { marcado: true, archivo: { nombre: 'certificado_notas_maria.pdf' } },
               perfil_tesis: { marcado: true, archivo: { nombre: 'perfil_tesis_maria.pdf' } },
             },
             observaciones: '',
@@ -225,6 +229,102 @@ export const POSTULANTES_MOCK = [
         { nombre_estado: 'tribunal_asignado', descripcion: 'Tribunal asignado', created_at: '2026-08-20T09:00:00.000000Z' },
       ],
       siguientes_estados: SIGUIENTES_POR_ESTADO['tribunal_asignado'],
+      secuencia: SECUENCIAS['Tesis de Grado'],
+    },
+  },
+  {
+    // Perfil pendiente de revisión: KARDEX debe verificar el título y decidir.
+    id_estudiante: 105,
+    ci: '7788990',
+    nombres: 'Andrea Noelia',
+    apellidos: 'Salazar Cruz',
+    registro_universitario: 'RU-2019-0257',
+    fecha_nacimiento: '2000-03-11',
+    email: 'andrea.s@upea.edu.bo',
+    telefono: '70112233',
+    promedio_global: 81.2,
+    tiene_cuenta: true,
+    username: 'Andrea_7788990',
+    tramite: {
+      id_tramite: 303,
+      id_estudiante: 105,
+      id_modalidad: 2,
+      id_tutor: null,
+      tutor: null,
+      estado_actual: 'pendiente_concejo_universitario',
+      observaciones: null,
+      hitos: {
+        solicitud_presentada: '2026-09-20',
+        modulos: {
+          perfil_tesis: {
+            titulo: 'Uso de imágenes satelitales para el monitoreo desequías en el altiplano',
+            titulo_actualizado: '2026-09-20',
+          },
+        },
+      },
+      documentos: [
+        { id_documento: 1, tipo_documento: 'nota_solicitud', nombre_archivo: 'nota_solicitud_andrea.pdf', ruta_archivo: 'documentos/andrea/nota.pdf', tamanio_kb: 320 },
+        { id_documento: 2, tipo_documento: 'certificado_notas', nombre_archivo: 'certificado_notas_andrea.pdf', ruta_archivo: 'documentos/andrea/notas.pdf', tamanio_kb: 180 },
+        { id_documento: 3, tipo_documento: 'perfil_tesis', nombre_archivo: 'perfil_andrea.pdf', ruta_archivo: 'documentos/andrea/perfil.pdf', tamanio_kb: 540 },
+      ],
+      created_at: '2026-09-20T08:00:00.000000Z',
+      updated_at: '2026-09-20T08:00:00.000000Z',
+      modalidad: { id_modalidad: 2, nombre: 'Tesis de Grado' },
+      estudiante: { id_estudiante: 105, ci: '7788990', nombres: 'Andrea Noelia', apellidos: 'Salazar Cruz', registro_universitario: 'RU-2019-0257' },
+      estados: [
+        { nombre_estado: 'solicitud_presentada', descripcion: 'Solicitud presentada', created_at: '2026-09-20T08:00:00.000000Z' },
+        { nombre_estado: 'pendiente_concejo_universitario', descripcion: 'Perfil en revisión por Kardex', created_at: '2026-09-20T08:05:00.000000Z' },
+      ],
+      siguientes_estados: SIGUIENTES_POR_ESTADO['pendiente_concejo_universitario'],
+      secuencia: SECUENCIAS['Tesis de Grado'],
+    },
+  },
+  {
+    // Perfil ya rechazado: el módulo muestra la observación y espera el reenvío.
+    id_estudiante: 106,
+    ci: '4455667',
+    nombres: 'Diego Iván',
+    apellidos: 'Rojas Yupanqui',
+    registro_universitario: 'RU-2018-0451',
+    fecha_nacimiento: '2000-11-05',
+    email: 'diego.r@upea.edu.bo',
+    telefono: '70223344',
+    promedio_global: 70.4,
+    tiene_cuenta: true,
+    username: 'Diego_4455667',
+    tramite: {
+      id_tramite: 304,
+      id_estudiante: 106,
+      id_modalidad: 2,
+      id_tutor: null,
+      tutor: null,
+      estado_actual: 'perfil_rechazado',
+      observaciones: 'El título presentado repite el de un trabajo de grado ya registrado.',
+      hitos: {
+        solicitud_presentada: '2026-09-05',
+        perfil_rechazado: '2026-09-12',
+        modulos: {
+          perfil_tesis: {
+            titulo: 'Sistemas de riego eficientes para cultivos de altura en el altiplano boliviano',
+            titulo_actualizado: '2026-09-05',
+          },
+        },
+      },
+      documentos: [
+        { id_documento: 4, tipo_documento: 'nota_solicitud', nombre_archivo: 'nota_solicitud_diego.pdf', ruta_archivo: 'documentos/diego/nota.pdf', tamanio_kb: 300 },
+        { id_documento: 5, tipo_documento: 'certificado_notas', nombre_archivo: 'certificado_notas_diego.pdf', ruta_archivo: 'documentos/diego/notas.pdf', tamanio_kb: 190 },
+        { id_documento: 6, tipo_documento: 'perfil_tesis', nombre_archivo: 'perfil_diego.pdf', ruta_archivo: 'documentos/diego/perfil.pdf', tamanio_kb: 500 },
+      ],
+      created_at: '2026-09-05T08:00:00.000000Z',
+      updated_at: '2026-09-12T09:00:00.000000Z',
+      modalidad: { id_modalidad: 2, nombre: 'Tesis de Grado' },
+      estudiante: { id_estudiante: 106, ci: '4455667', nombres: 'Diego Iván', apellidos: 'Rojas Yupanqui', registro_universitario: 'RU-2018-0451' },
+      estados: [
+        { nombre_estado: 'solicitud_presentada', descripcion: 'Solicitud presentada', created_at: '2026-09-05T08:00:00.000000Z' },
+        { nombre_estado: 'pendiente_concejo_universitario', descripcion: 'Perfil en revisión por Kardex', created_at: '2026-09-05T08:05:00.000000Z' },
+        { nombre_estado: 'perfil_rechazado', descripcion: 'Perfil rechazado por Kardex', observaciones: 'Existen trabajos de grado registrados con el mismo título de tesis. Debe presentar su perfil nuevamente con un título de tesis diferente.', created_at: '2026-09-12T09:00:00.000000Z' },
+      ],
+      siguientes_estados: SIGUIENTES_POR_ESTADO['perfil_rechazado'],
       secuencia: SECUENCIAS['Tesis de Grado'],
     },
   },
@@ -345,10 +445,15 @@ const ESTADOS_MODULOS = {
   publicacion: 'titulado',
 };
 
+// Estado al que pasa el trámite cuando KARDEX rechaza el perfil (el estudiante
+// debe presentar otro perfil con un título diferente).
+const PERFIL_RECHAZADO = 'perfil_rechazado';
+
 // Simula POST /tramites/{id}/flujo/{modulo} (guardado de un módulo del flujo).
 export function aplicarModuloMock(tramite, moduloId, datos) {
   const t = clonar(tramite);
-  const estado = ESTADOS_MODULOS[moduloId];
+  const rechaza = moduloId === 'perfil_tesis' && datos.accion === 'rechazar';
+  const estado = rechaza ? PERFIL_RECHAZADO : ESTADOS_MODULOS[moduloId];
   if (!estado) {
     throw { message: 'El módulo del flujo no es reconocido.' };
   }
@@ -356,25 +461,42 @@ export function aplicarModuloMock(tramite, moduloId, datos) {
   // La defensa se registra en dos pasos. La clave `paso` no se persiste (espejo
   // del TramiteService): el paso 1 guarda los datos sin transicionar el estado.
   const paso = Number(datos.paso ?? 2);
-  const { paso: _paso, ...datosGuardar } = datos;
+  const { paso: _paso, accion: _accion, ...datosGuardar } = datos;
   t.updated_at = new Date().toISOString();
-  t.hitos = {
-    ...(t.hitos || {}),
-    modulos: { ...(t.hitos?.modulos || {}), [moduloId]: datosGuardar },
-  };
+  t.hitos = { ...(t.hitos || {}) };
+
+  // Al rechazar el perfil se conserva lo que el estudiante presentó: solo se
+  // registra la decisión (espejo del TramiteService).
+  if (!rechaza) {
+    t.hitos.modulos = {
+      ...(t.hitos.modulos || {}),
+      [moduloId]: { ...(t.hitos.modulos?.[moduloId] || {}), ...datosGuardar },
+    };
+  }
+
   if (moduloId === 'defensa' && paso === 1) {
     return t;
   }
   t.estado_actual = estado;
-  t.hitos = { ...t.hitos, [estado]: hoy };
-  if (moduloId === 'aprobacion_tema' && datos.tutor_id) {
+  t.hitos[estado] = hoy;
+  if (rechaza) {
+    t.observaciones = datos.observaciones || t.observaciones;
+  } else if (moduloId === 'aprobacion_tema' && datos.tutor_id) {
     const tutor = DOCENTES_MOCK.find((d) => d.id_usuario === Number(datos.tutor_id));
     if (tutor) {
       t.id_tutor = tutor.id_usuario;
       t.tutor = { ...tutor };
     }
   }
-  t.estados = [...(t.estados || []), { nombre_estado: estado, descripcion: estado, created_at: new Date().toISOString() }];
+  t.estados = [
+    ...(t.estados || []),
+    {
+      nombre_estado: estado,
+      descripcion: estado,
+      observaciones: rechaza ? datos.observaciones || null : null,
+      created_at: new Date().toISOString(),
+    },
+  ];
   t.siguientes_estados = SIGUIENTES_POR_ESTADO[estado] || [];
   return t;
 }
@@ -382,14 +504,16 @@ export function aplicarModuloMock(tramite, moduloId, datos) {
 // Simula GET /kardex/titulos-tesis (verificación de unicidad del título).
 // Espejo del VerificacionTituloService del backend: normaliza el texto y puntúa
 // la similitud combinando coincidencia de cadena y solapamiento de palabras.
-export function verificarTituloMock(titulo, excluirTramite = null) {
+export function verificarTituloMock(titulo, excluirTramite = null, excluirEstudiante = null) {
   const consulta = String(titulo || '').trim();
   const normalizado = normalizarTitulo(consulta);
 
   const titulos = POSTULANTES_MOCK
     .map((p) => ({
       id_tramite: p.tramite?.id_tramite,
-      titulo: p.tramite?.hitos?.modulos?.aprobacion_tema?.tema_investigacion,
+      id_estudiante: p.id_estudiante,
+      titulo: p.tramite?.hitos?.modulos?.perfil_tesis?.titulo
+        || p.tramite?.hitos?.modulos?.aprobacion_tema?.tema_investigacion,
       estado_actual: p.tramite?.estado_actual,
       modalidad: p.tramite?.modalidad?.nombre,
       estudiante: {
@@ -400,7 +524,9 @@ export function verificarTituloMock(titulo, excluirTramite = null) {
       },
       created_at: (p.tramite?.created_at || '').slice(0, 10),
     }))
-    .filter((t) => t.titulo && t.id_tramite !== excluirTramite);
+    .filter((t) => t.titulo
+      && t.id_tramite !== excluirTramite
+      && t.id_estudiante !== excluirEstudiante);
 
   if (!normalizado) {
     return { consulta, unico: true, total: 0, coincidencias: [] };

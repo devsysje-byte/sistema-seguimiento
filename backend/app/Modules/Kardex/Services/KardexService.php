@@ -28,7 +28,7 @@ class KardexService
     private const DETALLE_CARGAS = [
         'modalidad:id_modalidad,nombre,descripcion,requisitos_minimos',
         'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,email,telefono,promedio_global',
-        'estudiante.user:id_usuario,nombres,apellidos,email,rol',
+        'estudiante.user:id_usuario,estudiante_id,nombres,apellidos,email,rol',
         'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,ruta_archivo,created_at',
         'estados:id_estado,id_tramite,nombre_estado,descripcion,observaciones,id_usuario_responsable,created_at',
         'estados.responsable:id_usuario,nombres,apellidos,rol',

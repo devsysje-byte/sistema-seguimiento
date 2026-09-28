@@ -61,12 +61,17 @@
       <template v-for="(m, i) in modulos" :key="m.id">
         <ModuloPerfilTesis
           v-if="m.id === 'perfil_tesis'"
+          id="modulo-perfil-tesis"
+          ref="moduloPerfil"
           :completado="m.completado"
           :en-progreso="m.enProgreso"
           :bloqueado="m.bloqueado"
           :datos="m.datos"
           :cargando="i === proximoPendiente && guardando"
+          :tramite="tramite"
+          :rechazo="rechazoPerfil"
           @guardar="(datos) => guardar(m.id, datos)"
+          @consultar-coincidencia="(c) => emit('consultar-coincidencia', c)"
         />
         <ModuloAprobacionTema
           v-else-if="m.id === 'aprobacion_tema'"
@@ -131,6 +136,7 @@ import {
   proximoModuloPendiente,
   pctTitulacion,
   estadoBadgeTitulacion,
+  rechazoPerfilTesis,
   validarModulo,
 } from '@/modules/tesis/utils/flujoTitulacion';
 import { fechaLegible, iniciales } from '@/modules/kardex/utils/formato';
@@ -150,17 +156,21 @@ const props = defineProps({
   docentes: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(['guardado']);
+const emit = defineEmits(['guardado', 'consultar-coincidencia']);
 
 const kardexStore = useKardexStore();
 const toastStore = useToastStore();
 
 const guardando = ref(false);
+const moduloPerfil = ref(null);
 
 const estudiante = computed(() => props.tramite?.estudiante || {});
 const estadoBadge = computed(() => estadoBadgeTitulacion(props.tramite));
 const progreso = computed(() => pctTitulacion(props.tramite));
 const proximoPendiente = computed(() => proximoModuloPendiente(props.tramite));
+
+// Motivo y observación del último rechazo del perfil (los ve el estudiante).
+const rechazoPerfil = computed(() => rechazoPerfilTesis(props.tramite));
 
 const modulos = computed(() => {
   const proximo = proximoPendiente.value;
@@ -186,10 +196,22 @@ async function guardar(moduloId, datos) {
   const actualizado = await kardexStore.guardarModuloFlujo(moduloId, datos);
   guardando.value = false;
   if (actualizado) {
-    toastStore.success(`Módulo completado — estado: ${modulo.badge}`);
+    toastStore.success(
+      datos.accion === 'rechazar'
+        ? 'Perfil rechazado. Se notificó al estudiante para que presente otro perfil.'
+        : `Módulo completado — estado: ${modulo.badge}`,
+    );
     emit('guardado', actualizado);
   } else {
     toastStore.error(kardexStore.errorMessage || 'No se pudo guardar el módulo.');
   }
 }
+
+// Verificación de unicidad disparada desde el resumen del postulante.
+function verificarTituloPerfil() {
+  moduloPerfil.value?.verificarTitulo();
+  document.getElementById('modulo-perfil-tesis')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+defineExpose({ verificarTituloPerfil });
 </script>

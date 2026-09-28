@@ -23,9 +23,12 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
-        <env name="DB_URL" value=""/>
+        <!--
+            La conexión de pruebas la define `.env.testing` (MySQL): el esquema del
+            proyecto usa migraciones específicas de MySQL (ENUM y `ALTER TABLE ...
+            MODIFY`), por lo que SQLite no puede construirlo. NO fijes aquí
+            DB_CONNECTION/DB_DATABASE o sobrescribirán la base de pruebas.
+        -->
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
