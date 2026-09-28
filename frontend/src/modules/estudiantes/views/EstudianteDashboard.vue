@@ -106,15 +106,15 @@
           </div>
         </div>
 
-        <router-link v-else-if="tramitesStore.tramiteActivo && esTesisActivo" to="/estudiante/tesis" class="card overflow-hidden relative block group">
+        <router-link v-else-if="tramitesStore.tramiteActivo && esTesisActivo" to="/estudiante/tesis" class="card overflow-hidden relative block group hover:ring-2 hover:ring-orange-500/40 transition-all duration-200">
           <div class="absolute inset-x-0 top-0 h-2 bg-orange"></div>
           <div class="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-              <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300 group-hover:scale-105 transition">
+              <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300 group-hover:bg-orange-500/20 group-hover:scale-105 transition-all duration-200">
                 <AppIcon name="graduation" :size="28" />
               </div>
               <div>
-                <h2 class="text-lg font-extrabold text-white">Tesis de Grado · En Curso</h2>
+                <h2 class="text-lg font-extrabold text-white transition-colors duration-200 group-hover:text-orange-300">Tesis de Grado · En Curso</h2>
                 <p class="text-sm text-slate-400">
                   Estado:
                   <span class="font-semibold text-orange-300">{{ formatoEstado(tramitesStore.tramiteActivo.estado_actual) }}</span>
@@ -160,16 +160,16 @@
             </p>
           </div>
 
-          <router-link to="/estudiante/tesis" class="card overflow-hidden relative block group">
+          <router-link to="/estudiante/tesis" class="card overflow-hidden relative block group hover:ring-2 hover:ring-orange-500/40 transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-2 bg-orange"></div>
             <div class="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300 group-hover:scale-105 transition">
+                <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300 group-hover:bg-orange-500/20 group-hover:scale-105 transition-all duration-200">
                   <AppIcon name="graduation" :size="28" />
                 </div>
                 <div>
-                  <h2 class="text-lg font-extrabold text-white">Tesis de Grado</h2>
-                  <p class="text-sm text-slate-400">Aqui puedes solcitar la modalidad de graduación de Tesis de Grado y realizar el seguimiento correspondiente.</p>
+                  <h2 class="text-lg font-extrabold text-white transition-colors duration-200 group-hover:text-orange-300">Tesis de Grado</h2>
+                  <p class="text-sm text-slate-400">Aqui puedes solicitar la modalidad de graduación de Tesis de Grado y realizar el seguimiento correspondiente.</p>
                 </div>
               </div>
               <span class="btn-warm px-5 py-2.5">

@@ -78,15 +78,30 @@
             :key="m.to"
             :to="m.to"
             :style="{ animationDelay: `${i * 40}ms` }"
-            class="flex items-center gap-3 px-4 py-4 rounded-2xl text-white font-bold transition transform hover:scale-[1.02] active:scale-[0.98] shadow-lg opacity-90 hover:opacity-100"
-            :class="[
-              gradientes[i % gradientes.length],
-              esActivo(m.to) ? 'ring-4 ring-white/30' : 'ring-0',
-            ]"
+            class="group flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-200"
+            :class="esActivo(m.to)
+              ? 'bg-orange text-white shadow-lg shadow-orange-900/30'
+              : 'bg-white/5 border border-white/10 text-slate-300 hover:ring-2 hover:ring-orange-500/40'"
             @click="abierto = false"
           >
-            <AppIcon :name="m.icono" :size="22" />
-            <span class="text-sm uppercase tracking-wide">{{ m.label }}</span>
+            <span
+              class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-200"
+              :class="esActivo(m.to)
+                ? 'bg-white/20 text-white'
+                : 'bg-orange-500/15 text-orange-300 group-hover:bg-orange-500/30'"
+            >
+              <AppIcon :name="m.icono" :size="20" />
+            </span>
+            <span
+              class="text-sm uppercase tracking-wide font-bold transition-colors duration-200"
+              :class="esActivo(m.to) ? '' : 'group-hover:text-orange-300'"
+            >{{ m.label }}</span>
+            <AppIcon
+              name="chevron-right"
+              :size="16"
+              class="ml-auto shrink-0 transition-colors duration-200"
+              :class="esActivo(m.to) ? 'text-white/70' : 'text-slate-500 group-hover:text-orange-300'"
+            />
           </router-link>
         </nav>
       </aside>
@@ -107,8 +122,9 @@
 
 <script setup>
 // Shell del Dashboard de KARDEX: encabezado con marca "KARDEX", perfil y cierre
-// de sesión; barra lateral oscura con los 5 módulos en naranja; y un área de
-// contenido dinámico donde cada módulo se monta en su propia ruta hija.
+// de sesión; barra lateral oscura con los módulos, que se iluminan en naranja
+// al pasar el cursor (mismo efecto que los botones del panel de administración);
+// y un área de contenido dinámico donde cada módulo se monta en su ruta hija.
 import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/modules/auth';
@@ -132,15 +148,6 @@ const modulos = [
     { to: '/kardex/trabajo-dirigido', label: 'Trabajo Dirigido', icono: 'folder' },
     { to: '/kardex/examen', label: 'Examen de Grado', icono: 'graduation' },
     { to: '/kardex/reporte', label: 'Reporte de Modalidad', icono: 'chart' },
-];
-
-// Degradados naranjas/ámbar que distinguen cada tarjeta de módulo.
-const gradientes = [
-    'bg-orange',
-    'bg-orange',
-    'bg-orange',
-    'bg-orange',
-    'bg-orange',
 ];
 
 /** Determina si una ruta hija del módulo está activa.

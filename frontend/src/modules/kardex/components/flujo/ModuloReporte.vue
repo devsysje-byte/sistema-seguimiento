@@ -22,7 +22,7 @@
         </button>
         <button class="btn-warm px-4 !py-2" :disabled="cargando || generando" @click="descargarActual">
           <AppIcon name="download" :size="15" />
-          Descargar Reoporte
+          Descargar Reporte
         </button>
       </div>
     </div>
@@ -77,169 +77,119 @@
     </div>
   </ModuloTarjeta>
 
-  <!-- Área imprimible (fuera de pantalla): el PDF se genera 100% en el frontend -->
+  <!-- Área imprimible (fuera de pantalla): el PDF se genera en el frontend -->
   <div class="reporte-oculto" aria-hidden="true">
     <div ref="contenedorReporte" class="reporte-pagina">
-      <!-- 1. Encabezado del reporte -->
-      <header class="reporte-encabezado">
-        <div class="reporte-encabezado__logo">LOGOTIPO</div>
-        <div class="reporte-encabezado__titulares">
-          <h1>REPORTE EJECUTIVO DE TESIS</h1>
-          <p>Fecha de emisión: <strong>{{ fechaEmision }}</strong></p>
-          <p>Emitido por: <strong>{{ usuarioEmisor }}</strong></p>
+
+      <!-- ===== ENCABEZADO: logo + datos institucionales al lado Drecho ===== -->
+      <header class="doc-header">
+        <div class="doc-header__brand">
+          <img src="/images/logo.png" alt="Logo institucional" class="doc-logo" crossorigin="anonymous" />
+          <div class="doc-brand-text">
+            <p class="doc-brand-text__title">Universidad Pública de El Alto</p>
+            <p class="doc-brand-text__line">Sistema de Seguimiento de Titulación Carrera de Economía</p>
+            <p class="doc-brand-text__line">El Alto — Bolivia</p>
+            <p class="doc-brand-text__line">+591 12345678 · upea@edu.bo</p>
+          </div>
+        </div>
+        <div class="doc-header__right">
+          <!--<p class="doc-tagline">REPORTE OFICIAL</p>-->
+          <!--<p class="doc-tagline2">Emitido: {{ fechaEmision }}</p>-->
         </div>
       </header>
 
-      <!-- 2. Datos del estudiante -->
-      <section class="reporte-bloque reporte-bloque--estudiante">
-        <h2>Datos del Estudiante</h2>
-        <div class="reporte-grid reporte-grid--2">
-          <div class="reporte-campo reporte-campo--ancho2">
-            <span>Nombre completo</span>
-            <strong>{{ datosEstudiante.nombre }}</strong>
-          </div>
-          <div class="reporte-campo">
-            <span>Carrera / Programa</span>
-            <strong>{{ datosEstudiante.carrera }}</strong>
-          </div>
-          <div class="reporte-campo">
-            <span>Matrícula (R.U.)</span>
-            <strong>{{ datosEstudiante.matricula }}</strong>
-          </div>
-          <div class="reporte-campo">
-            <span>C.I.</span>
-            <strong>{{ datosEstudiante.ci }}</strong>
-          </div>
-          <div class="reporte-campo reporte-campo--ancho2">
-            <span>Correo institucional</span>
-            <strong>{{ datosEstudiante.correo }}</strong>
-          </div>
+      <!-- ===== DATOS DEL ESTUDIANTE + METADATOS ===== -->
+      <section class="doc-info">
+        <div class="doc-info__estudiante">
+          <h3>Datos del Estudiante</h3>
+          <p><strong>{{ datosEstudiante.nombre }}</strong></p>
+          <p>C.I.: {{ datosEstudiante.ci }} · R.U.: {{ datosEstudiante.matricula }}</p>
+          <p>{{ datosEstudiante.carrera }}</p>
+          <p>{{ datosEstudiante.correo }}</p>
+        </div>
+        <div class="doc-info__meta">
+          <h3>Datos del Trámite</h3>
+          <p><strong>N.º:</strong> #{{ tramite?.id_tramite || 'S00000' }}</p>
+          <p><strong>Modalidad:</strong> {{ tramite?.modalidad?.nombre || '—' }}</p>
+          <p><strong>Estado:</strong> <span :class="badgeClass(estadoGeneral)">{{ estadoGeneral }}</span></p>
+          <p><strong>Avance:</strong> {{ avance }}%</p>
+          <p><strong>Emitido por:</strong> {{ usuarioEmisor }}</p>
         </div>
       </section>
 
-      <!-- 3. KPIs -->
-      <section class="reporte-kpis">
-        <div class="reporte-kpi reporte-kpi--enfasis">
-          <span class="reporte-kpi__label">Avance del Proceso</span>
-          <strong class="reporte-kpi__valor">{{ avance }}%</strong>
-          <div class="reporte-progreso">
-            <span :style="{ width: avance + '%' }"></span>
-          </div>
-        </div>
-        <div class="reporte-kpi">
-          <span class="reporte-kpi__label">Estado General</span>
-          <span class="reporte-kpi__badge">
-            <span :class="badgeClass(estadoGeneral)">{{ estadoGeneral }}</span>
-          </span>
-        </div>
-        <div class="reporte-kpi">
-          <span class="reporte-kpi__label">Días Transcurridos</span>
-          <strong class="reporte-kpi__valor">{{ diasTranscurridos }}</strong>
-          <span class="reporte-kpi__meta">desde el inicio del trámite</span>
-        </div>
-      </section>
+      <!-- ===== TÍTULO ===== -->
+      <h1 class="doc-titulo">Detalle del Proceso de Titulación</h1>
 
-      <!-- 4. Módulo 1 -->
-      <section class="reporte-bloque">
-        <h2><span class="reporte-numero">01</span>Módulo 1 — Perfil de Tesis</h2>
-        <table class="reporte-tabla">
+      <!-- ===== TABLA DE DETALLE DEL PROCESO ===== -->
+      <section class="doc-seccion">
+        <table class="doc-tabla">
           <thead>
             <tr>
-              <th>Documento</th>
-              <th>Estado</th>
-              <th>Archivo</th>
+              <th class="doc-tabla__nro">N.º</th>
+              <th class="doc-tabla__desc">Etapa / Descripción</th>
+              <th class="doc-tabla__estado">Estado</th>
+              <th class="doc-tabla__fecha">Fecha</th>
+              <th class="doc-tabla__detalle">Detalle</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="d in perfilTesis" :key="d.etiqueta">
-              <td>{{ d.etiqueta }}</td>
-              <td><span :class="badgeClass(d.estado)">{{ d.estado }}</span></td>
-              <td class="reporte-tabla__archivo">{{ d.archivo }}</td>
+            <tr v-for="(etapa, i) in etapasProceso" :key="i">
+              <td class="doc-tabla__nro">{{ String(i + 1).padStart(2, '0') }}</td>
+              <td class="doc-tabla__desc">
+                <strong>{{ etapa.etapa }}</strong>
+                <span v-if="etapa.subetapa" class="doc-tabla__sub">{{ etapa.subetapa }}</span>
+              </td>
+              <td class="doc-tabla__estado">
+                <span :class="badgeClass(etapa.estado)">{{ etapa.estado }}</span>
+              </td>
+              <td class="doc-tabla__fecha">{{ etapa.fecha || '—' }}</td>
+              <td class="doc-tabla__detalle">{{ etapa.detalle || '—' }}</td>
             </tr>
           </tbody>
         </table>
-      </section>
 
-      <!-- 5. Módulo 2 -->
-      <section class="reporte-bloque">
-        <h2><span class="reporte-numero">02</span>Módulo 2 — Aprobación del Tema</h2>
-        <div class="reporte-grid reporte-grid--2">
-          <div class="reporte-campo">
-            <span>N.º Resolución HCC</span>
-            <strong>{{ aprobacionTema.numero_resolucion || '—' }}</strong>
+        <div class="doc-totales">
+          <div class="doc-totales__row">
+            <span>Etapas completadas</span>
+            <strong>{{ etapasCompletadas }} / {{ etapasProceso.length }}</strong>
           </div>
-          <div class="reporte-campo">
-            <span>Fecha de Resolución</span>
-            <strong>{{ fechaLegible(aprobacionTema.fecha_resolucion) || '—' }}</strong>
-          </div>
-          <div class="reporte-campo reporte-campo--ancho2">
-            <span>Tema de Investigación</span>
-            <strong>{{ aprobacionTema.tema_investigacion || '—' }}</strong>
-          </div>
-          <div class="reporte-campo reporte-campo--ancho2 reporte-campo--acento">
-            <span>Docente Tutor</span>
-            <strong>{{ nombreTutor }}</strong>
+          <div class="doc-totales__row doc-totales__row--total">
+            <span>Estado general del trámite</span>
+            <strong>{{ estadoGeneral }} · {{ avance }}%</strong>
           </div>
         </div>
       </section>
 
-      <!-- 6. Módulo 3 -->
-      <section class="reporte-bloque">
-        <h2><span class="reporte-numero">03</span>Módulo 3 — Tribunal Revisor</h2>
-        <table class="reporte-tabla">
-          <thead>
-            <tr>
-              <th>Miembro</th>
-              <th>Rol / Cargo</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="m in tribunalRevisor" :key="m.rol">
-              <td>{{ m.nombre }}</td>
-              <td>{{ m.rol }}</td>
-              <td><span :class="badgeClass(m.estado)">{{ m.estado }}</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <!-- 7. Módulo 4 -->
-      <section class="reporte-bloque">
-        <h2><span class="reporte-numero">04</span>Módulo 4 — Defensa</h2>
-        <div class="reporte-grid reporte-grid--2">
-          <div class="reporte-campo">
-            <span>Fecha de Defensa</span>
-            <strong>{{ fechaLegible(defensa.fecha_defensa) || '—' }}</strong>
+      <!-- ===== PIE DE FIRMA (una sola área: Kardex o Secretaría) ===== -->
+      <section class="doc-firmas">
+        <div class="doc-firma">
+          <div class="doc-firma__img-wrap">
+            <img
+              v-if="firmante.firmaImg"
+              :src="firmante.firmaImg"
+              :alt="`Firma ${firmante.rol}`"
+              class="doc-firma__img"
+              crossorigin="anonymous"
+            />
           </div>
-          <div class="reporte-campo">
-            <span>Hora</span>
-            <strong>{{ defensa.hora || '—' }}</strong>
-          </div>
-          <div class="reporte-campo">
-            <span>Lugar</span>
-            <strong>{{ defensa.lugar || '—' }}</strong>
-          </div>
-          <div class="reporte-campo">
-            <span>N.º Resolución Final</span>
-            <strong>{{ defensa.numero_resolucion || '—' }}</strong>
-          </div>
-          <div class="reporte-campo reporte-campo--ancho2 reporte-campo--acento reporte-campo--nota">
-            <span>Resultado / Calificación</span>
-            <strong>{{ resultadoDefensa }}</strong>
-          </div>
+          <div class="doc-firma__linea"></div>
+          <p class="doc-firma__nombre">{{ firmante.nombre }}</p>
+          <p class="doc-firma__cargo">{{ firmante.cargo }}</p>
+          <p class="doc-firma__rol">Área: {{ firmante.rol }}</p>
+          <p class="doc-firma__fecha">Fecha: {{ firmante.fecha }}</p>
+          <p v-if="firmante.codigo" class="doc-firma__codigo">Código: {{ firmante.codigo }}</p>
         </div>
       </section>
 
-      <!-- 8. Pie de página -->
-      <footer class="reporte-pie">
-        <p>
-          Documento generado automáticamente por el Sistema de Seguimiento de Titulación. La información
-          contenida es de carácter confidencial y de uso exclusivo del proceso de titulación. Toda
-          reproducción total o parcial requiere autorización expresa de las autoridades académicas.
+      <!-- ===== NOTA LEGAL ===== -->
+      <section class="doc-notas">
+        <p class="doc-notas__legal">
+          Documento generado automáticamente por el Sistema de Seguimiento de Titulación.
+          La información contenida es de carácter confidencial y de uso exclusivo del proceso de titulación.
+          Vigencia: 30 días desde la emisión.
         </p>
-        <p class="reporte-pie__marca">SISTEMA DE SEGUIMIENTO DE TESIS · {{ fechaEmision }}</p>
-      </footer>
+      </section>
+
     </div>
   </div>
 </template>
@@ -268,6 +218,7 @@ const props = defineProps({
   docentes: { type: Array, default: () => [] },
   cargando: { type: Boolean, default: false },
   simulado: { type: Boolean, default: false },
+  areaFirmante: { type: String, default: null },
 });
 
 const emit = defineEmits(['guardar']);
@@ -278,7 +229,9 @@ const toastStore = useToastStore();
 const contenedorReporte = ref(null);
 const generando = ref(false);
 
-// --- Fuente de datos: `tramite.hitos.modulos` (datos guardados de c/u de los 4 módulos) ---
+/* ============================================================
+   DATOS DEL ESTUDIANTE
+   ============================================================ */
 const postulante = computed(() => props.tramite?.estudiante || {});
 
 const datosEstudiante = computed(() => {
@@ -293,16 +246,13 @@ const datosEstudiante = computed(() => {
   };
 });
 
+/* ============================================================
+   DATOS DE CADA MÓDULO
+   ============================================================ */
 const perfilDatos = computed(() => datosDeModulo(props.tramite, 'perfil_tesis') || {});
-const perfilTesis = computed(() =>
-  DOCUMENTOS_PERFIL.map((d) => ({
-    etiqueta: d.etiqueta,
-    estado: perfilDatos.value.documentos?.[d.tipo]?.marcado ? 'COMPLETADO' : 'PENDIENTE',
-    archivo: perfilDatos.value.documentos?.[d.tipo]?.archivo?.nombre || '—',
-  })),
-);
-
 const aprobacionTema = computed(() => datosDeModulo(props.tramite, 'aprobacion_tema') || {});
+const tribunalDatos = computed(() => datosDeModulo(props.tramite, 'tribunal_revisor') || {});
+const defensa = computed(() => datosDeModulo(props.tramite, 'defensa') || {});
 
 const nombreTutor = computed(() => {
   const t = aprobacionTema.value;
@@ -313,17 +263,6 @@ const nombreTutor = computed(() => {
   return t.tutor_id ? `Docente #${t.tutor_id}` : '—';
 });
 
-const tribunalDatos = computed(() => datosDeModulo(props.tramite, 'tribunal_revisor') || {});
-const tribunalRevisor = computed(() =>
-  (tribunalDatos.value.tribunal || []).map((m) => ({
-    rol: m.rol.charAt(0).toUpperCase() + m.rol.slice(1),
-    nombre: m.nombre || '—',
-    estado: 'ASIGNADO',
-  })),
-);
-
-const defensa = computed(() => datosDeModulo(props.tramite, 'defensa') || {});
-
 const resultadoDefensa = computed(() => {
   const nota = defensa.value.nota_final ?? defensa.value.resultado;
   if (nota === null || nota === undefined || nota === '') return '—';
@@ -331,21 +270,106 @@ const resultadoDefensa = computed(() => {
   return Number.isNaN(n) ? String(nota) : `${n} / 100`;
 });
 
-// --- KPIs ---
+/* ============================================================
+   ETAPAS DEL PROCESO
+   ============================================================ */
+const etapasProceso = computed(() => {
+  const etapas = [];
+
+  const solicitud = props.tramite?.hitos?.solicitud_presentada || props.tramite?.created_at;
+  etapas.push({
+    etapa: 'Solicitud de titulación',
+    subetapa: 'Presentación inicial del trámite',
+    estado: solicitud ? 'COMPLETADO' : 'PENDIENTE',
+    fecha: fechaLegible(solicitud) || '—',
+    detalle: `Modalidad: ${props.tramite?.modalidad?.nombre || '—'}`,
+  });
+
+  DOCUMENTOS_PERFIL.forEach((doc) => {
+    const item = perfilDatos.value.documentos?.[doc.tipo] || {};
+    etapas.push({
+      etapa: doc.etiqueta,
+      subetapa: 'Módulo 1 — Perfil de Tesis',
+      estado: item.marcado ? 'COMPLETADO' : 'PENDIENTE',
+      fecha: item.fecha ? fechaLegible(item.fecha) : '—',
+      detalle: item.archivo?.nombre || '—',
+    });
+  });
+
+  etapas.push({
+    etapa: 'Aprobación del tema de tesis',
+    subetapa: 'Módulo 2 — Aprobación del Tema',
+    estado: aprobacionTema.value.completado ? 'COMPLETADO' : 'PENDIENTE',
+    fecha: fechaLegible(aprobacionTema.value.fecha_resolucion) || '—',
+    detalle: aprobacionTema.value.numero_resolucion
+      ? `Resolución N.º ${aprobacionTema.value.numero_resolucion}`
+      : '—',
+  });
+
+  etapas.push({
+    etapa: 'Designación de docente tutor',
+    subetapa: 'Módulo 2 — Aprobación del Tema',
+    estado: aprobacionTema.value.tutor_id ? 'COMPLETADO' : 'PENDIENTE',
+    fecha: fechaLegible(aprobacionTema.value.fecha_resolucion) || '—',
+    detalle: nombreTutor.value,
+  });
+
+  const tribunal = tribunalDatos.value.tribunal || [];
+  etapas.push({
+    etapa: 'Conformación del tribunal revisor',
+    subetapa: 'Módulo 3 — Tribunal Revisor',
+    estado: tribunal.length ? 'COMPLETADO' : 'PENDIENTE',
+    fecha: fechaLegible(tribunalDatos.value.fecha_asignacion) || '—',
+    detalle: tribunal.length ? tribunal.map((m) => `${m.rol}: ${m.nombre}`).join(' · ') : '—',
+  });
+
+  etapas.push({
+    etapa: 'Defensa de tesis',
+    subetapa: 'Módulo 4 — Defensa',
+    estado: defensa.value.completado ? 'COMPLETADO' : 'PENDIENTE',
+    fecha: fechaLegible(defensa.value.fecha_defensa) || '—',
+    detalle:
+      [
+        defensa.value.hora,
+        defensa.value.lugar,
+        defensa.value.numero_resolucion ? `Res. ${defensa.value.numero_resolucion}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ') || '—',
+  });
+
+  etapas.push({
+    etapa: 'Resultado de la defensa',
+    subetapa: 'Módulo 4 — Defensa',
+    estado: defensa.value.nota_final != null ? 'COMPLETADO' : 'PENDIENTE',
+    fecha: fechaLegible(defensa.value.fecha_defensa) || '—',
+    detalle: resultadoDefensa.value,
+  });
+
+  etapas.push({
+    etapa: 'Generación del reporte final',
+    subetapa: 'Módulo 5 — Reporte',
+    estado: avance.value >= 100 ? 'COMPLETADO' : 'EN PROCESO',
+    fecha: fechaEmision.value,
+    detalle: 'Documento consolidado del trámite de titulación',
+  });
+
+  return etapas;
+});
+
+const etapasCompletadas = computed(
+  () => etapasProceso.value.filter((e) => e.estado === 'COMPLETADO').length,
+);
+
+/* ============================================================
+   KPIs
+   ============================================================ */
 const avance = computed(() => pctTitulacion(props.tramite));
 
 const estadoGeneral = computed(() => {
   if (avance.value >= 100) return 'COMPLETADO';
   if (avance.value > 0) return 'EN PROCESO';
   return 'PENDIENTE';
-});
-
-const diasTranscurridos = computed(() => {
-  const inicio = props.tramite?.hitos?.solicitud_presentada || props.tramite?.created_at;
-  if (!inicio) return 0;
-  const d = new Date(String(inicio).slice(0, 10));
-  if (Number.isNaN(d.getTime())) return 0;
-  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000));
 });
 
 const fechaEmision = computed(() =>
@@ -358,7 +382,54 @@ const usuarioEmisor = computed(() => {
   return `${u.nombres || ''} ${u.apellidos || ''}`.trim() || u.username || '—';
 });
 
-// --- Vista previa (tabla legible dentro del módulo) ---
+/* ============================================================
+   PIE DE FIRMA — una sola área (Kardex o Secretaría)
+   ============================================================ */
+const areaFirmanteResuelta = computed(() => {
+  if (props.areaFirmante) return props.areaFirmante;
+
+  if (props.tramite?.firmas?.kardex) return 'kardex';
+  if (props.tramite?.firmas?.secretaria) return 'secretaria';
+
+  const rol = authStore.user?.rol || authStore.user?.role || '';
+  if (String(rol).toLowerCase().includes('secretar')) return 'secretaria';
+  if (String(rol).toLowerCase().includes('kardex')) return 'kardex';
+
+  return 'kardex';
+});
+
+const firmante = computed(() => {
+  const area = areaFirmanteResuelta.value;
+  const datosArea = props.tramite?.firmas?.[area] || {};
+
+  const defaultsPorArea = {
+    kardex: {
+      rolLabel: 'Kardex',
+      nombre: 'Responsable de Kardex',
+      cargo: 'Jefatura de Registro Académico',
+    },
+    secretaria: {
+      rolLabel: 'Secretaría Académica',
+      nombre: 'Secretaría Académica',
+      cargo: 'Facultad / Programa',
+    },
+  };
+
+  const def = defaultsPorArea[area] || defaultsPorArea.kardex;
+
+  return {
+    rol: def.rolLabel,
+    nombre: datosArea.nombre || def.nombre,
+    cargo: datosArea.cargo || def.cargo,
+    fecha: datosArea.fecha ? fechaLegible(datosArea.fecha) : fechaEmision.value,
+    firmaImg: datosArea.imagen || null,
+    codigo: datosArea.codigo || null,
+  };
+});
+
+/* ============================================================
+   VISTA PREVIA
+   ============================================================ */
 const historial = computed(() =>
   [...(props.tramite?.estados || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
 );
@@ -366,7 +437,7 @@ const historial = computed(() =>
 const filas = computed(() => {
   const t = props.tramite;
   if (!t) return [];
-  const f = [
+  return [
     ['Postulante', `${postulante.value.nombres || ''} ${postulante.value.apellidos || ''}`.trim()],
     ['CI', postulante.value.ci || '—'],
     ['Registro Universitario', postulante.value.registro_universitario || '—'],
@@ -379,32 +450,35 @@ const filas = computed(() => {
       `${fechaLegible(e.created_at)} ${e.observaciones ? `— ${e.observaciones}` : ''}`,
     ]),
   ];
-  return f;
 });
 
-// --- Generación del PDF 100% en el frontend (html2pdf.js) ---
+/* ============================================================
+   PDF — CARTA, márgenes 1 cm en los 4 lados
+   ============================================================ */
 const OPCIONES_PDF = {
-  margin: [15, 15, 15, 15], // 15mm
+  margin: [10, 10, 10, 10],
   image: { type: 'jpeg', quality: 0.98 },
-  html2canvas: { scale: 3, useCORS: true, logging: false, backgroundColor: '#0e1726' },
-  jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-  pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+  html2canvas: {
+    scale: 3,
+    useCORS: true,
+    allowTaint: false,
+    logging: false,
+    backgroundColor: '#ffffff',
+  },
+  jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+  pagebreak: { mode: ['css', 'legacy'] },
 };
 
-/** Datos que se registran del reporte: fecha, formato y el consolidado del trámite. */
 function datosReporte() {
   return {
     generado: new Date().toISOString().slice(0, 10),
     formato: 'pdf',
-    contenido: filas.value.map(([k, v]) => `${k}: ${v}`).join('\n'),
+    contenido: etapasProceso.value
+      .map((e) => `${e.etapa} | ${e.estado} | ${e.fecha} | ${e.detalle}`)
+      .join('\n'),
   };
 }
 
-// El reporte es el ÚNICO módulo que se genera solo: en cuanto queda disponible
-// (completado el módulo de Defensa) se registra automáticamente y el flujo avanza
-// a "Reporte generado", sin que el funcionario tenga que aprobarlo ni pulsar un
-// botón. Solo se dispara una vez por módulo; el PDF se sigue descargando a
-// demanda desde "Ver reporte" / "Descargar de nuevo".
 let autogenerado = false;
 
 watch(
@@ -414,8 +488,6 @@ watch(
     autogenerado = true;
     emit('guardar', datosReporte());
   },
-  // `post`: el registro se dispara ya montado el módulo, nunca durante el
-  // render del padre (que es quien recibe el evento).
   { immediate: true, flush: 'post' },
 );
 
@@ -423,7 +495,20 @@ function nombreReporte() {
   return `reporte_ejecutivo_tesis${props.tramite?.id_tramite ? `_${props.tramite.id_tramite}` : ''}.pdf`;
 }
 
-/** Numera las páginas del PDF resultante ("Página 1 de N"). */
+async function esperarImagenes(contenedor) {
+  const imgs = contenedor.querySelectorAll('img');
+  await Promise.all(
+    Array.from(imgs).map((img) =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise((res) => {
+            img.addEventListener('load', res, { once: true });
+            img.addEventListener('error', res, { once: true });
+          }),
+    ),
+  );
+}
+
 function paginar(pdf) {
   const total = pdf.internal.getNumberOfPages();
   const ancho = pdf.internal.pageSize.getWidth();
@@ -432,31 +517,26 @@ function paginar(pdf) {
     pdf.setPage(i);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8);
-    pdf.setTextColor(148, 163, 184);
-    pdf.text(`Página ${i} de ${total}`, ancho - 15, alto - 9, { align: 'right' });
+    pdf.setTextColor(150, 150, 150);
+    pdf.text(`Página ${i} / ${total}`, ancho - 10, alto - 5, { align: 'right' });
   }
 }
 
-/** Rasteriza el área imprimible y devuelve la instancia de jsPDF con paginación aplicada. */
 async function producirPdf() {
   if (!contenedorReporte.value) return null;
+  await esperarImagenes(contenedorReporte.value);
+  await new Promise((r) => setTimeout(r, 100));
   const worker = html2pdf().set(OPCIONES_PDF).from(contenedorReporte.value).toPdf();
   const pdf = await worker.get('pdf');
   paginar(pdf);
   return pdf;
 }
 
-/** Registra un error de generación sin dejarlo llegar al GlobalErrorBoundary. */
 function registrarErrorPdf(error) {
   console.error('[Reporte] No se pudo generar el PDF:', error);
   toastStore.error('No se pudo generar el reporte PDF. Intente nuevamente.');
 }
 
-/**
- * Registra el reporte y lo descarga. Es el respaldo manual: el reporte se
- * genera solo al quedar disponible el módulo; este botón solo se usa si eso no
- * llegó a ocurrir.
- */
 async function exportarReporte() {
   generando.value = true;
   try {
@@ -472,7 +552,6 @@ async function exportarReporte() {
   }
 }
 
-/** Abre el PDF generado en una pestaña nueva. */
 async function visualizar() {
   generando.value = true;
   try {
@@ -486,7 +565,6 @@ async function visualizar() {
   }
 }
 
-/** Vuelve a descargar el PDF ya generado, regenerándolo desde el DOM. */
 async function descargarActual() {
   generando.value = true;
   try {
@@ -509,15 +587,12 @@ function descargarBlob(blob, nombre) {
   URL.revokeObjectURL(url);
 }
 
-/** Abre un blob en una pestaña nueva (vista previa/visualización). */
 function abrirBlob(blob) {
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
-  // El visor del navegador necesita más tiempo que la descarga; se libera luego.
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-/** Devuelve las clases CSS (scoped) de la insignia según el estado. */
 function badgeClass(estado) {
   const mapa = {
     COMPLETADO: 'reporte-badge reporte-badge--verde',
@@ -531,9 +606,7 @@ function badgeClass(estado) {
 
 <style scoped>
 /* ============================================================
-   Área imprimible ("Reporte Ejecutivo de Tesis").
-   Paleta institucional: fondo slate oscuro, tarjetas redondeadas,
-   acentos verde esmeralda y azul cielo.
+   Área imprimible — Reporte Ejecutivo de Tesis (Blanco y Negro)
    ============================================================ */
 
 .reporte-oculto {
@@ -545,310 +618,347 @@ function badgeClass(estado) {
 }
 
 .reporte-pagina {
-  width: 794px; /* ancho A4 @96dpi */
+  width: 816px;
+  height: 981px;
   box-sizing: border-box;
-  padding: 26px 30px;
-  background: #0e1726;
-  color: #e2e8f0;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-/* -- Encabezado -- */
-.reporte-encabezado {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding-bottom: 14px;
-  border-bottom: 2px solid #1e293b;
-}
-
-.reporte-encabezado__logo {
-  width: 72px;
-  height: 72px;
-  flex: 0 0 72px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #334155;
-  border: 1px dashed #475569;
-  border-radius: 12px;
-  color: #94a3b8;
+  padding: 20px 30px 20px 20px;
+  background: #ffffff;
+  color: #000000;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-align: center;
+  line-height: 1.35;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.reporte-encabezado__titulares h1 {
+/* ---------- Encabezado ---------- */
+.doc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid #000000;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.doc-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.doc-logo {
+  display: block;
+  height: 48px;
+  max-width: 130px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.doc-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  min-width: 0;
+}
+
+.doc-brand-text__title {
   margin: 0;
-  font-size: 20px;
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 1px;
-  color: #ffffff;
+  color: #000000;
+  white-space: nowrap;
 }
 
-.reporte-encabezado__titulares p {
-  margin: 2px 0 0;
+.doc-brand-text__line {
+  margin: 0;
+  font-size: 9px;
+  color: #333333;
+  white-space: nowrap;
+}
+
+.doc-header__right {
+  text-align: right;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 150px;
+}
+
+.doc-tagline {
+  margin: 0;
   font-size: 10px;
-  color: #94a3b8;
+  font-weight: 700;
+  color: #000000;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
-.reporte-encabezado__titulares strong {
-  color: #38bdf8;
+.doc-tagline2 {
+  margin: 2px 0 0;
+  font-size: 8px;
+  color: #333333;
+  white-space: nowrap;
+}
+
+/* ---------- Bloque info ---------- */
+.doc-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.doc-info h3 {
+  margin: 0 0 3px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #000000;
+  border-bottom: 1px solid #000000;
+  padding-bottom: 2px;
+}
+
+.doc-info p {
+  margin: 0;
+  font-size: 9.5px;
+  color: #222222;
+  line-height: 1.3;
+}
+
+.doc-info strong {
+  color: #000000;
   font-weight: 600;
 }
 
-/* -- Bloques -- */
-.reporte-bloque {
-  margin-top: 18px;
-  padding: 14px 16px;
-  background: #111c2e;
-  border: 1px solid #1e293b;
-  border-radius: 12px;
-}
-
-.reporte-bloque h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  font-size: 12px;
-  font-weight: 800;
+/* ---------- Título ---------- */
+.doc-titulo {
+  margin: 2px 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000000;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #f1f5f9;
+  border-left: 4px solid #000000;
+  padding-left: 8px;
+  flex-shrink: 0;
 }
 
-.reporte-numero {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: #10b981;
-  color: #052e1d;
-  font-size: 10px;
+/* ---------- Tabla ---------- */
+.doc-seccion {
+  flex: 0 0 auto;
+  width: 100%;
+  overflow: hidden;
 }
 
-.reporte-bloque--estudiante {
-  border-color: #10b9814d;
-  background: linear-gradient(180deg, #10231f, #0f1a2b);
+.doc-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8.5px;
+  table-layout: fixed;
 }
 
-.reporte-bloque--estudiante h2 {
-  color: #34d399;
-}
-
-/* -- Rejillas de campos -- */
-.reporte-grid {
-  display: grid;
-  gap: 8px;
-}
-
-.reporte-grid--2 {
-  grid-template-columns: 1fr 1fr;
-}
-
-.reporte-campo {
-  padding: 10px 12px;
-  background: #0e1726;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-}
-
-.reporte-campo--ancho2 {
-  grid-column: 1 / -1;
-}
-
-.reporte-campo--acento {
-  border-color: #10b98159;
-  background: #10b98114;
-}
-
-.reporte-campo--nota strong {
-  font-size: 16px;
-  color: #34d399;
-}
-
-.reporte-campo span {
-  display: block;
-  font-size: 9px;
-  font-weight: 700;
+.doc-tabla thead th {
+  text-align: left;
+  font-size: 8px;
+  font-weight: 800;
+  color: #101010;
+  background: #d3d0d0;
+  padding: 3.5px 4px;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: #64748b;
-  margin-bottom: 3px;
-}
-
-.reporte-campo strong {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  color: #e2e8f0;
+  letter-spacing: 0.3px;
+  overflow: hidden;
   word-break: break-word;
 }
 
-.reporte-campo--acento strong {
-  color: #34d399;
-}
-
-/* -- KPIs -- */
-.reporte-kpis {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.reporte-kpi {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 92px;
-  padding: 14px;
-  background: #111c2e;
-  border: 1px solid #1e293b;
-  border-radius: 12px;
-}
-
-.reporte-kpi--enfasis {
-  border-color: #38bdf8;
-  background: linear-gradient(160deg, #082f49, #0b2440);
-}
-
-.reporte-kpi__label {
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: #94a3b8;
-}
-
-.reporte-kpi--enfasis .reporte-kpi__label {
-  color: #7dd3fc;
-}
-
-.reporte-kpi__valor {
-  font-size: 26px;
-  font-weight: 800;
-  color: #ffffff;
-  line-height: 1.1;
-}
-
-.reporte-kpi--enfasis .reporte-kpi__valor {
-  color: #7dd3fc;
-}
-
-.reporte-kpi__meta {
-  font-size: 9px;
-  color: #64748b;
-}
-
-.reporte-kpi__badge {
-  display: flex;
-}
-
-.reporte-progreso {
-  height: 7px;
-  margin-top: 6px;
-  background: #0b1220;
-  border-radius: 999px;
+.doc-tabla tbody td {
+  padding: 3px 4px;
+  color: #222222;
+  border-bottom: 1px solid #cccccc;
+  vertical-align: top;
+  line-height: 1.2;
   overflow: hidden;
+  word-break: break-word;
 }
 
-.reporte-progreso span {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, #10b981, #38bdf8);
-  border-radius: 999px;
+.doc-tabla tbody tr:nth-child(even) {
+  background: #f5f5f5;
 }
 
-/* -- Insignias de estado -- */
+.doc-tabla__nro { width: 5%; text-align: center; color: #333333; font-weight: 700; }
+.doc-tabla__desc { width: 30%; }
+.doc-tabla__desc strong { display: block; color: #000000; font-weight: 600; font-size: 8.5px; }
+.doc-tabla__sub { display: block; font-size: 7.5px; color: #555555; margin-top: 0.5px; }
+.doc-tabla__estado { width: 15%; }
+.doc-tabla__fecha { width: 15%; white-space: nowrap; }
+.doc-tabla__detalle { width: 35%; font-size: 8.2px; color: #333333; }
+
+/* ---------- Totales ---------- */
+.doc-totales {
+  margin: 6px auto 0;
+  width: 60%;
+  max-width: 400px;
+  font-size: 9px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.doc-totales__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 2px 4px;
+  color: #222222;
+}
+
+.doc-totales__row span {
+  flex: 0 1 auto;
+  white-space: nowrap;
+}
+
+.doc-totales__row strong {
+  flex: 0 0 auto;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.doc-totales__row--total {
+  border-top: 1.2px solid #000000;
+  margin-top: 2px;
+  padding-top: 4px;
+  font-weight: 800;
+  color: #000000;
+  font-size: 9.5px;
+}
+
+/* ---------- Badges (sin bordes ni bordes redondeados) ---------- */
 .reporte-badge {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+  padding: 0;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  text-transform: uppercase;
 }
 
 .reporte-badge--verde {
-  background: #10b9811f;
-  border: 1px solid #10b98180;
-  color: #34d399;
+  color: #000000;
+  font-weight: 800;
 }
 
 .reporte-badge--azul {
-  background: #38bdf81f;
-  border: 1px solid #38bdf880;
-  color: #7dd3fc;
+  color: #000000;
+  font-weight: 700;
 }
 
 .reporte-badge--gris {
-  background: #64748b1f;
-  border: 1px solid #64748b80;
-  color: #94a3b8;
+  color: #555555;
+  font-weight: 600;
+  font-style: italic;
 }
 
-/* -- Tablas -- */
-.reporte-tabla {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.reporte-tabla th {
-  padding: 8px 12px;
-  text-align: left;
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: #94a3b8;
-  background: #0b1220;
-  border-bottom: 1px solid #1e293b;
-}
-
-.reporte-tabla td {
-  padding: 9px 12px;
-  border-bottom: 1px solid #ffffff12;
-  color: #e2e8f0;
-}
-
-.reporte-tabla tr:last-child td {
-  border-bottom: 0;
-}
-
-.reporte-tabla__archivo {
-  color: #7dd3fc !important;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: 10px;
-}
-
-/* -- Pie de página -- */
-.reporte-pie {
-  margin-top: 20px;
+/* ---------- Pie de firma ---------- */
+.doc-firmas {
+  margin-top: auto;
   padding-top: 12px;
-  border-top: 2px solid #1e293b;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.doc-firma {
+  width: 300px;
   text-align: center;
-  font-size: 9px;
-  color: #64748b;
 }
 
-.reporte-pie p {
+.doc-firma__img-wrap {
+  height: 30px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+
+.doc-firma__img {
+  max-height: 28px;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+.doc-firma__linea {
+  height: 1px;
+  background: #000000;
+  margin-bottom: 4px;
+}
+
+.doc-firma__nombre {
   margin: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #000000;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
-.reporte-pie__marca {
-  margin-top: 4px !important;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  color: #475569;
+.doc-firma__cargo {
+  margin: 1px 0 0;
+  font-size: 8.5px;
+  color: #333333;
+}
+
+.doc-firma__rol {
+  margin: 1px 0 0;
+  font-size: 8px;
+  color: #000000;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.doc-firma__fecha {
+  margin: 1px 0 0;
+  font-size: 8px;
+  color: #333333;
+}
+
+.doc-firma__codigo {
+  margin: 1px 0 0;
+  font-size: 7px;
+  color: #555555;
+  font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+}
+
+/* ---------- Nota legal ---------- */
+.doc-notas {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid #cccccc;
+  flex-shrink: 0;
+}
+
+.doc-notas__legal {
+  margin: 0;
+  font-size: 7.5px;
+  color: #333333;
+  line-height: 1.35;
+  text-align: justify;
 }
 </style>
