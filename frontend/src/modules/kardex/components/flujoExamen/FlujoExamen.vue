@@ -296,9 +296,13 @@ function esConservado(etapa) {
   return registroDe(etapa)?.conservado === true;
 }
 
-/** Un módulo sólo se habilita cuando es el siguiente pendiente. */
+/**
+ * Un módulo sólo se habilita cuando es el siguiente pendiente, salvo el Reporte
+ * en un estado reprobado: ahí ninguna tarjeta avanza (primero se reabre el
+ * examen), pero SÍ se emite el acta de resultados de la resolución en curso.
+ */
 function bloqueado(indice) {
-  if (reabrible.value) return true;
+  if (reabrible.value) return modulos.value[indice]?.id !== 'reporte';
   return indice !== proximoPendiente.value;
 }
 

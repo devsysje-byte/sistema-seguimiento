@@ -19,7 +19,12 @@
           {{ aprobado ? 'Solicitud habilitada para seguir el flujo.' : 'Solicitud rechazada por intentos agotados.' }}
         </p>
       </div>
-      <p v-if="registro.observaciones" class="text-sm text-slate-300 leading-relaxed">
+      <p v-if="aprobado" class="text-sm text-slate-300 leading-relaxed">
+        Intento
+        <span class="font-semibold text-slate-100">{{ usados }}</span> de {{ maximo }}.
+        El estudiante habilita su solicitud de examen de grado.
+      </p>
+      <p v-else-if="registro.observaciones" class="text-sm text-slate-300 leading-relaxed">
         {{ registro.observaciones }}
       </p>
     </div>

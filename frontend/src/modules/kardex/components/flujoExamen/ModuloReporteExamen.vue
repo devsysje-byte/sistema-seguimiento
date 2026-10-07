@@ -2,7 +2,7 @@
   <ModuloTarjeta
     numero="6"
     titulo="Reporte"
-    descripcion="Emite el reporte oficial del Examen de Grado y titula al estudiante."
+    descripcion="Emite el acta oficial del Examen de Grado; titula al estudiante cuando aprobó ambos exámenes."
     icono="file-text"
     :completado="completado"
     :en-progreso="enProgreso"
@@ -40,6 +40,55 @@
           <AppIcon v-if="generando" name="loader" :size="18" class="animate-spin" />
           <AppIcon v-else name="download" :size="18" />
           <span class="uppercase tracking-wide">Descargar reporte</span>
+        </button>
+        <button type="button" class="btn-ghost justify-center" :disabled="generando" @click="visualizar">
+          <AppIcon name="eye" :size="18" />
+          <span class="uppercase tracking-wide">Visualizar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Estado reprobado: se emite el acta de resultados, sin titular. -->
+    <div v-else-if="reprobadoMode" class="space-y-4">
+      <div
+        class="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3"
+      >
+        <AppIcon name="alert-triangle" :size="18" class="shrink-0 mt-0.5 text-amber-300" />
+        <p class="text-sm font-semibold text-amber-200 leading-relaxed">
+          El estudiante reprobó {{ reprobadosLista }}. El acta documenta los resultados bajo la
+          Resolución del HCC vigente y NO titula al estudiante; para re-solicitar el examen
+          use «Reabrir examen» en el panel superior, pero desontara el núemero de intentos.
+        </p>
+      </div>
+
+      <dl class="grid sm:grid-cols-3 gap-2.5">
+        <div class="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 sm:col-span-3">
+          <dt class="dato-label">N.º de Resolución del HCC</dt>
+          <dd class="text-sm font-semibold text-white mt-0.5">
+            {{ habilitacion?.numero_resolucion || '—' }}
+          </dd>
+        </div>
+        <div class="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5">
+          <dt class="dato-label">Examen teórico</dt>
+          <dd class="text-sm font-semibold text-white mt-0.5">{{ notaDe('sorteo_teorico') }}</dd>
+        </div>
+        <div class="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5">
+          <dt class="dato-label">Examen de especialidad</dt>
+          <dd class="text-sm font-semibold text-white mt-0.5">{{ notaDe('sorteo_especialidad') }}</dd>
+        </div>
+        <div class="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5">
+          <dt class="dato-label">Intentos utilizados</dt>
+          <dd class="text-sm font-semibold text-white mt-0.5">
+            {{ numeroIntentos }} de {{ MAXIMO_INTENTOS }}
+          </dd>
+        </div>
+      </dl>
+
+      <div class="flex flex-col sm:flex-row justify-end gap-2">
+        <button type="button" class="btn-warm justify-center" :disabled="generando" @click="descargar">
+          <AppIcon v-if="generando" name="loader" :size="18" class="animate-spin" />
+          <AppIcon v-else name="download" :size="18" />
+          <span class="uppercase tracking-wide">Generar acta de resultados</span>
         </button>
         <button type="button" class="btn-ghost justify-center" :disabled="generando" @click="visualizar">
           <AppIcon name="eye" :size="18" />
@@ -97,6 +146,43 @@
         </button>
       </div>
     </div>
+
+    <!-- Historial de resoluciones del HCC: cuáles quedaron aprobadas y bajo cuál. -->
+    <section v-if="!bloqueado && resoluciones.length" class="space-y-2.5 mt-6">
+      <h5 class="dato-label uppercase tracking-wide">Historial de resoluciones del HCC</h5>
+      <div class="overflow-x-auto rounded-xl border border-white/10">
+        <table class="w-full text-sm">
+          <thead class="bg-white/5 text-left text-[10px] uppercase tracking-wide text-slate-400">
+            <tr>
+              <th class="px-3 py-2">Resolución</th>
+              <th class="px-3 py-2">Fecha</th>
+              <th class="px-3 py-2">Examen teórico</th>
+              <th class="px-3 py-2">Examen de especialidad</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5">
+            <tr v-for="r in resoluciones" :key="r.id_historial_examen" class="align-top">
+              <td class="px-3 py-2 font-semibold text-white">
+                {{ r.numero }}
+                <span
+                  v-if="r.vigente"
+                  class="ml-1 inline-block rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-[9px] font-bold uppercase"
+                >
+                  Vigente
+                </span>
+              </td>
+              <td class="px-3 py-2 text-slate-300">{{ fechaLegible(r.fecha) || '—' }}</td>
+              <td class="px-3 py-2" :class="estadoClase(r.teorico.aprobado)">
+                {{ textoExamen(r.teorico) }}
+              </td>
+              <td class="px-3 py-2" :class="estadoClase(r.especialidad.aprobado)">
+                {{ textoExamen(r.especialidad) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </ModuloTarjeta>
 
   <!-- Área imprimible (fuera de pantalla): el PDF se arma en el frontend. -->
@@ -176,8 +262,32 @@
       </section>
 
       <section class="doc-seccion">
-        <h2 class="doc-seccion__titulo">3. Dictamen</h2>
-        <p class="doc-parrafo">
+        <h2 class="doc-seccion__titulo">3. Historial de resoluciones del HCC</h2>
+        <table class="doc-tabla">
+          <thead>
+            <tr>
+              <th class="doc-tabla__desc">Resolución</th>
+              <th class="doc-tabla__fecha">Fecha</th>
+              <th class="doc-tabla__desc">Examen teórico</th>
+              <th class="doc-tabla__desc">Examen de especialidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in resoluciones" :key="r.id_historial_examen">
+              <td class="doc-tabla__desc">
+                {{ r.numero }}<template v-if="r.vigente"> (Vigente)</template>
+              </td>
+              <td class="doc-tabla__fecha">{{ fechaLegible(r.fecha) || '—' }}</td>
+              <td class="doc-tabla__desc">{{ textoExamen(r.teorico) }}</td>
+              <td class="doc-tabla__desc">{{ textoExamen(r.especialidad) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="doc-seccion">
+        <h2 class="doc-seccion__titulo">4. Dictamen</h2>
+        <p v-if="aprobadoMode" class="doc-parrafo">
           En virtud a los resultados obtenidos y al cumplimiento del plan de estudios de la
           carrera de {{ carrera }}, el Consejo de la Universidad Pública de El Alto RESUELVE
           <strong>TITULAR</strong> al estudiante
@@ -185,7 +295,17 @@
           {{ estudiante.ru }}, en la modalidad de
           <strong>{{ tramite?.modalidad?.nombre || 'Examen de Grado' }}</strong>.
         </p>
-        <p class="doc-parrafo">Promedio final del examen de grado: <strong>{{ promedioFinal }}</strong>.</p>
+        <p v-else class="doc-parrafo">
+          En virtud a los resultados obtenidos durante el examen de grado, el Consejo de la
+          Universidad Pública de El Alto hace constar que el estudiante
+          <strong>{{ estudiante.nombre }}</strong>, con C.I. {{ estudiante.ci }} y R.U.
+          {{ estudiante.ru }}, <strong>NO CORRESPONDE TITULAR</strong> al haber reprobado
+          {{ reprobadosLista }}. Deberá volver a solicitar el examen de grado según el reglamento
+          y tramitar una nueva habilitación conforme a la Resolución del HCC vigente.
+        </p>
+        <p v-if="aprobadoMode" class="doc-parrafo">
+          Promedio final del examen de grado: <strong>{{ promedioFinal }}</strong>.
+        </p>
       </section>
 
       <footer class="doc-footer">
@@ -207,20 +327,29 @@
 </template>
 
 <script setup>
-// Módulo 6 del flujo de Examen de Grado: genera el reporte oficial y titula al
+// Módulo 6 del flujo de Examen de Grado: genera el acta oficial y titula al
 // estudiante. El PDF se arma en el frontend con html2pdf a partir de
 // `historial_examen`, que es la fuente de verdad del examen (tema, fecha, nota y
 // resolución), y no del estado actual, que tras una reapertura vuelve atrás.
 //
-// Emitir el reporte y titular son la misma acción: el botón guarda el módulo,
-// que deja el trámite en `titulado`. Si el PDF falla, el módulo NO se guarda y el
-// estudiante no queda titular sin constancia.
+// Emitir el reporte y titular son la misma acción CUANDO EL ESTUDIANTE APROBÓ:
+// el botón guarda el módulo, que deja el trámite en `titulado`. Si el PDF
+// falla, el módulo NO se guarda y el estudiante no queda titular sin constancia.
+//
+// Cuando el estudiante reprobó cualquiera de los dos exámenes también se puede
+// generar el DOCUMENTO (acta de resultados) desde la tarjeta, pero sin titular:
+// ahí no se guarda nada en el backend y la reapertura sigue disponible.
+//
+// El acta incluye el historial de Resoluciones del HCC con qué examen se aprobó
+// bajo cada una (los aprobados viven en `hitos.examen_aprobado`).
 import { computed, ref } from 'vue';
 import html2pdf from 'html2pdf.js';
 import {
+  ESTADOS_REAPERIBLES,
   MAXIMO_INTENTOS,
   NOTA_MINIMA,
   historialExamen,
+  resolucionesHistorial,
   validarModulo,
 } from '@/modules/examen/utils/flujoExamen';
 import { fechaLegible } from '@/modules/kardex/utils/formato';
@@ -262,8 +391,81 @@ const ETIQUETAS = [
 
 const carrera = 'Economía';
 
+/** El reporte titula solo cuando el estudiante aprobó ambos exámenes. */
+const aprobadoMode = computed(() => ['aprobado', 'titulado'].includes(props.tramite?.estado_actual));
+
+/** Estados donde quedó un examen sin aprobar: se emite el acta sin titular. */
+const reprobadoMode = computed(() => ESTADOS_REAPERIBLES.includes(props.tramite?.estado_actual));
+
 /** Notas asignadas en el módulo 5 (fuente de verdad de las notas). */
 const notasAsignadas = computed(() => props.tramite?.hitos?.modulos?.asignacion_notas || {});
+
+/**
+ * Resoluciones del HCC con la suerte de cada examen en cada una.
+ *
+ * `hitos.examen_aprobado` conserva los exámenes aprobados de la resolución
+ * vigente (los reprobados se leen de `hitos.modulos.asignacion_notas`); las
+ * resoluciones anteriores quedaron sin aprobados, porque solo se cambia la
+ * resolución cuando AMBOS exámenes salieron reprobados.
+ */
+const resoluciones = computed(() => {
+  const conservados = props.tramite?.hitos?.examen_aprobado || {};
+  const notas = notasAsignadas.value;
+
+  return resolucionesHistorial(props.tramite).map((h) => {
+    if (!h.vigente) {
+      return {
+        id_historial_examen: h.id_historial_examen,
+        numero: h.numero_resolucion || '—',
+        fecha: h.fecha_resolucion || '',
+        vigente: false,
+        teorico: { aprobado: false, nota: null },
+        especialidad: { aprobado: false, nota: null },
+      };
+    }
+
+    const teorico = conservados.examen_teorico;
+    const especialidad = conservados.examen_especialidad;
+
+    return {
+      id_historial_examen: h.id_historial_examen,
+      numero: h.numero_resolucion || '—',
+      fecha: h.fecha_resolucion || '',
+      vigente: true,
+      teorico: teorico
+        ? { aprobado: true, nota: teorico.nota }
+        : { aprobado: false, nota: notas.nota_teorico ?? null },
+      especialidad: especialidad
+        ? { aprobado: true, nota: especialidad.nota }
+        : { aprobado: false, nota: notas.nota_especialidad ?? null },
+    };
+  });
+});
+
+/** Exámenes del intento en curso que quedaron reprobados, como lista. */
+const reprobadosLista = computed(() => {
+  const fallidos = exams.value.filter(
+    (e) => e.resultado === 'REPROBADO' || e.resultado === 'NO ASISTIÓ',
+  );
+
+  if (!fallidos.length) return 'los exámenes';
+
+  return fallidos.map((e) => `el ${e.etiqueta.toLowerCase()}`).join(' y ');
+});
+
+function tieneNota(nota) {
+  return nota !== null && nota !== undefined && nota !== '';
+}
+
+/** Resultado legible de un examen en el historial de resoluciones. */
+function textoExamen(ex) {
+  if (ex.aprobado) return `APROBADO — Nota ${ex.nota}`;
+  return tieneNota(ex.nota) ? `Reprobado — Nota ${ex.nota}` : 'Reprobado';
+}
+
+function estadoClase(aprobado) {
+  return aprobado ? 'font-semibold text-emerald-300' : 'font-semibold text-red-300';
+}
 
 /** ¿El estudiante asistió al sorteo de esa etapa? */
 function asistioA(etapa) {

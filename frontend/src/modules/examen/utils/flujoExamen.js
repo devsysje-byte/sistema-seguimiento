@@ -151,6 +151,26 @@ export function historialExamen(tramite) {
 }
 
 /**
+ * Resoluciones del HCC registradas en el historial, en orden cronológico, con
+ * la vigente señalada.
+ *
+ * `hitos.examen_aprobado` concentra los exámenes aprobados de la resolución
+ * vigente. Las resoluciones anteriores quedan sin aprobados: el cambio de
+ * resolución solo procede cuando AMBOS exámenes salieron reprobados, así que
+ * en una resolución superada nunca hubo un examen aprobado.
+ */
+export function resolucionesHistorial(tramite) {
+  const habilitaciones = historialExamen(tramite).filter(
+    (f) => f.etapa === 'habilitacion_examen',
+  );
+
+  return habilitaciones.map((h, i) => ({
+    ...h,
+    vigente: i === habilitaciones.length - 1,
+  }));
+}
+
+/**
  * Registros del historial que pertenecen al intento en curso.
  *
  * Todo lo anterior a la última reapertura queda fuera: es el intento que ya se
