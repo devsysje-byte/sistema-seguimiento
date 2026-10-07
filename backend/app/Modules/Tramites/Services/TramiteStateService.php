@@ -18,6 +18,16 @@ use Illuminate\Support\Facades\DB;
 class TramiteStateService
 {
     /**
+     * Nombre de la modalidad de titulación de Examen de Grado.
+     *
+     * Es la clave con la que se registra su flujo en `TRANSITIONS`, y la usan los
+     * servicios que necesitan distinguirla: el contador de intentos de
+     * `ExamenService` y el reconocimiento de títulos ya obtenidos en
+     * `TramiteService::crear()`.
+     */
+    public const MODALIDAD_EXAMEN = 'Examen de Grado';
+
+    /**
      * Mapa de transiciones permitidas por modalidad de titulación.
      *
      * Cada modalidad define su flujo como `estado_actual => [estados siguientes]`.
@@ -30,18 +40,49 @@ class TramiteStateService
      * (3-12 meses), comisión revisora (suficiente/insuficiente), solicitud de
      * fecha de defensa, defensa y 90 días de corrección si no la aprueba.
      *
+     * Examen de Grado avanza por módulos gestionados por KARDEX: verificación
+     * de intentos (rechazo por `numero_intentos >= 3`), habilitación con
+     * Resolución del HCC, sorteo de bolo del examen teórico y del examen de
+     * especialidad (asistencia con tema y fecha en cada uno), asignación de
+     * notas de LOS DOS exámenes y reporte final. Reprobar o ausentarse NO cierra
+     * el flujo: el estudiante puede volver a solicitar el examen y el trámite se
+     * reabre desde `habilitado_examen`.
+     *
      * @var array<string, array<string, array<int, string>>>
      */
     private const TRANSITIONS = [
         'Examen de Grado' => [
-            'solicitud_presentada' => ['certificacion_acreditacion', 'rechazado'],
-            'certificacion_acreditacion' => ['inscripcion_pagada'],
-            'inscripcion_pagada' => ['espera_de_sorteo'],
-            'espera_de_sorteo' => ['tema_sorteado', 'reprobado_ausencia'],
-            'tema_sorteado' => ['examen_en_curso'],
-            'examen_en_curso' => ['deliberacion_tribunal'],
-            'deliberacion_tribunal' => ['acta_registrada'],
-            'acta_registrada' => ['aprobado', 'reprobado'],
+            // 1. Verificación de intentos. Se rechaza cuando el estudiante ya
+            //    agotó los intentos permitidos (`numero_intentos >= 3`).
+            'solicitud_presentada' => ['intentos_verificados', 'rechazado'],
+            // 2. Habilitación del estudiante con la Resolución del HCC.
+            'intentos_verificados' => ['habilitado_examen', 'rechazado'],
+            // 3. Sorteo de bolo del examen teórico. Registra la asistencia con el
+            //    tema sorteado y la fecha; no asistir cierra el sorteo sin nota
+            //    (resultado `no_asistio`) pero sigue en `examen_teorico_sorteado`,
+            //    porque la reprobación recién se decide en la asignación de notas.
+            'habilitado_examen' => ['examen_teorico_sorteado', 'examen_teorico_reprobado'],
+            'examen_teorico_sorteado' => ['examen_teorico_aprobado', 'examen_teorico_reprobado', 'examen_especialidad_sorteado'],
+            // 4. Sorteo de bolo del examen de especialidad (misma dinámica): se
+            //    alcanza tanto si el teórico se rindió como si no.
+            'examen_teorico_aprobado' => ['examen_especialidad_sorteado', 'examen_especialidad_reprobado'],
+            'examen_teorico_reprobado' => ['examen_especialidad_sorteado', 'examen_especialidad_reprobado', 'habilitado_examen'],
+            // 5. Asignación de notas: cierra los DOS exámenes juntos. Con las dos
+            //    notas en el mínimo queda `aprobado` (espera el reporte). Si el
+            //    teórico faltó aprobar, el trámite vuelve a `examen_teorico_reprobado`
+            //    aunque la especialidad se haya aprobado, porque titularse exige ambos.
+            'examen_especialidad_sorteado' => ['aprobado', 'examen_especialidad_reprobado', 'examen_teorico_reprobado'],
+            // Reapertura: reprobar cualquiera de los dos exámenes permite volver
+            // a solicitar el examen de grado. El contador de intentos sube con
+            // cada reapertura.
+            'examen_especialidad_reprobado' => ['habilitado_examen'],
+            // 6. Reporte en PDF y titulación. El reporte ES el último paso: al
+            //    generarlo el estudiante queda titulado, de modo que no queda
+            //    un estado intermedio en el que el examen esté aprobado sin
+            //    concluir. `reporte_examen_generado` se conserva por si un
+            //    migrate anterior dejó trámites en ese estado.
+            'aprobado' => ['titulado', 'reporte_examen_generado'],
+            'reporte_examen_generado' => ['titulado'],
         ],
         'Tesis de Grado' => [
             // 1. Fase de solicitud. El puente a `perfil_aprobado` permite que
@@ -102,7 +143,58 @@ class TramiteStateService
      *
      * @var array<int, string>
      */
-    private const TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia', 'titulado'];
+    private const TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'titulado'];
+
+    /**
+     * Estados de Examen de Grado que NO cierran el tr??mite.
+     *
+     * `aprobado` es terminal para el resto de las modalidades, pero en Examen
+     * no lo es: `aprobado` espera el reporte que titula al estudiante. Los
+     * listados de "pendientes" y "concluidos" los necesitan expl??citos, porque
+     * de lo contrario un tr??mite que KARDEX todav??a tiene que resolver
+     * desaparecer??a de la cola de trabajo.
+     *
+     * @var array<int, string>
+     */
+    private const EXAMEN_NO_TERMINALES = [
+        'aprobado',
+    ];
+
+    /**
+     * Estados de Examen de Grado que siguen abiertos.
+     *
+     * @return array<int, string>
+     */
+    public static function noTerminalesDeExamen(): array
+    {
+        return self::EXAMEN_NO_TERMINALES;
+    }
+
+    /**
+     * Estados terminales POR MODALIDAD, para las modalidades cuyo flujo no cierra
+     * en el mismo punto que el resto.
+     *
+     * En Examen de Grado la aprobación no es terminal: el trámite continúa con
+     * el módulo de reporte y recién en `titulado` concluye. Además, una
+     * reprobación o una ausencia NO cierran el flujo, porque el estudiante puede
+     * volver a solicitar el examen (ver la sección de reapertura en `TRANSITIONS`).
+     *
+     * @var array<string, array<int, string>>
+     */
+    private const TERMINALES_POR_MODALIDAD = [
+        'Examen de Grado' => ['rechazado', 'titulado'],
+    ];
+
+    /**
+     * Estados terminales de una modalidad concreta.
+     *
+     * @param  string  $modalidadNombre  Nombre de la modalidad de titulación.
+     * @return array<int, string>
+     */
+    public static function terminalesDe(string $modalidadNombre): array
+    {
+        return self::TERMINALES_POR_MODALIDAD[$modalidadNombre] ?? self::TERMINALES;
+    }
 
     /**
      * Estados terminales compartidos del sistema.
@@ -115,6 +207,23 @@ class TramiteStateService
     public static function terminales(): array
     {
         return self::TERMINALES;
+    }
+
+    /**
+     * Indica si un trámite ya cerró su flujo según la modalidad a la que
+     * pertenece.
+     *
+     * Es la comprobación que usan los servicios antes de registrar un módulo:
+     * un `aprobado` de Examen de Grado todavía admite el módulo de reporte,
+     * mientras que en las demás modalidades sí es el fin del trámite.
+     */
+    public function esTerminal(Tramite $tramite): bool
+    {
+        return in_array(
+            $tramite->estado_actual,
+            self::terminalesDe($tramite->modalidad->nombre),
+            true
+        );
     }
 
     /**
@@ -184,6 +293,7 @@ class TramiteStateService
         $secuencia = [];
         $cola = ['solicitud_presentada'];
         $terminales = [];
+        $terminalesModalidad = self::terminalesDe($modalidadNombre);
 
         while (! empty($cola)) {
             $estado = array_shift($cola);
@@ -193,7 +303,7 @@ class TramiteStateService
             $secuencia[] = $estado;
 
             foreach ($mapa[$estado] ?? [] as $siguiente) {
-                if (in_array($siguiente, self::TERMINALES, true)) {
+                if (in_array($siguiente, $terminalesModalidad, true)) {
                     if (! in_array($siguiente, $terminales, true)) {
                         $terminales[] = $siguiente;
                     }
@@ -211,6 +321,6 @@ class TramiteStateService
         }
 
         // Los estados terminales van al final.
-        return array_merge(array_diff($secuencia, self::TERMINALES), $terminales);
+        return array_merge(array_diff($secuencia, $terminalesModalidad), $terminales);
     }
 }

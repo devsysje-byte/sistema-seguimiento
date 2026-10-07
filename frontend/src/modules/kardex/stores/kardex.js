@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { kardexService } from '../services/kardex';
 import { tramitesService } from '@/modules/tramites/services/tramites';
-import { MODALIDADES_MOCK, buscarMock, consultarMock, asignarMock, transicionarMock, asignarTutorMock, resumenMock, aplicarModuloMock, verificarTituloMock } from '../mock/data';
+import { MODALIDADES_MOCK, buscarMock, consultarMock, asignarMock, transicionarMock, asignarTutorMock, resumenMock, aplicarModuloMock, verificarTituloMock, guardarModuloExamenMock, reabrirExamenMock } from '../mock/data';
 
 // Modalidades que el KARDEX puede asignar a un postulante.
 export const MODALIDADES_ASIGNABLES = ['Tesis de Grado', 'Trabajo Dirigido', 'Examen de Grado'];
@@ -316,7 +316,94 @@ export const useKardexStore = defineStore('kardex', {
                 this.verificandoTitulo = false;
             }
         },
-        /** Limpia la verificación de título. */
+        /**
+         * Guarda un módulo del flujo de Examen de Grado y avanza el estado del
+         * trámite. La respuesta ya incluye `historial_examen`, que es la fuente
+         * de verdad del avance del panel: los sorteos de un intento anterior no
+         * cuentan después de una reapertura.
+         *
+         * @param {string} moduloId Identificador del módulo (sorteo_teorico, ...).
+         * @param {Object} datos    Datos validados del formulario del módulo.
+         * @returns {Promise<Object|null>} Trámite actualizado.
+         */
+        async guardarModuloExamen(moduloId, datos) {
+            this.cargando = true;
+            this.errorMessage = null;
+            try {
+                if (!this.tramite) return null;
+
+                // Respaldo de demostración: sin API el módulo avanza contra los
+                // datos simulados, incluida la fila del historial de examen.
+                if (this.simulado) {
+                    this.tramite = guardarModuloExamenMock(this.tramite, moduloId, datos);
+                    return this.tramite;
+                }
+
+                const { data } = await kardexService.guardarModuloExamen(
+                    this.tramite.id_tramite,
+                    moduloId,
+                    datos,
+                );
+                this.tramite = data;
+                return this.tramite;
+            } catch (error) {
+                this.errorMessage = this._mensajeDeError(error, 'No se pudo guardar el módulo del examen.');
+                return null;
+            } finally {
+                this.cargando = false;
+            }
+        },
+        /**
+         * Reabre el trámite de Examen de Grado para que el estudiante vuelva a
+         * sortear el examen. El backend consume un intento y devuelve el trámite
+         * en `habilitado_examen`.
+         *
+         * @param {string} [observaciones] Motivo de la reapertura.
+         * @returns {Promise<Object|null>} Trámite actualizado.
+         */
+        async reabrirExamen(observaciones = null) {
+            this.cargando = true;
+            this.errorMessage = null;
+            try {
+                if (!this.tramite) return null;
+
+                if (this.simulado) {
+                    this.tramite = reabrirExamenMock(this.tramite, observaciones);
+                    return this.tramite;
+                }
+
+                const { data } = await kardexService.reabrirExamen(this.tramite.id_tramite, observaciones);
+                this.tramite = data;
+                return this.tramite;
+            } catch (error) {
+                this.errorMessage = this._mensajeDeError(error, 'No se pudo reabrir el examen.');
+                return null;
+            } finally {
+                this.cargando = false;
+            }
+        },
+        /**
+         * Extrae el primer mensaje de validación de una respuesta 422.
+         *
+         * Los módulos de examen reportan el error en la clave que corresponde al
+         * campo fallido (`datos`, `numero_intentos`, `observaciones`, `modulo`,
+         * `estado_actual`), y no siempre en `datos`.
+         *
+         * @param {Error} error    Error de la petición.
+         * @param {string} defecto Mensaje si la respuesta no trae detalles.
+         * @returns {string} Mensaje para el toast.
+         */
+        _mensajeDeError(error, defecto) {
+            const data = error?.response?.data;
+            const errores = data?.errors || {};
+            const primero = Object.values(errores).find((lista) => Array.isArray(lista) && lista.length);
+
+            // Las funciones simuladas lanzan un objeto plano con `message`.
+            return data?.message || primero?.[0] || error?.message || defecto;
+        },
+        /**
+         * Limpia la verificación de título.
+         */
         limpiarVerificacionTitulo() {
             this.verificacionTitulo = null;
         },

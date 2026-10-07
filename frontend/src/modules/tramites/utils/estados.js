@@ -7,7 +7,17 @@
 // ============================================================================
 
 // Estados que cierran el flujo de un trámite (no permiten avanzar).
-export const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia', 'titulado'];
+export const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'titulado'];
+
+// Estados terminales POR MODALIDAD, para los flujos que no concluyen en el mismo
+// punto que el resto. Espejo de `TramiteStateService::TERMINALES_POR_MODALIDAD`.
+//
+// En Examen de Grado la aprobación no es terminal (todavía falta emitir el
+// reporte) y reprobar NO cierra el flujo, porque el estudiante puede volver a
+// solicitar el examen consumiendo otro intento.
+const TERMINALES_POR_MODALIDAD = {
+  'Examen de Grado': ['rechazado', 'titulado'],
+};
 
 // Estados considerados de éxito/aprobación con tono verde.
 export const ESTADOS_OK = [
@@ -21,17 +31,39 @@ export const ESTADOS_OK = [
   'titulado',
   'monografia_aprobada',
   'conformidad_tutor',
+  // Examen de Grado
+  'intentos_verificados',
+  'habilitado_examen',
+  'reporte_examen_generado',
 ];
 
 // Estados de error/rechazo con tono rojo.
 export const ESTADOS_ERROR = [
   'rechazado',
   'reprobado',
-  'reprobado_ausencia',
   'perfil_rechazado',
   'insuficiente',
   'monografia_rechazada',
+  // Examen de Grado
+  'examen_teorico_reprobado',
+  'examen_especialidad_reprobado',
 ];
+
+/**
+ * Indica si un estado cierra el flujo de la modalidad indicada.
+ *
+ * La mayoría de las modalidades concluyen en los estados globales, pero el
+ * Examen de Grado tiene su propio punto de cierre: aprobar no es el final
+ * porque falta el reporte.
+ *
+ * @param {string} estado          Nombre interno del estado.
+ * @param {string} [modalidad]     Nombre de la modalidad de titulación.
+ * @returns {boolean} Si el trámite ya no puede avanzar.
+ */
+export function esTerminal(estado, modalidad) {
+  const terminales = TERMINALES_POR_MODALIDAD[modalidad] || ESTADOS_TERMINALES;
+  return terminales.includes(estado);
+}
 
 // Etiquetas legibles de los tipos de documentos de un trámite. Cubre la
 // documentación oficial de todas las modalidades; con fallback al tipo crudo.
@@ -121,8 +153,9 @@ export function toneEstado(estado) {
 export function progresoEstado(tramite) {
   // Los estados terminales cierran el flujo: aunque el estado no esté en la
   // secuencia de la modalidad (ej. "rechazado"), el trámite ya concluyó
-  // y el avance es del 100%.
-  if (ESTADOS_TERMINALES.includes(tramite?.estado_actual)) return 100;
+  // y el avance es del 100%. La terminalidad depende de la modalidad: en Examen
+  // de Grado "aprobado" todavía debe generar el reporte.
+  if (esTerminal(tramite?.estado_actual, tramite?.modalidad?.nombre)) return 100;
   const idx = (tramite?.secuencia || []).indexOf(tramite?.estado_actual);
   if (idx === -1 || !tramite?.secuencia?.length) return 0;
   return Math.min(Math.round(((idx + 1) / tramite.secuencia.length) * 100), 100);

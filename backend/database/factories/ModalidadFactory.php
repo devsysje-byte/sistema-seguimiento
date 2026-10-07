@@ -31,4 +31,10 @@ class ModalidadFactory extends Factory
     {
         return $this->state(fn (array $attributes) => ['nombre' => 'Tesis de Grado']);
     }
+
+    /** Modalidad de Examen de Grado (flujo de sorteos, nota y reporte). */
+    public function examen(): static
+    {
+        return $this->state(fn (array $attributes) => ['nombre' => 'Examen de Grado']);
+    }
 }

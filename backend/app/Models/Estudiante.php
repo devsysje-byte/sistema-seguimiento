@@ -26,7 +26,7 @@ class Estudiante extends Model
 
     protected $fillable = [
         'ci', 'nombres', 'apellidos', 'fecha_nacimiento', 'email', 'telefono',
-        'registro_universitario', 'promedio_global',
+        'registro_universitario', 'promedio_global', 'numero_intentos',
     ];
 
     protected function casts(): array
@@ -34,7 +34,21 @@ class Estudiante extends Model
         return [
             'fecha_nacimiento' => 'date',
             'promedio_global' => 'decimal:2',
+            'numero_intentos' => 'integer',
         ];
+    }
+
+    /**
+     * Nº de intentos de Examen de Grado ya utilizados por el estudiante.
+     *
+     * Lo incrementa el módulo de KARDEX al crear una postulación y al reabrir
+     * una solicitud reprobada o con ausencia. El módulo 1 del flujo lo compara
+     * con `config('examen.maximo_intentos')` para decidir si la solicitud se
+     * rechaza por haber agotado los intentos.
+     */
+    public function intentosAgotados(): bool
+    {
+        return $this->numero_intentos >= (int) config('examen.maximo_intentos', 3);
     }
 
     /**

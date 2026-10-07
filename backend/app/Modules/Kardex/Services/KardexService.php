@@ -27,12 +27,16 @@ class KardexService
     /** Eager-loads del detalle de trámite para la consulta del postulante. */
     private const DETALLE_CARGAS = [
         'modalidad:id_modalidad,nombre,descripcion,requisitos_minimos',
-        'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,email,telefono,promedio_global',
+        'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,email,telefono,promedio_global,numero_intentos',
         'estudiante.user:id_usuario,estudiante_id,nombres,apellidos,email,rol',
-        'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,ruta_archivo,created_at',
+        'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,ruta_archivo,tamanio_kb,created_at',
         'estados:id_estado,id_tramite,nombre_estado,descripcion,observaciones,id_usuario_responsable,created_at',
         'estados.responsable:id_usuario,nombres,apellidos,rol',
         'tutor:id_usuario,nombres,apellidos,email,rol',
+        // Historial especializado del Examen de Grado: las tarjetas del panel
+        // reconstruyen los módulos completados a partir de estas filas, porque
+        // tras un reintento el estado actual no refleja lo ya superado.
+        'historialExamen:id_historial_examen,id_tramite,nombre_estado,etapa,resultado,numero_resolucion,fecha_resolucion,tema,fecha_examen,nota,numero_intentos,observaciones,created_at',
     ];
 
     public function __construct(
@@ -203,7 +207,7 @@ class KardexService
             ->withCount([
                 'tramites as en_curso' => fn ($q) => $q->whereNotIn(
                     'estado_actual',
-                    ['aprobado', 'reprobado', 'reprobado_ausencia', 'rechazado'],
+                    ['aprobado', 'reprobado', 'rechazado'],
                 ),
             ])
             ->where('activo', true)
@@ -218,7 +222,7 @@ class KardexService
             ])
             ->all();
 
-        $enCursoEstados = ['aprobado', 'reprobado', 'reprobado_ausencia', 'rechazado'];
+        $enCursoEstados = ['aprobado', 'reprobado', 'rechazado'];
 
         return [
             'modalidades' => $porModalidad,

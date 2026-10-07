@@ -43,7 +43,7 @@ class TesisService
     private const ESTADOS_SOLICITUD_DEFENSA = ['suficiente', 'correcciones_90_dias', 'solicitud_fecha_defensa'];
 
     /** Estados terminales que permiten iniciar una nueva solicitud. */
-    private const TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'reprobado_ausencia'];
+    private const TERMINALES = ['aprobado', 'reprobado', 'rechazado'];
 
     public function __construct(
         private readonly TramiteService $tramiteService,
@@ -184,7 +184,7 @@ class TesisService
 
             // Tras reprobar, debe cumplir los plazos reglamentarios (90 días de
             // corrección o el periodo máximo de 365 días) para optar nuevamente.
-            if (in_array($ultimo->estado_actual, ['reprobado', 'reprobado_ausencia'], true)
+            if (in_array($ultimo->estado_actual, ['reprobado'], true)
                 && ! $this->puedeReoptar($ultimo)) {
                 $proxima = $this->proximaReoptar($ultimo);
 

@@ -32,9 +32,13 @@ export const SECUENCIAS = {
   ],
   'Examen de Grado': [
     'solicitud_presentada',
-    'examen_programado',
-    'defensa_en_curso',
+    'intentos_verificados',
+    'habilitado_examen',
+    'examen_teorico_sorteado',
+    'examen_especialidad_sorteado',
     'aprobado',
+    'reporte_examen_generado',
+    'titulado',
   ],
 };
 
@@ -58,7 +62,17 @@ export const SIGUIENTES_POR_ESTADO = {
   defensa_aprobada: ['reporte_generado', 'aprobado'],
   reporte_generado: ['titulado', 'aprobado'],
   correcciones_90_dias: ['solicitud_fecha_defensa', 'reprobado'],
-  examen_programado: ['defensa_en_curso'],
+
+  // --- Examen de Grado (espejo de TramiteStateService::TRANSITIONS) ---
+  intentos_verificados: ['habilitado_examen', 'rechazado'],
+  habilitado_examen: ['examen_teorico_sorteado'],
+  examen_teorico_sorteado: ['examen_especialidad_sorteado'],
+  examen_especialidad_sorteado: ['aprobado', 'examen_teorico_reprobado', 'examen_especialidad_reprobado'],
+  aprobado: ['reporte_examen_generado'],
+  examen_teorico_reprobado: ['habilitado_examen'],
+  examen_especialidad_reprobado: ['habilitado_examen'],
+  reporte_examen_generado: ['titulado'],
+
   aprobado: [],
   reprobado: [],
   rechazado: [],
@@ -328,6 +342,127 @@ export const POSTULANTES_MOCK = [
       secuencia: SECUENCIAS['Tesis de Grado'],
     },
   },
+  {
+    // Examen de Grado habilitado: los sorteos quedan desbloqueados.
+    id_estudiante: 107,
+    ci: '8899001',
+    nombres: 'Paola Elena',
+    apellidos: 'Villarroel Choque',
+    registro_universitario: 'RU-2016-0288',
+    fecha_nacimiento: '1999-04-22',
+    email: 'paola.v@upea.edu.bo',
+    telefono: '70334455',
+    promedio_global: 76.2,
+    tiene_cuenta: true,
+    username: 'Paola_8899001',
+    numero_intentos: 1,
+    tramite: {
+      id_tramite: 305,
+      id_estudiante: 107,
+      id_modalidad: 1,
+      id_tutor: null,
+      tutor: null,
+      estado_actual: 'habilitado_examen',
+      observaciones: null,
+      hitos: {
+        solicitud_presentada: '2026-08-12',
+        intentos_verificados: '2026-08-14',
+        habilitado_examen: '2026-08-20',
+        modulos: {
+          habilitacion_examen: {
+            numero_resolucion: 'HCC-0315/2026',
+            fecha_resolucion: '2026-08-20',
+          },
+        },
+      },
+      created_at: '2026-08-12T08:00:00.000000Z',
+      updated_at: '2026-08-20T10:15:00.000000Z',
+      modalidad: { id_modalidad: 1, nombre: 'Examen de Grado' },
+      estudiante: { id_estudiante: 107, ci: '8899001', nombres: 'Paola Elena', apellidos: 'Villarroel Choque', registro_universitario: 'RU-2016-0288', numero_intentos: 1 },
+      estados: [
+        { nombre_estado: 'solicitud_presentada', descripcion: 'Solicitud presentada', created_at: '2026-08-12T08:00:00.000000Z' },
+        { nombre_estado: 'intentos_verificados', descripcion: 'Intentos verificados', created_at: '2026-08-14T09:30:00.000000Z' },
+        { nombre_estado: 'habilitado_examen', descripcion: 'Estudiante habilitado', created_at: '2026-08-20T10:15:00.000000Z' },
+      ],
+      historial_examen: [
+        { id_historial_examen: 1, nombre_estado: 'intentos_verificados', etapa: 'verificacion_intentos', resultado: 'verificado', numero_resolucion: null, fecha_resolucion: null, tema: null, fecha_examen: null, nota: null, numero_intentos: 1, observaciones: 'Intento 1 de 3.', created_at: '2026-08-14T09:30:00.000000Z' },
+        { id_historial_examen: 2, nombre_estado: 'habilitado_examen', etapa: 'habilitacion_examen', resultado: 'habilitado', numero_resolucion: 'HCC-0315/2026', fecha_resolucion: '2026-08-20', tema: null, fecha_examen: null, nota: null, numero_intentos: 1, observaciones: 'Resolución N.º HCC-0315/2026 del HCC.', created_at: '2026-08-20T10:15:00.000000Z' },
+      ],
+      siguientes_estados: SIGUIENTES_POR_ESTADO.habilitado_examen,
+      secuencia: SECUENCIAS['Examen de Grado'],
+    },
+  },
+  {
+    // Examen de Grado reprobado en el teórico: el panel de reapertura aparece.
+    id_estudiante: 108,
+    ci: '5566778',
+    nombres: 'Marcelo Alejandro',
+    apellidos: 'Zeballos Nina',
+    registro_universitario: 'RU-2015-0190',
+    fecha_nacimiento: '1998-07-30',
+    email: 'marcelo.z@upea.edu.bo',
+    telefono: '70445566',
+    promedio_global: 71.8,
+    tiene_cuenta: true,
+    username: 'Marcelo_5566778',
+    numero_intentos: 2,
+    tramite: {
+      id_tramite: 306,
+      id_estudiante: 108,
+      id_modalidad: 1,
+      id_tutor: null,
+      tutor: null,
+      estado_actual: 'examen_teorico_reprobado',
+      observaciones: 'Reprobó el examen teórico con 48 puntos.',
+      hitos: {
+        solicitud_presentada: '2026-07-01',
+        intentos_verificados: '2026-07-03',
+        habilitado_examen: '2026-07-08',
+        examen_teorico_reprobado: '2026-08-05',
+        modulos: {
+          habilitacion_examen: {
+            numero_resolucion: 'HCC-0288/2026',
+            fecha_resolucion: '2026-07-08',
+          },
+          sorteo_teorico: {
+            asistio: true,
+            tema: 'Gestión administrativa del Estado en Bolivia',
+            fecha_examen: '2026-08-05',
+          },
+          sorteo_especialidad: {
+            asistio: true,
+            tema: 'Ética profesional y normativa universitaria',
+            fecha_examen: '2026-08-07',
+          },
+          asignacion_notas: {
+            nota_teorico: '48',
+            nota_especialidad: '78',
+          },
+        },
+      },
+      created_at: '2026-07-01T08:00:00.000000Z',
+      updated_at: '2026-08-07T15:30:00.000000Z',
+      modalidad: { id_modalidad: 1, nombre: 'Examen de Grado' },
+      estudiante: { id_estudiante: 108, ci: '5566778', nombres: 'Marcelo Alejandro', apellidos: 'Zeballos Nina', registro_universitario: 'RU-2015-0190', numero_intentos: 2 },
+      estados: [
+        { nombre_estado: 'solicitud_presentada', descripcion: 'Solicitud presentada', created_at: '2026-07-01T08:00:00.000000Z' },
+        { nombre_estado: 'intentos_verificados', descripcion: 'Intentos verificados', created_at: '2026-07-03T09:00:00.000000Z' },
+        { nombre_estado: 'habilitado_examen', descripcion: 'Estudiante habilitado', created_at: '2026-07-08T11:20:00.000000Z' },
+        { nombre_estado: 'examen_teorico_sorteado', descripcion: 'Examen teórico sorteado', created_at: '2026-08-05T10:00:00.000000Z' },
+        { nombre_estado: 'examen_especialidad_sorteado', descripcion: 'Examen de especialidad sorteado', created_at: '2026-08-07T09:10:00.000000Z' },
+        { nombre_estado: 'examen_teorico_reprobado', descripcion: 'Examen teórico reprobado', observaciones: 'Reprobó el examen teórico con 48 puntos.', created_at: '2026-08-07T15:30:00.000000Z' },
+      ],
+      historial_examen: [
+        { id_historial_examen: 3, nombre_estado: 'intentos_verificados', etapa: 'verificacion_intentos', resultado: 'verificado', numero_resolucion: null, fecha_resolucion: null, tema: null, fecha_examen: null, nota: null, numero_intentos: 2, observaciones: 'Intento 2 de 3.', created_at: '2026-07-03T09:00:00.000000Z' },
+        { id_historial_examen: 4, nombre_estado: 'habilitado_examen', etapa: 'habilitacion_examen', resultado: 'habilitado', numero_resolucion: 'HCC-0288/2026', fecha_resolucion: '2026-07-08', tema: null, fecha_examen: null, nota: null, numero_intentos: 2, observaciones: 'Resolución N.º HCC-0288/2026 del HCC.', created_at: '2026-07-08T11:20:00.000000Z' },
+        { id_historial_examen: 5, nombre_estado: 'examen_teorico_sorteado', etapa: 'sorteo_teorico', resultado: 'asistio', numero_resolucion: null, fecha_resolucion: null, tema: 'Gestión administrativa del Estado en Bolivia', fecha_examen: '2026-08-05', nota: null, numero_intentos: 2, observaciones: 'Asistió al sorteo de bolos.', created_at: '2026-08-05T10:00:00.000000Z' },
+        { id_historial_examen: 6, nombre_estado: 'examen_especialidad_sorteado', etapa: 'sorteo_especialidad', resultado: 'asistio', numero_resolucion: null, fecha_resolucion: null, tema: 'Ética profesional y normativa universitaria', fecha_examen: '2026-08-07', nota: null, numero_intentos: 2, observaciones: 'Asistió al sorteo de bolos.', created_at: '2026-08-07T09:10:00.000000Z' },
+        { id_historial_examen: 7, nombre_estado: 'examen_teorico_reprobado', etapa: 'asignacion_notas', resultado: 'reprobado', numero_resolucion: null, fecha_resolucion: null, tema: null, fecha_examen: null, nota: '48.00', numero_intentos: 2, observaciones: 'Asignación de notas: teórico 48 (mínimo 51) y especialidad 78 (mínimo 51).', created_at: '2026-08-07T15:30:00.000000Z' },
+      ],
+      siguientes_estados: SIGUIENTES_POR_ESTADO.examen_teorico_reprobado,
+      secuencia: SECUENCIAS['Examen de Grado'],
+    },
+  },
 ];
 
 // Estrategia de búsqueda por CI o R.U. (mismo criterio que el backend).
@@ -501,6 +636,205 @@ export function aplicarModuloMock(tramite, moduloId, datos) {
   return t;
 }
 
+// ============================================================================
+// Examen de Grado
+//
+// Espejo de ExamenService: cada módulo deja una fila en `historial_examen`, que
+// es la fuente de verdad del avance del panel. Los sorteos son de un solo paso
+// (asistencia/tema/fecha); las notas se asignan después, en `asignacion_notas`,
+// y es ahí donde se decide si cada examen fue aprobado o reprobado.
+// ============================================================================
+
+const ESTADOS_MODULOS_EXAMEN = {
+  verificacion_intentos: 'intentos_verificados',
+  habilitacion_examen: 'habilitado_examen',
+  reporte: 'titulado',
+};
+
+const ESTADOS_REAPERIBLES = [
+  'examen_teorico_reprobado',
+  'examen_especialidad_reprobado',
+];
+
+const MAXIMO_INTENTOS_MOCK = 3;
+const NOTA_MINIMA_MOCK = 51;
+
+/** Resuelve el estado y el resultado de un sorteo a partir de sus datos (1 paso). */
+function destinoSorteoMock(datos, prefijo) {
+  const estado = `examen_${prefijo}_sorteado`;
+  return {
+    estado,
+    resultado: datos.asistio ? 'asistio' : 'no_asistio',
+  };
+}
+
+/** Resultado de `asignacion_notas`: ambas notas deben superar el mínimo. */
+function destinoNotasMock(tramite, datos) {
+  const ultimoRegistro = (etapa) =>
+    [...(tramite.historial_examen || [])]
+      .filter((f) => f.etapa === etapa)
+      .sort((a, b) => (b.id_historial_examen || 0) - (a.id_historial_examen || 0))[0];
+
+  const teorico = ultimoRegistro('sorteo_teorico');
+  const especialidad = ultimoRegistro('sorteo_especialidad');
+  const teoricoNoAsistio = teorico?.resultado === 'no_asistio';
+  const especialidadNoAsistio = especialidad?.resultado === 'no_asistio';
+
+  const notaTeorico = Number(datos.nota_teorico);
+  const notaEspecialidad = Number(datos.nota_especialidad);
+
+  if (!teorico) {
+    throw { message: 'Registre primero el sorteo del examen teórico antes de asignar la nota.' };
+  }
+  if (!especialidad) {
+    throw { message: 'Registre primero el sorteo del examen de especialidad antes de asignar la nota.' };
+  }
+  if (!teoricoNoAsistio && !Number.isFinite(notaTeorico)) {
+    throw { message: 'Ingrese la nota del examen teórico.' };
+  }
+  if (!especialidadNoAsistio && !Number.isFinite(notaEspecialidad)) {
+    throw { message: 'Ingrese la nota del examen de especialidad.' };
+  }
+
+  const teoricoAprobado = !teoricoNoAsistio && notaTeorico >= NOTA_MINIMA_MOCK;
+  const especialidadAprobado = !especialidadNoAsistio && notaEspecialidad >= NOTA_MINIMA_MOCK;
+
+  if (teoricoAprobado && especialidadAprobado) {
+    return { estado: 'aprobado', resultado: 'aprobado' };
+  }
+  if (!teoricoAprobado) {
+    return { estado: 'examen_teorico_reprobado', resultado: 'reprobado' };
+  }
+  return { estado: 'examen_especialidad_reprobado', resultado: 'reprobado' };
+}
+
+/**
+ * Simula POST /tramites/{id}/examen/{modulo}.
+ *
+ * @param {Object} tramite   Trámite de Examen de Grado.
+ * @param {string} moduloId  Identificador del módulo.
+ * @param {Object} datos     Datos del formulario.
+ */
+export function guardarModuloExamenMock(tramite, moduloId, datos) {
+  const t = clonar(tramite);
+  const hoy = new Date().toISOString();
+  const idSiguiente = (t.historial_examen?.length || 0) + 1;
+  const usados = Number(t.estudiante?.numero_intentos ?? 0);
+
+  let destino;
+  if (moduloId === 'verificacion_intentos') {
+    if (datos.accion === 'rechazar') {
+      if (usados < MAXIMO_INTENTOS_MOCK) {
+        throw {
+          message: `El estudiante lleva ${usados} de ${MAXIMO_INTENTOS_MOCK} intentos permitidos. `
+            + 'Solo se rechaza la solicitud cuando los intentos están agotados.',
+        };
+      }
+      destino = { estado: 'rechazado', resultado: 'rechazado' };
+    } else {
+      if (usados >= MAXIMO_INTENTOS_MOCK) {
+        throw { message: `El estudiante agotó los ${MAXIMO_INTENTOS_MOCK} intentos permitidos.` };
+      }
+      destino = { estado: 'intentos_verificados', resultado: 'verificado' };
+    }
+  } else if (moduloId === 'habilitacion_examen') {
+    destino = { estado: 'habilitado_examen', resultado: 'habilitado' };
+  } else if (moduloId === 'sorteo_teorico' || moduloId === 'sorteo_especialidad') {
+    destino = destinoSorteoMock(datos, moduloId === 'sorteo_teorico' ? 'teorico' : 'especialidad');
+  } else if (moduloId === 'asignacion_notas') {
+    destino = destinoNotasMock(t, datos);
+  } else if (moduloId === 'reporte') {
+    destino = { estado: 'titulado', resultado: 'titulado' };
+  } else {
+    throw { message: 'El módulo del flujo de examen no es reconocido.' };
+  }
+
+  const esSorteo = moduloId === 'sorteo_teorico' || moduloId === 'sorteo_especialidad';
+  const esAsignacionNotas = moduloId === 'asignacion_notas';
+  const guardado = { ...(t.hitos?.modulos?.[moduloId] || {}), ...datos };
+
+  t.updated_at = hoy;
+  t.estado_actual = destino.estado;
+  t.observaciones = datos.observaciones || t.observaciones;
+  t.hitos = { ...(t.hitos || {}) };
+  t.hitos.modulos = { ...(t.hitos.modulos || {}), [moduloId]: guardado };
+  t.estados = [
+    ...(t.estados || []),
+    { nombre_estado: destino.estado, descripcion: destino.estado, observaciones: null, created_at: hoy },
+  ];
+  t.historial_examen = [
+    ...(t.historial_examen || []),
+    {
+      id_historial_examen: idSiguiente,
+      nombre_estado: destino.estado,
+      etapa: moduloId,
+      resultado: destino.resultado,
+      numero_resolucion: moduloId === 'habilitacion_examen' ? datos.numero_resolucion || null : null,
+      fecha_resolucion: moduloId === 'habilitacion_examen' ? datos.fecha_resolucion || null : null,
+      tema: esSorteo ? guardado.tema || null : null,
+      fecha_examen: esSorteo ? guardado.fecha_examen || null : null,
+      nota: esAsignacionNotas ? String(datos.nota_teorico || datos.nota_especialidad) : null,
+      numero_intentos: usados,
+      observaciones: datos.observaciones || null,
+      created_at: hoy,
+    },
+  ];
+  t.siguientes_estados = SIGUIENTES_POR_ESTADO[destino.estado] || [];
+  t.secuencia = SECUENCIAS['Examen de Grado'];
+  return t;
+}
+
+/** Simula POST /tramites/{id}/examen/reabrir. */
+export function reabrirExamenMock(tramite, observaciones = null) {
+  const t = clonar(tramite);
+
+  if (!ESTADOS_REAPERIBLES.includes(t.estado_actual)) {
+    throw { message: 'El estudiante solo puede re-solicitar el examen si reprobó un examen o no asistió a un sorteo.' };
+  }
+
+  const usados = Number(t.estudiante?.numero_intentos ?? 0);
+  if (usados >= MAXIMO_INTENTOS_MOCK) {
+    throw { message: 'El estudiante agotó los intentos permitidos para el Examen de Grado.' };
+  }
+
+  const hoy = new Date().toISOString();
+  const motivo = String(observaciones || '').trim()
+    || 'El estudiante solicitó volver a rendir el examen de grado.';
+
+  t.updated_at = hoy;
+  t.estado_actual = 'habilitado_examen';
+  t.estudiante = { ...(t.estudiante || {}), numero_intentos: usados + 1 };
+  t.hitos = { ...(t.hitos || {}) };
+  t.hitos.modulos = { ...(t.hitos.modulos || {}) };
+  ['sorteo_teorico', 'sorteo_especialidad', 'asignacion_notas'].forEach((m) => {
+    delete t.hitos.modulos[m];
+  });
+  t.estados = [
+    ...(t.estados || []),
+    { nombre_estado: 'habilitado_examen', descripcion: 'Examen reabierto', observaciones: motivo, created_at: hoy },
+  ];
+  t.historial_examen = [
+    ...(t.historial_examen || []),
+    {
+      id_historial_examen: (t.historial_examen?.length || 0) + 1,
+      nombre_estado: 'habilitado_examen',
+      etapa: 'reapertura',
+      resultado: 're_solicitud',
+      numero_resolucion: null,
+      fecha_resolucion: null,
+      tema: null,
+      fecha_examen: null,
+      nota: null,
+      numero_intentos: usados + 1,
+      observaciones: motivo,
+      created_at: hoy,
+    },
+  ];
+  t.siguientes_estados = SIGUIENTES_POR_ESTADO.habilitado_examen;
+  t.secuencia = SECUENCIAS['Examen de Grado'];
+  return t;
+}
+
 // Simula GET /kardex/titulos-tesis (verificación de unicidad del título).
 // Espejo del VerificacionTituloService del backend: normaliza el texto y puntúa
 // la similitud combinando coincidencia de cadena y solapamiento de palabras.
@@ -572,7 +906,7 @@ function similitudTitulos(consulta, candidato) {
 }
 
 // Estados terminales que dejan de considerarse "en curso" en el resumen.
-const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'reprobado_ausencia', 'rechazado', 'titulado'];
+const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'titulado'];
 const esEnCurso = (estado) => !ESTADOS_TERMINALES.includes(estado);
 
 // Simula GET /kardex/resumen (resumen estadístico del dashboard).

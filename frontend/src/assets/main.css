@@ -53,6 +53,35 @@
   .td {
     @apply px-4 py-3 text-sm text-slate-300;
   }
+  /* Rótulo de los datos resumidos de un módulo (etiqueta sobre el valor). */
+  .dato-label {
+    @apply text-[11px] uppercase tracking-wider text-slate-400 font-semibold;
+  }
+  /* Texto de apoyo o aclaración debajo de un campo. */
+  .dato-ayuda {
+    @apply text-xs text-slate-400 mt-1;
+  }
+  /* Aviso de módulo bloqueado: la acción queda deshabilitada hasta la anterior. */
+  .aviso-bloqueo {
+    @apply flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-slate-400;
+  }
+  /* Opción seleccionable de un grupo de tarjetas (conmutadores, veredictos). */
+  .opcion {
+    @apply flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition
+      disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .opcion-inactiva {
+    @apply border-white/10 bg-white/5 text-slate-200;
+  }
+  .opcion-activa-verde {
+    @apply border-emerald-500 bg-emerald-500/10 text-emerald-200;
+  }
+  .opcion-activa-naranja {
+    @apply border-orange-500 bg-orange-500/10 text-orange-200;
+  }
+  .opcion-activa-roja {
+    @apply border-red-500 bg-red-500/10 text-red-200;
+  }
 }
 
 .page-enter-active,

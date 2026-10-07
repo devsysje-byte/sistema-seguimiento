@@ -23,6 +23,9 @@ class EstudianteFactory extends Factory
             'telefono' => fake()->numerify('########'),
             'registro_universitario' => 'RU-'.fake()->unique()->numerify('####'),
             'promedio_global' => fake()->randomFloat(2, 50, 100),
+            // El Examen de Grado limita los intentos; los de otras modalidades
+            // nunca leen este campo.
+            'numero_intentos' => 0,
         ];
     }
 

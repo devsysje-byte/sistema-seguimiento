@@ -58,7 +58,6 @@ class ReporteService
         'aprobado' => 'Aprobado',
         'titulado' => 'Titulado',
         'reprobado' => 'Reprobado',
-        'reprobado_ausencia' => 'Reprobado por ausencia',
         'rechazado' => 'Rechazado',
     ];
 

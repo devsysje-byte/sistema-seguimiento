@@ -5,9 +5,12 @@ namespace App\Modules\Tramites\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Tramites\Http\Requests\AsignarTutorRequest;
 use App\Modules\Tramites\Http\Requests\CrearTramiteRequest;
+use App\Modules\Tramites\Http\Requests\GuardarModuloExamenRequest;
 use App\Modules\Tramites\Http\Requests\GuardarModuloFlujoRequest;
+use App\Modules\Tramites\Http\Requests\ReabrirExamenRequest;
 use App\Modules\Tramites\Http\Requests\RevisarTramiteRequest;
 use App\Modules\Tramites\Http\Requests\TransicionarTramiteRequest;
+use App\Modules\Tramites\Services\ExamenService;
 use App\Modules\Tramites\Services\TramiteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,7 +25,10 @@ use Illuminate\Http\Request;
  */
 class TramiteController extends Controller
 {
-    public function __construct(private readonly TramiteService $tramiteService) {}
+    public function __construct(
+        private readonly TramiteService $tramiteService,
+        private readonly ExamenService $examenService,
+    ) {}
 
     /**
      * GET /api/estudiante/tramite-activo
@@ -140,6 +146,46 @@ class TramiteController extends Controller
                 $request->user()
             ),
             201
+        );
+    }
+
+    /**
+     * POST /api/tramites/{id}/examen/{modulo} (roles de gestión)
+     *
+     * Guarda un módulo del flujo de Examen de Grado y avanza el trámite al
+     * estado que corresponde. Los módulos de sorteo (`sorteo_teorico` y
+     * `sorteo_especialidad`) registran la asistencia con el tema y la fecha;
+     * la nota de ambos exámenes se asigna después, en `asignacion_notas`.
+     */
+    public function guardarModuloExamen(GuardarModuloExamenRequest $request, int $id, string $modulo): JsonResponse
+    {
+        $validated = $request->validated();
+
+        return response()->json(
+            $this->examenService->guardarModulo(
+                $id,
+                $modulo,
+                $validated['datos'],
+                $request->user()
+            ),
+            201
+        );
+    }
+
+    /**
+     * POST /api/tramites/{id}/examen/reabrir (roles de gestión)
+     *
+     * Devuelve el trámite a `habilitado_examen` para que el estudiante pueda
+     * volver a sortear el examen, consumiendo un intento.
+     */
+    public function reabrirExamen(ReabrirExamenRequest $request, int $id): JsonResponse
+    {
+        return response()->json(
+            $this->examenService->reabrirSolicitud(
+                $id,
+                $request->validated()['observaciones'] ?? null,
+                $request->user()
+            )
         );
     }
 

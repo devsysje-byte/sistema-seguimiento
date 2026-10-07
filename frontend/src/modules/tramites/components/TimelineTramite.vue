@@ -186,7 +186,7 @@ const enProceso = computed(() => !ESTADOS_TERMINALES.includes(estadoActual.value
 const statusIcon = computed(() => {
   const actual = estadoActual.value;
   if (actual === 'aprobado') return 'award';
-  if (['reprobado', 'rechazado', 'reprobado_ausencia'].includes(actual)) return 'x-circle';
+  if (['reprobado', 'rechazado'].includes(actual)) return 'x-circle';
   return 'clock';
 });
 

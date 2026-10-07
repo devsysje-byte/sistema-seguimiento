@@ -44,12 +44,11 @@ const PCT_POR_ESTADO = {
   aprobado: 100,
   titulado: 100,
   reprobado: 75,
-  reprobado_ausencia: 75,
   rechazado: 20,
 };
 
 // Estados de error que se muestran tal cual (no se traducen a un módulo).
-export const ESTADOS_ERROR_TITULACION = ['rechazado', 'reprobado', 'reprobado_ausencia', 'perfil_rechazado', 'insuficiente'];
+export const ESTADOS_ERROR_TITULACION = ['rechazado', 'reprobado', 'perfil_rechazado', 'insuficiente'];
 
 // Documentos verificados en el módulo de perfil (checkboxes con PDF adjunto).
 // Son los mismos tipos que el estudiante adjunta en su solicitud

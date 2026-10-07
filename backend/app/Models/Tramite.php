@@ -90,6 +90,21 @@ class Tramite extends Model
     }
 
     /**
+     * Relación uno a muchos con el HISTORIAL ESPECIALIZADO del Examen de Grado.
+     *
+     * Solo se usa en trámites de la modalidad Examen de Grado: guarda el detalle
+     * propio de cada transición (etapa, asistencia, tema, fecha, nota y número
+     * de resolución). `estados` sigue siendo la línea de tiempo genérica.
+     *
+     * @return HasMany Historiales `\App\Models\HistorialEstadoExamen`
+     *                 del flujo de examen de grado.
+     */
+    public function historialExamen()
+    {
+        return $this->hasMany(HistorialEstadoExamen::class, 'id_tramite', 'id_tramite');
+    }
+
+    /**
      * Indica si un usuario es el estudiante propietario de este trámite.
      *
      * Centraliza la comprobación de propiedad que los servicios de Tramites y

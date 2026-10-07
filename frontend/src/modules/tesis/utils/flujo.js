@@ -38,7 +38,6 @@ export const DESCRIPCION_ESTADO = {
   aprobado: '¡Felicitaciones! Tu tesis de grado fue aprobada.',
   titulado: '¡Felicidades! Tu trámite de titulación concluyó: estás titulado.',
   reprobado: 'Tu tesis no fue aprobada. Consulta las alternativas disponibles.',
-  reprobado_ausencia: 'No asististe a tu defensa. Consulta las alternativas disponibles.',
   rechazado: 'Tu solicitud fue rechazada definitivamente. Consulta las alternativas disponibles.',
 };
 

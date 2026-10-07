@@ -226,7 +226,7 @@ const terminalAprobada = computed(() =>
 );
 const terminalReprobada = computed(() =>
   tramitesStore.tramiteActivo?.modalidad?.nombre === 'Tesis de Grado'
-  && ['reprobado', 'reprobado_ausencia'].includes(tramitesStore.tramiteActivo?.estado_actual)
+  && ['reprobado'].includes(tramitesStore.tramiteActivo?.estado_actual)
 );
 const reoptar = computed(() => reoptarInfo(tramitesStore.tramiteActivo, {
   diasCorreccion: tesisStore.config.dias_correccion,

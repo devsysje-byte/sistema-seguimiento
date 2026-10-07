@@ -556,7 +556,7 @@ const tesisAprobada = computed(() =>
 );
 const titulado = computed(() => tramite.value?.estado_actual === 'titulado');
 const tesisReprobada = computed(() =>
-  tesisTerminada.value && ['reprobado', 'reprobado_ausencia'].includes(tramite.value?.estado_actual)
+  tesisTerminada.value && ['reprobado'].includes(tramite.value?.estado_actual)
 );
 const reoptar = computed(() => reoptarInfo(tramite.value, {
   diasCorreccion: tesisStore.config.dias_correccion,

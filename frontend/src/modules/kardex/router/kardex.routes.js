@@ -6,10 +6,10 @@ const ROLES_KARDEX = ['kardex', 'secretaria', 'direccion', 'admin'];
  *
  * Shell propio del dashboard (encabezado + barra lateral) con rutas hijas. La
  * ruta raíz (/kardex) muestra el panel general con estadísticas de modalidades,
- * estudiantes y tutores. Los módulos 3 al 5 (Trabajo Dirigido, Examen de Grado
- * y Reporte de Modalidad) comparten la vista placeholder de la próxima etapa;
- * los dos funcionales (Registro de Postulante y Tesis de Grado) son la
- * funcionalidad de la primera etapa.
+ * estudiantes y tutores. Los módulos con flujo propio (Registro de Postulante,
+ * Tesis de Grado y Examen de Grado) avanzan por tarjetas secuenciales; Trabajo
+ * Dirigido y Reporte de Modalidad comparten la vista placeholder de la próxima
+ * etapa.
  */
 export default [
     {
@@ -43,8 +43,7 @@ export default [
             {
                 path: 'examen',
                 name: 'KardexExamen',
-                component: () => import('@/modules/kardex/views/ModuloPlaceholder.vue'),
-                props: { modulo: 'Examen de Grado', icono: 'graduation', descripcion: 'Registro y seguimiento de la modalidad de Examen de Grado.' },
+                component: () => import('@/modules/kardex/views/ExamenGradoKardex.vue'),
             },
             {
                 path: 'reporte',

@@ -46,7 +46,7 @@ class TramiteService extends BasePaginadoService
     /** Eager-loads del detalle con proyección de columnas (ni contraseñas ni sobrantes). */
     private const DETALLE_CARGAS = [
         'modalidad:id_modalidad,nombre,descripcion,requisitos_minimos',
-        'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,email,telefono,promedio_global',
+        'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,email,telefono,promedio_global,numero_intentos',
         'estudiante.user:id_usuario,estudiante_id,nombres,apellidos,email,rol',
         'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,ruta_archivo,tamanio_kb,created_at',
         'estados:id_estado,id_tramite,nombre_estado,descripcion,observaciones,id_usuario_responsable,created_at',
@@ -120,7 +120,7 @@ class TramiteService extends BasePaginadoService
         'aprobado' => 100,
         'titulado' => 100,
         'reprobado' => 75,
-        'reprobado_ausencia' => 75,
+
         'rechazado' => 20,
     ];
 
@@ -169,8 +169,13 @@ class TramiteService extends BasePaginadoService
         }
 
         // Un estudiante que ya aprobó una modalidad no puede iniciar más trámites.
-        $aprobada = Tramite::where('id_estudiante', $estudiante->id_estudiante)
-            ->where('estado_actual', 'aprobado')
+        // Se cuentan los dos estados de cierre del flujo de Examen de Grado:
+        // `aprobado` (ambos exámenes rendidos, pendiente el reporte) y `titulado`
+        // (reporte emitido). Reprobar o ser rechazado sí permite volver a
+        // postular, y en Examen consume un intento.
+        $aprobada = Tramite::query()
+            ->where('id_estudiante', $estudiante->id_estudiante)
+            ->whereIn('estado_actual', ['titulado', 'aprobado'])
             ->exists();
 
         if ($aprobada) {
@@ -183,6 +188,8 @@ class TramiteService extends BasePaginadoService
                 'id_modalidad' => $validated['id_modalidad'],
                 'estado_actual' => 'solicitud_presentada',
             ]);
+
+            $this->contarIntentoExamen($tramite);
 
             EstadoTramite::create([
                 'id_tramite' => $tramite->id_tramite,
@@ -221,7 +228,12 @@ class TramiteService extends BasePaginadoService
     {
         return $this->paginar(
             $this->listadoBase($q)
-                ->whereNotIn('estado_actual', TramiteStateService::terminales())
+                ->where(function (Builder $w) {
+                    $w->whereNotIn('estado_actual', TramiteStateService::terminales())
+                        // Examen: la ausencia y la aprobación aún esperan
+                        // reapertura y reporte, pese a ser terminales en el resto.
+                        ->orWhereIn('estado_actual', TramiteStateService::noTerminalesDeExamen());
+                })
                 ->orderByDesc('created_at'),
             $this->porPagina($perPage)
         );
@@ -237,6 +249,7 @@ class TramiteService extends BasePaginadoService
         return $this->paginar(
             $this->listadoBase($q)
                 ->whereIn('estado_actual', TramiteStateService::terminales())
+                ->whereNotIn('estado_actual', TramiteStateService::noTerminalesDeExamen())
                 ->orderByDesc('updated_at'),
             $this->porPagina($perPage)
         );
@@ -280,7 +293,7 @@ class TramiteService extends BasePaginadoService
             ->leftJoin('tramites', 'tramites.id_modalidad', '=', 'modalidades.id_modalidad')
             ->select(['modalidades.id_modalidad', 'modalidades.nombre'])
             ->selectRaw("SUM(CASE WHEN tramites.estado_actual = 'aprobado' THEN 1 ELSE 0 END) AS aprobados")
-            ->selectRaw("SUM(CASE WHEN tramites.estado_actual IN ('rechazado', 'reprobado', 'reprobado_ausencia') THEN 1 ELSE 0 END) AS reprobados")
+            ->selectRaw("SUM(CASE WHEN tramites.estado_actual IN ('rechazado', 'reprobado') THEN 1 ELSE 0 END) AS reprobados")
             ->selectRaw('COUNT(tramites.id_tramite) AS total')
             ->groupBy(['modalidades.id_modalidad', 'modalidades.nombre'])
             ->orderBy('modalidades.nombre')
@@ -703,6 +716,26 @@ class TramiteService extends BasePaginadoService
             $this->porPagina($perPage),
             fn (Tramite $t) => $this->formatear($t)
         );
+    }
+
+    /**
+     * Suma un intento al contador del estudiante cuando la modalidad es Examen de
+     * Grado.
+     *
+     * El módulo 1 del flujo (`verificacion_intentos`) compara este contador contra
+     * `examen.maximo_intentos` para admitir o rechazar la solicitud, y
+     * `ExamenService::reabrirSolicitud()` lo vuelve a subir cuando el estudiante
+     * re-solicita el examen. Solo el Examen de Grado tiene intentos limitados.
+     */
+    private function contarIntentoExamen(Tramite $tramite): void
+    {
+        $estudiante = $tramite->estudiante()->first();
+
+        if ($estudiante === null || $tramite->modalidad->nombre !== TramiteStateService::MODALIDAD_EXAMEN) {
+            return;
+        }
+
+        $estudiante->increment('numero_intentos');
     }
 
     /**

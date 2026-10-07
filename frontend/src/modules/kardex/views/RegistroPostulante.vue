@@ -24,7 +24,7 @@
             v-model="identificador"
             type="text"
             class="input pl-10"
-            placeholder="Ej: 5445112 o RU-2020-0087"
+            placeholder="Ej: 12345678 o RU-20004008"
             autocomplete="off"
           />
         </div>

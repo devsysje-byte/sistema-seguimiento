@@ -33,6 +33,30 @@ export const kardexService = {
         return http.post(`/tramites/${id}/flujo/${modulo}`, { datos });
     },
     /**
+     * Guarda un módulo del flujo de Examen de Grado.
+     *
+     * Los sorteos son de un solo paso (asistencia, tema y fecha); las notas no
+     * se registran aquí, sino en el módulo `asignacion_notas`, que cierra los
+     * dos exámenes con su nota final.
+     *
+     * @param {number} id     Identificador del trámite.
+     * @param {string} modulo Módulo del flujo (ver `flujoExamen.js`).
+     * @param {Object} datos  Datos validados del formulario.
+     */
+    guardarModuloExamen(id, modulo, datos) {
+        return http.post(`/tramites/${id}/examen/${modulo}`, { datos });
+    },
+    /**
+     * Reabre un trámite de Examen de Grado reprobado o con ausencia para que el
+     * estudiante vuelva a sortear el examen. Consume un intento.
+     *
+     * @param {number} id            Identificador del trámite.
+     * @param {string} [observaciones] Motivo de la reapertura.
+     */
+    reabrirExamen(id, observaciones = null) {
+        return http.post(`/tramites/${id}/examen/reabrir`, { observaciones });
+    },
+    /**
      * Verifica la unicidad de un título de tesis de grado.
      *
      * @param {string} titulo          Título a verificar.
