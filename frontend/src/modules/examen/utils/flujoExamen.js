@@ -4,9 +4,15 @@
 // Describe la modalidad como una secuencia de 6 módulos. A diferencia de la
 // Tesis, aquí NO hay tutor ni tribunal: dos sorteos de bolo, un módulo de
 // ASIGNACIÓN DE NOTAS que cierra ambos exámenes juntos y un reporte final, y
-// el estudiante puede REABRIR el trámite cuando reprobó cualquiera de los dos
-// exámenes, lo que reinicia los sorteos desde el estado habilitado consumiendo
-// otro intento.
+// el estudiante puede REABRIR el trámite cuando quedó con alguno de los dos
+// exámenes sin aprobar, consumiendo otro intento.
+//
+// El alcance de la reapertura depende de qué examen no se aprobó:
+//   - Reprobar UN SOLO examen reabre únicamente ese examen: la nota del examen
+//     aprobado se CONSERVA (llega en `hitos.examen_aprobado`) y la Resolución
+//     del HCC en curso sigue valiendo.
+//   - Reprobar AMBOS exige una NUEVA Resolución del HCC y rendir de nuevo los
+//     dos exámenes.
 //
 // La nota de los dos exámenes se registra DESPUÉS de los dos sorteos (módulo 5
 // `asignacion_notas`), no dentro de cada tarjeta de sorteo: recién ahí se
@@ -20,7 +26,8 @@
 // vuelve atrás) sino del historial especializado `historial_examen`, que el
 // backend expone como `tramite.historial_examen`. Los módulos de sorteo solo
 // cuentan los registros posteriores a la última reapertura: los sorteos de un
-// intento anterior ya no valen.
+// intento anterior ya no valen, salvo el del examen conservado, que se
+// sintetiza desde `hitos.examen_aprobado`.
 //
 // Espejo de `App\Modules\Tramites\Services\ExamenService`.
 // ============================================================================
@@ -103,10 +110,11 @@ const RESULTADOS_RESUELTOS = {
   reporte: ['titulado'],
 };
 
-/** Estados desde los que el estudiante puede volver a sortear el examen. */
+/** Estados desde los que el estudiante puede volver a rendir el examen. */
 export const ESTADOS_REAPERIBLES = [
   'examen_teorico_reprobado',
   'examen_especialidad_reprobado',
+  'examen_ambos_reprobados',
 ];
 
 /** Etiquetas de cada módulo de sorteo, para los mensajes de la tarjeta. */
@@ -117,6 +125,12 @@ export const ETIQUETAS_SORTEOS = {
 
 /** Módulos de sorteo de bolo: registran asistencia, tema y fecha. */
 export const MODULOS_SORTEOS = ['sorteo_teorico', 'sorteo_especialidad'];
+
+/** Clave de `hitos.examen_aprobado` para el sorteo de cada examen. */
+const EXAMENES_CONSERVADOS = {
+  sorteo_teorico: 'examen_teorico',
+  sorteo_especialidad: 'examen_especialidad',
+};
 
 /** Rango y mínimo de nota del examen (espejo de `config/examen.php`). */
 export const RANGO_NOTA = [0, 100];
@@ -164,20 +178,50 @@ function registrosDelIntento(tramite) {
 export function modulosExamen(tramite) {
   const todas = historialExamen(tramite);
   const delIntento = registrosDelIntento(tramite);
+  const conservados = tramite?.hitos?.examen_aprobado || null;
 
   return MODULOS_FLUJO_EXAMEN.map((m) => {
     const fuente = m.porIntento ? delIntento : todas;
     const registros = fuente.filter((f) => f.etapa === m.id);
-    const registro = registros.length ? registros[registros.length - 1] : null;
+    let registro = registros.length ? registros[registros.length - 1] : null;
+
+    // Un examen ya aprobado en la resolución en curso no vuelve a sortearse: su
+    // sorteo se muestra completado con la nota conservada en `examen_aprobado`.
+    const claveConservado = EXAMENES_CONSERVADOS[m.id];
+    const conservado = claveConservado ? conservados?.[claveConservado] : null;
+    if (!registro && conservado) {
+      registro = {
+        resultado: 'aprobado',
+        tema: conservado.tema,
+        fecha_examen: conservado.fecha_examen,
+        nota: conservado.nota,
+        conservado: true,
+      };
+    }
+
+    let completado = Boolean(registro)
+      && (RESULTADOS_RESUELTOS[m.id] || []).includes(registro.resultado);
+
+    // La habilitación cuenta la Resolución del HCC vigente: se requiere una
+    // resolución por cada solicitud completa. Una re-solicitud COMPLETA (ambos
+    // exámenes reprobados) deja la habilitación pendiente hasta registrar una
+    // NUEVA resolución; una re-solicitud parcial conserva la vigente.
+    if (m.id === 'habilitacion_examen') {
+      const numResoluciones = todas.filter((f) => f.etapa === 'habilitacion_examen').length;
+      const numSolicitudesCompletas = 1 + todas.filter(
+        (f) => f.etapa === 'reapertura' && f.resultado === 're_solicitud',
+      ).length;
+      completado = Boolean(registro) && numResoluciones >= numSolicitudesCompletas;
+    }
 
     return {
       ...m,
       registro,
       // Un registro de un intento anterior no cuenta: tras reabrir el
       // módulo vuelve a estar pendiente.
-      completado: Boolean(registro) && (RESULTADOS_RESUELTOS[m.id] || []).includes(registro.resultado),
+      completado,
       // Un registro a medio registrar (resultado aún no terminal) está en curso.
-      enProgreso: Boolean(registro) && !RESULTADOS_RESUELTOS[m.id].includes(registro.resultado),
+      enProgreso: Boolean(registro) && !(RESULTADOS_RESUELTOS[m.id] || []).includes(registro.resultado),
       reabierto: m.porIntento && todas.some((f) => f.etapa === 'reapertura')
         && !registro,
     };
@@ -307,6 +351,10 @@ export function validarModulo(moduloId, datos = {}, contexto = {}) {
       const revisarNota = (valor, nombre, asistio) => {
         // El examen no se rindió: la ausencia ya lo dejó reprobado, sin nota.
         if (asistio === false) return;
+
+        // Un examen conservado ya fue aprobado y asciende su nota automáticamente:
+        // el módulo no pide nota nueva ni la puede reprobar.
+        if (asistio === 'conservado') return;
 
         if (valor === '' || valor === null || valor === undefined) {
           if (asistio === true) errores.push(`Ingrese la nota del ${nombre}.`);

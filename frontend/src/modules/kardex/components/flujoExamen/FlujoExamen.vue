@@ -84,11 +84,11 @@
             <AppIcon name="alert-triangle" :size="18" />
           </div>
           <div>
-            <h4 class="font-bold text-white uppercase">El estudiante debe volver a rendir el examen</h4>
+            <h4 class="font-bold text-white uppercase">EL ESTUDIANTE DEBE SOLICITAR OTRA MODALIDAD DE TITULACION</h4>
             <p class="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed">
               {{ motivoReapertura }} Al reabrir, el trámite vuelve a
-              <span class="font-semibold text-slate-300">Habilitado</span>, se reinician los dos
-              sorteos y la asignación de notas, y se consume un intento
+              <span class="font-semibold text-slate-300">{{ reapertura.destino }}</span>,
+              {{ reapertura.texto }}, y se consume un intento
               <span class="font-semibold text-slate-300">(quedan {{ restantes }} de {{ maximoIntentos }})</span>.
               <span v-if="restantes === 0" class="block mt-1 text-red-300">
                 Ya no quedan intentos: para continuar debe registrarse una nueva postulación.
@@ -180,7 +180,6 @@ import { useKardexStore } from '../../stores/kardex';
 import {
   MAXIMO_INTENTOS,
   MODULOS_FLUJO_EXAMEN,
-  NOTA_MINIMA,
   esReabrible,
   intentosRestantes,
   intentosUsados,
@@ -233,47 +232,55 @@ const fechaInicio = computed(() =>
 /**
  * Texto que explica por qué el trámite quedó reabrible.
  *
- * Las notas se asignan en el módulo 5 y cierran los dos exámenes a la vez: si
- * alguna quedó por debajo del mínimo (o el estudiante no asistió al sorteo), el
- * trámite queda en un estado reabrible. Titularse exige aprobar ambos exámenes,
- * por eso `examen_teorico_reprobado` puede coexistir con una nota aprobada de
- * especialidad (y viceversa).
+ * Según el estado en el que quedó la asignación de notas, el estudiante debe
+ * volver a rendir solo el examen que no aprobó (conservando la nota del otro y
+ * la Resolución del HCC en curso) o ambos exámenes con una nueva Resolución.
  */
 const motivoReapertura = computed(() => {
-  const notas = props.tramite?.hitos?.modulos?.asignacion_notas || {};
-  const teorico = registroDe('sorteo_teorico');
-  const especialidad = registroDe('sorteo_especialidad');
-  const asistioT = asistioA(teorico);
-  const asistioE = asistioA(especialidad);
-  const notaT = Number(notas.nota_teorico);
-  const notaE = Number(notas.nota_especialidad);
-  const teoricoOk = asistioT && !Number.isNaN(notaT) && notaT >= NOTA_MINIMA;
-  const especialidadOk = asistioE && !Number.isNaN(notaE) && notaE >= NOTA_MINIMA;
-  const especialidadPrimero = props.tramite?.estado_actual === 'examen_especialidad_reprobado';
-
-  if (teoricoOk && !especialidadOk) {
-    return especialidadPrimero
-      ? detalleReapertura('especialidad', asistioE, notas.nota_especialidad)
-      : 'Aprobó el examen teórico, pero el examen de especialidad no fue aprobado.';
+  switch (props.tramite?.estado_actual) {
+    case 'examen_teorico_reprobado':
+      return 'Reprobó el examen teórico; la nota de especialidad se conserva.';
+    case 'examen_especialidad_reprobado':
+      return 'Reprobó el examen de especialidad; la nota del teórico se conserva.';
+    case 'examen_ambos_reprobados':
+      return 'Ninguno de los dos exámenes fue aprobado.';
+    default:
+      return '';
   }
-
-  if (!teoricoOk && especialidadOk) {
-    return 'Aprobó el examen de especialidad, pero el examen teórico no fue aprobado.';
-  }
-
-  return especialidadPrimero
-    ? detalleReapertura('especialidad', asistioE, notas.nota_especialidad)
-    : detalleReapertura('teorico', asistioT, notas.nota_teorico);
 });
 
-function detalleReapertura(examen, asistio, nota) {
-  const etiqueta = examen === 'teorico' ? 'el examen teórico' : 'el examen de especialidad';
-  if (!asistio) return `El estudiante no asistió al sorteo de ${etiqueta}.`;
-  if (nota === null || nota === undefined || nota === '') {
-    return `El estudiante reprobó ${etiqueta}.`;
+/**
+ * Detalle de la reapertura según el alcance.
+ *
+ * Reprobar un SOLO examen vuelve al punto en que se reabre únicamente ese
+ * sorteo; reprobar AMBOS vuelve a la verificación de intentos y exige una nueva
+ * Resolución del HCC antes de los sorteos.
+ */
+const reapertura = computed(() => {
+  switch (props.tramite?.estado_actual) {
+    case 'examen_teorico_reprobado':
+      return {
+        destino: 'Habilitado',
+        texto: 'se reabre únicamente el examen teórico, conservando la nota de especialidad y la Resolución del HCC en curso',
+        observacion: 'El estudiante solicitó volver a rendir únicamente el examen teórico; la especialidad aprobada se conserva.',
+        toast: 'Examen reabierto: el estudiante vuelve a sortear el examen teórico.',
+      };
+    case 'examen_especialidad_reprobado':
+      return {
+        destino: 'Teórico aprobado',
+        texto: 'se reabre únicamente el examen de especialidad, conservando la nota del teórico y la Resolución del HCC en curso',
+        observacion: 'El estudiante solicitó volver a rendir únicamente el examen de especialidad; el teórico aprobado se conserva.',
+        toast: 'Examen reabierto: el estudiante vuelve a sortear el examen de especialidad.',
+      };
+    default:
+      return {
+        destino: 'Verificación de Intentos',
+        texto: 'se reinician los dos sorteos y la asignación de notas, y se exigirá una NUEVA Resolución del HCC para habilitar de nuevo al estudiante',
+        observacion: 'El estudiante solicitó volver a rendir ambos exámenes con una nueva Resolución del HCC.',
+        toast: 'Examen reabierto: registre una nueva Resolución del HCC para habilitar de nuevo al estudiante.',
+      };
   }
-  return `El estudiante reprobó ${etiqueta} con ${nota} puntos.`;
-}
+});
 
 /** Último registro del historial de una etapa del flujo. */
 function registroDe(etapa) {
@@ -282,6 +289,11 @@ function registroDe(etapa) {
 
 function asistioA(registro) {
   return ['asistio', 'aprobado', 'reprobado'].includes(registro?.resultado);
+}
+
+/** ¿El registro es un sorteo de un examen ya aprobado que se conserva? */
+function esConservado(etapa) {
+  return registroDe(etapa)?.conservado === true;
 }
 
 /** Un módulo sólo se habilita cuando es el siguiente pendiente. */
@@ -302,8 +314,9 @@ async function guardar(moduloId, datos) {
     ? { intentos: usados.value, maximo: maximoIntentos }
     : moduloId === 'asignacion_notas'
       ? {
-          asistio_teorico: asistioA(registroDe('sorteo_teorico')),
-          asistio_especialidad: asistioA(registroDe('sorteo_especialidad')),
+          // Un examen conservado ya está aprobado: el validador no pide su nota.
+          asistio_teorico: esConservado('sorteo_teorico') ? 'conservado' : asistioA(registroDe('sorteo_teorico')),
+          asistio_especialidad: esConservado('sorteo_especialidad') ? 'conservado' : asistioA(registroDe('sorteo_especialidad')),
         }
       : {};
 
@@ -333,9 +346,7 @@ async function guardar(moduloId, datos) {
 
 async function reabrir() {
   guardando.value = true;
-  const actualizado = await kardexStore.reabrirExamen(
-    'El estudiante solicitó volver a rendir el examen de grado.',
-  );
+  const actualizado = await kardexStore.reabrirExamen(reapertura.value.observacion);
   guardando.value = false;
 
   if (!actualizado) {
@@ -343,7 +354,7 @@ async function reabrir() {
     return;
   }
 
-  toastStore.success('Examen reabierto. El estudiante vuelve a sortear desde Habilitado.');
+  toastStore.success(reapertura.value.toast);
   emit('guardado', actualizado);
 }
 </script>

@@ -8,8 +8,9 @@
       <div>
         <h2 class="text-2xl font-bold text-white uppercase">Examen de Grado</h2>
         <p class="text-sm text-slate-400 mt-0.5">
-          Habilite al estudiante, registre los sorteos de cada examen y asigne las notas. No
-          asistir a un sorteo reproba ese examen; titularse exige aprobar ambos con 51 o más.
+          Habilite al estudiante, registre los sorteos de cada examen y asigne las notas. Si
+          reprobó solo un examen, su nota aprobada se conserva y re-sortea únicamente el otro;
+          reprobar ambos exige una nueva Resolución del HCC. Titularse exige aprobar ambos con 51 o más.
         </p>
       </div>
     </div>
@@ -121,15 +122,19 @@
 //
 // A diferencia de la Tesis, aquí no hay perfil, tutor ni tribunal. El flujo son
 // seis tarjetas secuenciales (intentos, habilitación, dos sorteos, asignación
-// de notas y reporte) y el estudiante puede reabrir el trámite cuando reprobó
-// cualquiera de los dos exámenes, consumiendo un intento (de 3). No asistir al
-// sorteo de bolos de un examen lo reproba automáticamente, pero tras el teórico
-// el estudiante siempre puede pasar al sorteo del examen de especialidad; las
-// notas de ambos se asignan después y solo se titula aprobándolas con 51 o más.
+// de notas y reporte) y el estudiante puede reabrir el trámite cuando quedó sin
+// aprobar alguno de los dos exámenes, consumiendo un intento (de 3). No asistir
+// al sorteo de bolos de un examen lo reproba automáticamente, pero tras el
+// teórico el estudiante siempre puede pasar al sorteo del examen de
+// especialidad; las notas de ambos se asignan después y solo se titula
+// aprobándolas con 51 o más.
+//
+// Reprobar UN SOLO examen reabre únicamente ese sorteo y conserva la nota del
+// examen aprobado (junto con la Resolución del HCC en curso); reprobar AMBOS
+// exige una nueva Resolución y volver a rendir los dos exámenes.
 //
 // El avance de las tarjetas se deriva del historial especializado del examen,
-// no del estado actual, porque una reapertura devuelve el trámite a
-// "Habilitado".
+// no del estado actual, porque una reapertura devuelve el trámite atrás.
 import { computed, ref } from 'vue';
 import { useKardexStore } from '@/modules/kardex';
 import { iniciales } from '@/modules/kardex/utils/formato';

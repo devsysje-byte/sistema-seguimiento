@@ -31,14 +31,18 @@ use Illuminate\Validation\ValidationException;
  *  4. `sorteo_especialidad` — misma dinámica para el examen de especialidad.
  *  5. `asignacion_notas` — registra las notas de LOS DOS exámenes y es quien
  *     decide el resultado: ambas con 51 o más dejan el trámite en `aprobado`;
- *     cualquier ausencia o nota inferior al mínimo deja el trámite en el estado
- *     reabrible que corresponde (`examen_teorico_reprobado` o
- *     `examen_especialidad_reprobado`).
+ *     cualquier ausencia o nota inferior al mínimo deja el trámite en un estado
+ *     reabrible: `examen_teorico_reprobado` (solo teórico reprobado, la nota
+ *     de especialidad se conserva), `examen_especialidad_reprobado` (solo
+ *     especialidad reprobada, la nota del teórico se conserva) o
+ *     `examen_ambos_reprobados` (ninguno aprobó).
  *  6. `reporte` — genera el reporte en PDF y cierra el trámite en `titulado`.
  *
- * Reprobar cualquiera de los dos exámenes NO cierra el flujo:
- * `reabrirSolicitud()` devuelve el trámite a `habilitado_examen` y consume un
- * intento, para que el estudiante pueda volver a rendir el examen de grado.
+ * Reprobar cualquiera de los dos exámenes NO cierra el flujo: el estudiante
+ * puede re-solicitar el examen y volver a rendir ÚNICAMENTE el examen que
+ * reprobó, conservando la nota del examen aprobado y la Resolución del HCC en
+ * curso. Reprobar AMBOS exige una NUEVA Resolución y rendir de nuevo los dos
+ * exámenes. Cada reapertura consume un intento.
  * Titularse exige aprobar AMBOS exámenes con 51 puntos o más.
  *
  * Cada transición se escribe en dos lugares: la línea de tiempo genérica
@@ -67,21 +71,26 @@ class ExamenService
     ];
 
     /**
-     * Estados reabribles a los que puede llegar `asignacion_notas`.
+     * Estado al que vuelve la reapertura según el examen que quedó reprobado.
      *
-     * Cada uno señala qué examen faltó aprobar: si el teórico no se aprobó
-     * (ausencia o nota inferior al mínimo) manda `examen_teorico_reprobado`,
-     * aunque la especialidad haya sido aprobada, porque titularse exige los dos.
+     * - Solo teórico: retoma desde `habilitado_examen` para sortear de nuevo
+     *   únicamente el teórico; la Resolución del HCC en curso se conserva.
+     * - Solo especialidad: retoma desde `examen_teorico_aprobado` (el teórico ya
+     *   aprobado se conserva) para sortear solo la especialidad.
+     * - Ambos: regresa a la verificación de intentos, porque la re-solicitud
+     *   exige registrar una NUEVA Resolución del HCC antes de los sorteos.
      *
-     * @var array<string, string>
+     * El `resultado` con que se registra la reapertura en el historial indica
+     * el alcance: `re_solicitud` (completa, nueva resolución),
+     * `re_solicitud_teorico` y `re_solicitud_especialidad` (solo un examen).
+     *
+     * @var array<string, array{estado:string, resultado:string}>
      */
-    private const ESTADO_REPROBADO = [
-        'examen_teorico' => 'examen_teorico_reprobado',
-        'examen_especialidad' => 'examen_especialidad_reprobado',
+    private const REAPERTURA_POR_ESTADO = [
+        'examen_teorico_reprobado' => ['estado' => 'habilitado_examen', 'resultado' => 're_solicitud_teorico'],
+        'examen_especialidad_reprobado' => ['estado' => 'examen_teorico_aprobado', 'resultado' => 're_solicitud_especialidad'],
+        'examen_ambos_reprobados' => ['estado' => 'intentos_verificados', 'resultado' => 're_solicitud'],
     ];
-
-    /** Estado al que regresa el trámite cuando el estudiante re-solicita. */
-    private const REAPERTURA = 'habilitado_examen';
 
     /**
      * Estados desde los que el estudiante puede volver a solicitar el examen.
@@ -91,6 +100,14 @@ class ExamenService
     private const REAPERIBLES = [
         'examen_teorico_reprobado',
         'examen_especialidad_reprobado',
+        'examen_ambos_reprobados',
+    ];
+
+    /** Módulos del intento que se repiten tras una reapertura (sorteos + notas). */
+    private const MODULOS_DE_INTENTO = [
+        'sorteo_teorico',
+        'sorteo_especialidad',
+        'asignacion_notas',
     ];
 
     public function __construct(
@@ -153,8 +170,18 @@ class ExamenService
         // `paso` y `accion` son controles del formulario, no datos del módulo.
         unset($datos['paso'], $datos['accion']);
 
+        // En la asignación de notas el backend es quien conoce la nota de cada
+        // examen (la de un examen conservado viene del hito `examen_aprobado`).
+        // Se integran a los datos para que `hitos.modulos.asignacion_notas`
+        // queden completos y el seguimiento y el reporte muestren ambas notas.
+        if ($modulo === 'asignacion_notas') {
+            $datos['nota_teorico'] = $resolucion['notas']['examen_teorico'] ?? null;
+            $datos['nota_especialidad'] = $resolucion['notas']['examen_especialidad'] ?? null;
+        }
+
         $this->persistirModulo($tramite, $modulo, $datos);
         $this->persistirHito($tramite, $resolucion['estado']);
+        $this->persistirExamenesAprobados($tramite, $resolucion);
         $this->registrarHistorial($tramite, $modulo, $resolucion, $estudiante, $actor);
 
         event(new EstadoTramiteCambiado($tramite, $resolucion['estado'], $resolucion['observacion']));
@@ -164,7 +191,12 @@ class ExamenService
 
     /**
      * Reabre un trámite reprobado o con ausencia para que el estudiante pueda
-     * volver a sortear el examen.
+     * volver a rendir el examen.
+     *
+     * El alcance depende del estado al que quedó la asignación de notas:
+     * reprobar un SOLO examen reabre únicamente ese examen (la nota del examen
+     * aprobado y la Resolución del HCC en curso se conservan); reprobar AMBOS
+     * reabre el intento completo y exige registrar una nueva Resolución.
      *
      * Consume un intento: si el estudiante ya agotó los permitidos, no se puede
      * re-solicitar y KARDEX debe registrar una nueva postulación.
@@ -212,22 +244,24 @@ class ExamenService
             ]);
         }
 
+        $config = self::REAPERTURA_POR_ESTADO[$tramite->estado_actual];
+        $estadoReabierto = $tramite->estado_actual;
         $intentos = $estudiante->numero_intentos + 1;
         $observacion = trim((string) $observaciones) !== ''
             ? (string) $observaciones
-            : 'El estudiante solicitó volver a rendir el examen de grado.';
+            : $this->observacionReapertura($tramite->estado_actual);
 
-        $this->transicionar($tramite, self::REAPERTURA, $observacion, $actor);
+        $this->transicionar($tramite, $config['estado'], $observacion, $actor);
 
         $estudiante->update(['numero_intentos' => $intentos]);
-        $this->persistirHito($tramite, self::REAPERTURA);
-        $this->limpiarModulosDeIntento($tramite);
+        $this->persistirHito($tramite, $config['estado']);
+        $this->limpiarModulosParaReapertura($tramite, $estadoReabierto);
         $this->registrarHistorial(
             $tramite,
             'reapertura',
             [
-                'estado' => self::REAPERTURA,
-                'resultado' => 're_solicitud',
+                'estado' => $config['estado'],
+                'resultado' => $config['resultado'],
                 'numero_resolucion' => null,
                 'tema' => null,
                 'fecha_examen' => null,
@@ -239,7 +273,10 @@ class ExamenService
             intentos: $intentos
         );
 
-        event(new EstadoTramiteCambiado($tramite, self::REAPERTURA, $observacion));
+        $eventoEstado = $tramite->estado_actual;
+        $tramite->refresh();
+
+        event(new EstadoTramiteCambiado($tramite, $eventoEstado, $observacion));
 
         return $this->formatear($tramite);
     }
@@ -436,25 +473,33 @@ class ExamenService
     /**
      * Módulo 5 — asignación de notas de LOS DOS exámenes.
      *
-     * Es el único módulo que decide el resultado del intento: exige que los dos
-     * sorteos del intento en curso estén registrados y, por cada examen rendido,
-     * una nota dentro del rango permitido. Un examen no rendido (ausencia en su
-     * sorteo) cierra sin nota y cuenta como reprobado.
+     * Es el único módulo que decide el resultado del intento. Cada examen se
+     * resuelve con DOS fuentes posibles:
+     *
+     *  - Conservado: el examen quedó APROBADO en un intento anterior de la misma
+     *    Resolución del HCC (vive en `hitos.examen_aprobado`). Su nota se
+     *    conserva tal cual: no se exige un nuevo sorteo ni se vuelve a asignar.
+     *  - Del intento en curso: el examen se sortea y se rinde ahora. Exige que el
+     *    sorteo del intento en curso esté registrado y una nota dentro del rango.
+     *    Un examen no rendido (ausencia en su sorteo) cierra sin nota y cuenta
+     *    como reprobado.
      *
      * El estado resultante es `aprobado` solo cuando las dos notas llegan al
      * mínimo; si no, deja el trámite en el estado reabrible del examen que faltó
-     * aprobar (`examen_teorico_reprobado` manda sobre el de especialidad,
-     * porque titularse exige los dos).
+     * aprobar: `examen_teorico_reprobado`, `examen_especialidad_reprobado` o
+     * `examen_ambos_reprobados`.
      *
      * @param  array<string, mixed>  $datos
      * @return array{estado:string, resultado:?string, numero_resolucion:?string,
-     *               tema:?string, fecha_examen:?string, nota:?float, observacion:string}
+     *               tema:?string, fecha_examen:?string, nota:?float, observacion:string,
+     *               notas:array<string, ?float>}
      */
     private function destinoNotas(array $datos, Tramite $tramite): array
     {
         $intento = $this->historialDelIntento($tramite);
         $minimo = (int) config('examen.nota_minima', 51);
         [$rangoMin, $rangoMax] = config('examen.rango_nota', [0, 100]);
+        $aprobados = $tramite->hitos['examen_aprobado'] ?? [];
 
         $campos = [
             'examen_teorico' => ['sorteo_teorico', 'nota_teorico', 'examen teórico'],
@@ -463,8 +508,19 @@ class ExamenService
 
         $notas = [];
         $ausencias = [];
+        $fuentes = [];
 
         foreach ($campos as $prefijo => [$etapa, $campo, $etiqueta]) {
+            // El examen ya fue aprobado en un intento anterior de esta resolución:
+            // se conserva su nota y no vuelve a sortearse.
+            if (isset($aprobados[$prefijo])) {
+                $notas[$prefijo] = (float) $aprobados[$prefijo]['nota'];
+                $ausencias[$prefijo] = false;
+                $fuentes[$prefijo] = 'conservado';
+
+                continue;
+            }
+
             $sorteo = $intento->firstWhere('etapa', $etapa);
 
             if ($sorteo === null) {
@@ -476,6 +532,7 @@ class ExamenService
             if ($sorteo->resultado !== 'asistio') {
                 $notas[$prefijo] = null;
                 $ausencias[$prefijo] = true;
+                $fuentes[$prefijo] = 'no_asistio';
 
                 continue;
             }
@@ -496,8 +553,11 @@ class ExamenService
                 ]);
             }
 
-            $notas[$prefijo] = $nota;
+            // Se conserva el valor original (int/float) tal como llegó del
+            // formulario: volver a persistirlo mantiene el tipo sin redondeos.
+            $notas[$prefijo] = $valor;
             $ausencias[$prefijo] = false;
+            $fuentes[$prefijo] = 'asistio';
         }
 
         $teoricoAprobado = $this->examenAprobado($notas['examen_teorico'], $ausencias['examen_teorico'], $minimo);
@@ -505,10 +565,12 @@ class ExamenService
 
         if ($teoricoAprobado && $especialidadAprobado) {
             $estado = 'aprobado';
+        } elseif (! $teoricoAprobado && ! $especialidadAprobado) {
+            $estado = 'examen_ambos_reprobados';
         } elseif (! $teoricoAprobado) {
-            $estado = self::ESTADO_REPROBADO['examen_teorico'];
+            $estado = 'examen_teorico_reprobado';
         } else {
-            $estado = self::ESTADO_REPROBADO['examen_especialidad'];
+            $estado = 'examen_especialidad_reprobado';
         }
 
         return [
@@ -518,8 +580,56 @@ class ExamenService
             'tema' => null,
             'fecha_examen' => null,
             'nota' => $notas['examen_teorico'],
-            'observacion' => $this->observacionAsignacionNotas($notas, $ausencias, $minimo, $estado),
+            'notas' => $notas,
+            'examen_aprobado' => $this->examenesAprobados($intento, $aprobados, $notas, $teoricoAprobado, $especialidadAprobado),
+            'observacion' => $this->observacionAsignacionNotas($notas, $fuentes, $minimo, $estado),
         ];
+    }
+
+    /**
+     * Exámenes aprobados de la resolución en curso, para arrastrar su nota a los
+     * intentos siguientes.
+     *
+     * Solo se registran los exámenes con nota igual o superior al mínimo; el
+     * examen reprobado no figura y se vuelve a rendir en la re-solicitud. La nota
+     * de un examen conservado y aprobado de nuevo se conserva.
+     *
+     * @return array<string, array{nota:float, tema:?string, fecha_examen:?string}>
+     */
+    private function examenesAprobados(
+        Collection $intento,
+        array $aprobados,
+        array $notas,
+        bool $teoricoAprobado,
+        bool $especialidadAprobado
+    ): array {
+        $resultado = [];
+
+        foreach ([
+            'examen_teorico' => ['sorteo_teorico', $teoricoAprobado],
+            'examen_especialidad' => ['sorteo_especialidad', $especialidadAprobado],
+        ] as $prefijo => [$etapa, $aprobado]) {
+            if (! $aprobado || $notas[$prefijo] === null) {
+                continue;
+            }
+
+            if (isset($aprobados[$prefijo])) {
+                // Conservado y sigue aprobado: se arrastra tal cual.
+                $resultado[$prefijo] = $aprobados[$prefijo];
+
+                continue;
+            }
+
+            $sorteo = $intento->firstWhere('etapa', $etapa);
+
+            $resultado[$prefijo] = [
+                'nota' => $notas[$prefijo],
+                'tema' => $sorteo?->tema,
+                'fecha_examen' => $sorteo?->fecha_examen,
+            ];
+        }
+
+        return $resultado;
     }
 
     /** Indica si un examen quedó aprobado: asistió y alcanzó el mínimo. */
@@ -554,14 +664,19 @@ class ExamenService
      * de nota (se usa la del examen teórico) y el detalle completo de ambas
      * queda en `hitos.modulos.asignacion_notas`.
      */
-    private function observacionAsignacionNotas(array $notas, array $ausencias, int $minimo, string $estado): string
+    private function observacionAsignacionNotas(array $notas, array $fuentes, int $minimo, string $estado): string
     {
         $detalle = [];
 
-        foreach (['examen_teorico' => 'examen teórico', 'examen_especialidad' => 'examen de especialidad'] as $prefijo => $etiqueta) {
-            $detalle[] = $ausencias[$prefijo]
-                ? "{$etiqueta}: no asistió (sin nota, REPROBADO)"
-                : "{$etiqueta}: {$this->formatearNota((float) $notas[$prefijo])} puntos";
+        foreach ([
+            'examen_teorico' => 'examen teórico',
+            'examen_especialidad' => 'examen de especialidad',
+        ] as $prefijo => $etiqueta) {
+            $detalle[] = match ($fuentes[$prefijo]) {
+                'no_asistio' => "{$etiqueta}: no asistió (sin nota, REPROBADO)",
+                'conservado' => "{$etiqueta}: {$this->formatearNota((float) $notas[$prefijo])} puntos (conservado)",
+                default => "{$etiqueta}: {$this->formatearNota((float) $notas[$prefijo])} puntos",
+            };
         }
 
         $resumen = 'Asignación de notas — '.implode(' · ', $detalle)." (mínimo {$minimo}).";
@@ -570,7 +685,21 @@ class ExamenService
             return $resumen.' Ambos exámenes APROBADOS.';
         }
 
-        return $resumen.' Al menos un examen NO fue aprobado: el trámite queda reabrible.';
+        return $resumen.match ($estado) {
+            'examen_teorico_reprobado' => ' El examen teórico no fue aprobado: se conserva la nota de especialidad y el estudiante re-sortea solo el teórico.',
+            'examen_especialidad_reprobado' => ' El examen de especialidad no fue aprobado: se conserva la nota del teórico y el estudiante re-sortea solo la especialidad.',
+            default => ' Ninguno de los dos exámenes fue aprobado: la re-solicitud exige una nueva Resolución del HCC.',
+        };
+    }
+
+    /** Motivo por defecto de una reapertura, según el examen que quedó reprobado. */
+    private function observacionReapertura(string $estado): string
+    {
+        return match ($estado) {
+            'examen_teorico_reprobado' => 'El estudiante solicitó volver a rendir únicamente el examen teórico; la especialidad aprobada se conserva.',
+            'examen_especialidad_reprobado' => 'El estudiante solicitó volver a rendir únicamente el examen de especialidad; el teórico aprobado se conserva.',
+            default => 'El estudiante solicitó volver a rendir ambos exámenes con una nueva Resolución del HCC.',
+        };
     }
 
     /**
@@ -663,21 +792,60 @@ class ExamenService
     }
 
     /**
-     * Deja en blanco los módulos que se repiten en cada intento tras una
-     * reapertura.
+     * Deja en blanco los módulos que se repiten tras una reapertura.
      *
      * Los sorteos y la asignación de notas viven en `hitos.modulos` para el
      * seguimiento, pero pertenecen al intento que se acaba de consumir: si se
      * conservaran, la tarjeta del nuevo intento mostraría el tema, la fecha y
      * las notas del intento anterior como si fueran los vigentes.
+     *
+     * El alcance depende del examen que quedó reprobado:
+     *
+     *  - Solo teórico: se reinician el sorteo del teórico y las notas; el voto de
+     *    especialidad y la Resolución del HCC en curso se conservan.
+     *  - Solo especialidad: se reinicia el sorteo de especialidad y las notas; el
+     *    teórico aprobado y la resolución se conservan.
+     *  - Ambos: se reinician LOS DOS sorteos, las notas y la habilitación, porque
+     *    la re-solicitud exige registrar una NUEVA Resolución del HCC.
      */
-    private function limpiarModulosDeIntento(Tramite $tramite): void
+    private function limpiarModulosParaReapertura(Tramite $tramite, string $estadoReabierto): void
     {
         $hitos = $tramite->hitos ?? [];
+        $aReiniciar = self::MODULOS_DE_INTENTO;
 
-        foreach (['sorteo_teorico', 'sorteo_especialidad', 'asignacion_notas'] as $modulo) {
+        // Cuando se reprueban AMBOS hay que registrar una nueva resolución: la
+        // habilitación anterior deja de contar para lo que viene.
+        if ($estadoReabierto === 'examen_ambos_reprobados') {
+            $aReiniciar[] = 'habilitacion_examen';
+        } elseif ($estadoReabierto === 'examen_teorico_reprobado') {
+            $aReiniciar = array_values(array_diff($aReiniciar, ['sorteo_especialidad']));
+        } elseif ($estadoReabierto === 'examen_especialidad_reprobado') {
+            $aReiniciar = array_values(array_diff($aReiniciar, ['sorteo_teorico']));
+        }
+
+        foreach ($aReiniciar as $modulo) {
             unset($hitos['modulos'][$modulo]);
         }
+
+        $tramite->update(['hitos' => $hitos]);
+    }
+
+    /**
+     * Persiste los exámenes aprobados de la resolución en curso.
+     *
+     * `hitos.examen_aprobado` guarda, por cada examen aprobado de la resolución
+     * vigente, su nota, tema y fecha, para que una re-solicitud parcial (solo el
+     * examen reprobado) conserve la nota del examen aprobado sin volver a
+     * sortearlo ni reasignarlo.
+     */
+    private function persistirExamenesAprobados(Tramite $tramite, array $resolucion): void
+    {
+        if (! array_key_exists('examen_aprobado', $resolucion) || $resolucion['examen_aprobado'] === []) {
+            return;
+        }
+
+        $hitos = $tramite->fresh()?->hitos ?? [];
+        $hitos['examen_aprobado'] = $resolucion['examen_aprobado'];
 
         $tramite->update(['hitos' => $hitos]);
     }

@@ -36,6 +36,8 @@ export const SECUENCIAS = {
     'habilitado_examen',
     'examen_teorico_sorteado',
     'examen_especialidad_sorteado',
+    'examen_ambos_reprobados',
+    'examen_teorico_aprobado',
     'aprobado',
     'reporte_examen_generado',
     'titulado',
@@ -66,14 +68,15 @@ export const SIGUIENTES_POR_ESTADO = {
   // --- Examen de Grado (espejo de TramiteStateService::TRANSITIONS) ---
   intentos_verificados: ['habilitado_examen', 'rechazado'],
   habilitado_examen: ['examen_teorico_sorteado'],
-  examen_teorico_sorteado: ['examen_especialidad_sorteado'],
-  examen_especialidad_sorteado: ['aprobado', 'examen_teorico_reprobado', 'examen_especialidad_reprobado'],
-  aprobado: ['reporte_examen_generado'],
+  examen_teorico_sorteado: ['examen_teorico_aprobado', 'examen_teorico_reprobado', 'examen_especialidad_sorteado', 'aprobado'],
+  examen_teorico_aprobado: ['examen_especialidad_sorteado', 'examen_especialidad_reprobado'],
   examen_teorico_reprobado: ['habilitado_examen'],
-  examen_especialidad_reprobado: ['habilitado_examen'],
+  examen_especialidad_sorteado: ['aprobado', 'examen_especialidad_reprobado', 'examen_teorico_reprobado', 'examen_ambos_reprobados'],
+  examen_especialidad_reprobado: ['examen_teorico_aprobado'],
+  examen_ambos_reprobados: ['intentos_verificados'],
+  aprobado: ['reporte_examen_generado'],
   reporte_examen_generado: ['titulado'],
 
-  aprobado: [],
   reprobado: [],
   rechazado: [],
   titulado: [],
@@ -393,7 +396,8 @@ export const POSTULANTES_MOCK = [
     },
   },
   {
-    // Examen de Grado reprobado en el teórico: el panel de reapertura aparece.
+    // Examen de Grado con el TEÓRICO reprobado y la ESPECIALIDAD aprobada: la
+    // nota de especialidad se conserva y la re-solicitud reabre solo el teórico.
     id_estudiante: 108,
     ci: '5566778',
     nombres: 'Marcelo Alejandro',
@@ -439,6 +443,14 @@ export const POSTULANTES_MOCK = [
             nota_especialidad: '78',
           },
         },
+        // La especialidad quedó aprobada: se conserva para el siguiente intento.
+        examen_aprobado: {
+          examen_especialidad: {
+            nota: 78,
+            tema: 'Ética profesional y normativa universitaria',
+            fecha_examen: '2026-08-07',
+          },
+        },
       },
       created_at: '2026-07-01T08:00:00.000000Z',
       updated_at: '2026-08-07T15:30:00.000000Z',
@@ -460,6 +472,78 @@ export const POSTULANTES_MOCK = [
         { id_historial_examen: 7, nombre_estado: 'examen_teorico_reprobado', etapa: 'asignacion_notas', resultado: 'reprobado', numero_resolucion: null, fecha_resolucion: null, tema: null, fecha_examen: null, nota: '48.00', numero_intentos: 2, observaciones: 'Asignación de notas: teórico 48 (mínimo 51) y especialidad 78 (mínimo 51).', created_at: '2026-08-07T15:30:00.000000Z' },
       ],
       siguientes_estados: SIGUIENTES_POR_ESTADO.examen_teorico_reprobado,
+      secuencia: SECUENCIAS['Examen de Grado'],
+    },
+  },
+  {
+    // Examen de Grado con AMBOS exámenes reprobados: la re-solicitud exige una
+    // NUEVA Resolución del HCC y rendir de nuevo los dos exámenes.
+    id_estudiante: 109,
+    ci: '1234887',
+    nombres: 'Luis Fernando',
+    apellidos: 'Apaza Condori',
+    registro_universitario: 'RU-2014-0405',
+    fecha_nacimiento: '1997-02-14',
+    email: 'luis.a@upea.edu.bo',
+    telefono: '70556677',
+    promedio_global: 68.5,
+    tiene_cuenta: true,
+    username: 'Luis_1234887',
+    numero_intentos: 2,
+    tramite: {
+      id_tramite: 307,
+      id_estudiante: 109,
+      id_modalidad: 1,
+      id_tutor: null,
+      tutor: null,
+      estado_actual: 'examen_ambos_reprobados',
+      observaciones: 'Reprobó ambos exámenes.',
+      hitos: {
+        solicitud_presentada: '2026-06-10',
+        intentos_verificados: '2026-06-12',
+        habilitado_examen: '2026-06-18',
+        examen_ambos_reprobados: '2026-07-20',
+        modulos: {
+          habilitacion_examen: {
+            numero_resolucion: 'HCC-0210/2026',
+            fecha_resolucion: '2026-06-18',
+          },
+          sorteo_teorico: {
+            asistio: true,
+            tema: 'Derecho administrativo boliviano',
+            fecha_examen: '2026-07-15',
+          },
+          sorteo_especialidad: {
+            asistio: true,
+            tema: 'Legislación universitaria y ética profesional',
+            fecha_examen: '2026-07-17',
+          },
+          asignacion_notas: {
+            nota_teorico: '45',
+            nota_especialidad: '38',
+          },
+        },
+      },
+      created_at: '2026-06-10T08:00:00.000000Z',
+      updated_at: '2026-07-20T16:00:00.000000Z',
+      modalidad: { id_modalidad: 1, nombre: 'Examen de Grado' },
+      estudiante: { id_estudiante: 109, ci: '1234887', nombres: 'Luis Fernando', apellidos: 'Apaza Condori', registro_universitario: 'RU-2014-0405', numero_intentos: 2 },
+      estados: [
+        { nombre_estado: 'solicitud_presentada', descripcion: 'Solicitud presentada', created_at: '2026-06-10T08:00:00.000000Z' },
+        { nombre_estado: 'intentos_verificados', descripcion: 'Intentos verificados', created_at: '2026-06-12T09:00:00.000000Z' },
+        { nombre_estado: 'habilitado_examen', descripcion: 'Estudiante habilitado', created_at: '2026-06-18T10:00:00.000000Z' },
+        { nombre_estado: 'examen_teorico_sorteado', descripcion: 'Examen teórico sorteado', created_at: '2026-07-15T10:00:00.000000Z' },
+        { nombre_estado: 'examen_especialidad_sorteado', descripcion: 'Examen de especialidad sorteado', created_at: '2026-07-17T09:10:00.000000Z' },
+        { nombre_estado: 'examen_ambos_reprobados', descripcion: 'Ambos exámenes reprobados', observaciones: 'Reprobó ambos exámenes.', created_at: '2026-07-20T16:00:00.000000Z' },
+      ],
+      historial_examen: [
+        { id_historial_examen: 8, nombre_estado: 'intentos_verificados', etapa: 'verificacion_intentos', resultado: 'verificado', numero_resolucion: null, fecha_resolucion: null, tema: null, fecha_examen: null, nota: null, numero_intentos: 2, observaciones: 'Intento 2 de 3.', created_at: '2026-06-12T09:00:00.000000Z' },
+        { id_historial_examen: 9, nombre_estado: 'habilitado_examen', etapa: 'habilitacion_examen', resultado: 'habilitado', numero_resolucion: 'HCC-0210/2026', fecha_resolucion: '2026-06-18', tema: null, fecha_examen: null, nota: null, numero_intentos: 2, observaciones: 'Resolución N.º HCC-0210/2026 del HCC.', created_at: '2026-06-18T10:00:00.000000Z' },
+        { id_historial_examen: 10, nombre_estado: 'examen_teorico_sorteado', etapa: 'sorteo_teorico', resultado: 'asistio', numero_resolucion: null, fecha_resolucion: null, tema: 'Derecho administrativo boliviano', fecha_examen: '2026-07-15', nota: null, numero_intentos: 2, observaciones: 'Asistió al sorteo de bolos.', created_at: '2026-07-15T10:00:00.000000Z' },
+        { id_historial_examen: 11, nombre_estado: 'examen_especialidad_sorteado', etapa: 'sorteo_especialidad', resultado: 'asistio', numero_resolucion: null, fecha_resolucion: null, tema: 'Legislación universitaria y ética profesional', fecha_examen: '2026-07-17', nota: null, numero_intentos: 2, observaciones: 'Asistió al sorteo de bolos.', created_at: '2026-07-17T09:10:00.000000Z' },
+        { id_historial_examen: 12, nombre_estado: 'examen_ambos_reprobados', etapa: 'asignacion_notas', resultado: 'reprobado', numero_resolucion: null, fecha_resolucion: null, tema: null, fecha_examen: null, nota: '45.00', numero_intentos: 2, observaciones: 'Asignación de notas: teórico 45 (mínimo 51) y especialidad 38 (mínimo 51).', created_at: '2026-07-20T16:00:00.000000Z' },
+      ],
+      siguientes_estados: SIGUIENTES_POR_ESTADO.examen_ambos_reprobados,
       secuencia: SECUENCIAS['Examen de Grado'],
     },
   },
@@ -654,7 +738,27 @@ const ESTADOS_MODULOS_EXAMEN = {
 const ESTADOS_REAPERIBLES = [
   'examen_teorico_reprobado',
   'examen_especialidad_reprobado',
+  'examen_ambos_reprobados',
 ];
+
+/** Estado de la reapertura según el examen reprobado (espejo del backend). */
+const REAPERTURA_POR_ESTADO = {
+  examen_teorico_reprobado: {
+    estado: 'habilitado_examen',
+    resultado: 're_solicitud_teorico',
+    limpiar: ['sorteo_teorico'],
+  },
+  examen_especialidad_reprobado: {
+    estado: 'examen_teorico_aprobado',
+    resultado: 're_solicitud_especialidad',
+    limpiar: ['sorteo_especialidad'],
+  },
+  examen_ambos_reprobados: {
+    estado: 'intentos_verificados',
+    resultado: 're_solicitud',
+    limpiar: ['sorteo_teorico', 'sorteo_especialidad', 'habilitacion_examen'],
+  },
+};
 
 const MAXIMO_INTENTOS_MOCK = 3;
 const NOTA_MINIMA_MOCK = 51;
@@ -668,44 +772,74 @@ function destinoSorteoMock(datos, prefijo) {
   };
 }
 
-/** Resultado de `asignacion_notas`: ambas notas deben superar el mínimo. */
+/**
+ * Resultado de `asignacion_notas` (espejo del backend).
+ *
+ * Cada examen se resuelve con dos fuentes posibles: la nota conservada de un
+ * intento anterior (`hitos.examen_aprobado`) o la del intento en curso. Si
+ * ninguno llega al mínimo, el trámite pasa a `examen_ambos_reprobados`.
+ */
 function destinoNotasMock(tramite, datos) {
   const ultimoRegistro = (etapa) =>
     [...(tramite.historial_examen || [])]
       .filter((f) => f.etapa === etapa)
       .sort((a, b) => (b.id_historial_examen || 0) - (a.id_historial_examen || 0))[0];
 
-  const teorico = ultimoRegistro('sorteo_teorico');
-  const especialidad = ultimoRegistro('sorteo_especialidad');
-  const teoricoNoAsistio = teorico?.resultado === 'no_asistio';
-  const especialidadNoAsistio = especialidad?.resultado === 'no_asistio';
+  const aprobados = tramite.hitos?.examen_aprobado || {};
 
-  const notaTeorico = Number(datos.nota_teorico);
-  const notaEspecialidad = Number(datos.nota_especialidad);
+  const etiquetaDe = (prefijo) => (prefijo === 'examen_teorico' ? 'el examen teórico' : 'el examen de especialidad');
 
-  if (!teorico) {
-    throw { message: 'Registre primero el sorteo del examen teórico antes de asignar la nota.' };
-  }
-  if (!especialidad) {
-    throw { message: 'Registre primero el sorteo del examen de especialidad antes de asignar la nota.' };
-  }
-  if (!teoricoNoAsistio && !Number.isFinite(notaTeorico)) {
-    throw { message: 'Ingrese la nota del examen teórico.' };
-  }
-  if (!especialidadNoAsistio && !Number.isFinite(notaEspecialidad)) {
-    throw { message: 'Ingrese la nota del examen de especialidad.' };
+  const resolver = (prefijo, etapa, campoNota) => {
+    if (aprobados[prefijo]) {
+      return { aprobado: true, nota: Number(aprobados[prefijo].nota), entrada: aprobados[prefijo] };
+    }
+
+    const sorteo = ultimoRegistro(etapa);
+    if (!sorteo) {
+      throw { message: `Registre primero el sorteo de ${etiquetaDe(prefijo)} antes de asignar la nota.` };
+    }
+    if (sorteo.resultado === 'no_asistio') {
+      return { aprobado: false, nota: null, entrada: null };
+    }
+
+    const nota = Number(datos[campoNota]);
+    if (!Number.isFinite(nota)) {
+      throw { message: `Ingrese la nota de ${etiquetaDe(prefijo)}.` };
+    }
+
+    return {
+      aprobado: nota >= NOTA_MINIMA_MOCK,
+      nota,
+      entrada: { nota, tema: sorteo.tema, fecha_examen: sorteo.fecha_examen },
+    };
+  };
+
+  const teorico = resolver('examen_teorico', 'sorteo_teorico', 'nota_teorico');
+  const especialidad = resolver('examen_especialidad', 'sorteo_especialidad', 'nota_especialidad');
+
+  let estado;
+  if (teorico.aprobado && especialidad.aprobado) {
+    estado = 'aprobado';
+  } else if (!teorico.aprobado && !especialidad.aprobado) {
+    estado = 'examen_ambos_reprobados';
+  } else if (!teorico.aprobado) {
+    estado = 'examen_teorico_reprobado';
+  } else {
+    estado = 'examen_especialidad_reprobado';
   }
 
-  const teoricoAprobado = !teoricoNoAsistio && notaTeorico >= NOTA_MINIMA_MOCK;
-  const especialidadAprobado = !especialidadNoAsistio && notaEspecialidad >= NOTA_MINIMA_MOCK;
+  // Solo los exámenes APROBADOS de la resolución en curso se conservan para el
+  // intento siguiente; el reprobado se vuelve a rendir.
+  const examenesAprobados = {};
+  if (teorico.aprobado) examenesAprobados.examen_teorico = teorico.entrada;
+  if (especialidad.aprobado) examenesAprobados.examen_especialidad = especialidad.entrada;
 
-  if (teoricoAprobado && especialidadAprobado) {
-    return { estado: 'aprobado', resultado: 'aprobado' };
-  }
-  if (!teoricoAprobado) {
-    return { estado: 'examen_teorico_reprobado', resultado: 'reprobado' };
-  }
-  return { estado: 'examen_especialidad_reprobado', resultado: 'reprobado' };
+  return {
+    estado,
+    resultado: estado === 'aprobado' ? 'aprobado' : 'reprobado',
+    notas: { examen_teorico: teorico.nota, examen_especialidad: especialidad.nota },
+    examenesAprobados,
+  };
 }
 
 /**
@@ -753,11 +887,23 @@ export function guardarModuloExamenMock(tramite, moduloId, datos) {
   const esAsignacionNotas = moduloId === 'asignacion_notas';
   const guardado = { ...(t.hitos?.modulos?.[moduloId] || {}), ...datos };
 
+  // La nota de un examen conservado la resuelve el backend (la trae de
+  // `hitos.examen_aprobado`); se integra a los datos para que la tarjeta del
+  // módulo quede completa, igual que en ExamenService.
+  if (esAsignacionNotas) {
+    guardado.nota_teorico = destino.notas?.examen_teorico ?? '';
+    guardado.nota_especialidad = destino.notas?.examen_especialidad ?? '';
+  }
+
   t.updated_at = hoy;
   t.estado_actual = destino.estado;
   t.observaciones = datos.observaciones || t.observaciones;
   t.hitos = { ...(t.hitos || {}) };
   t.hitos.modulos = { ...(t.hitos.modulos || {}), [moduloId]: guardado };
+  // Solo los exámenes aprobados de la resolución en curso se conservan.
+  if (esAsignacionNotas && Object.keys(destino.examenesAprobados || {}).length) {
+    t.hitos.examen_aprobado = destino.examenesAprobados;
+  }
   t.estados = [
     ...(t.estados || []),
     { nombre_estado: destino.estado, descripcion: destino.estado, observaciones: null, created_at: hoy },
@@ -773,7 +919,9 @@ export function guardarModuloExamenMock(tramite, moduloId, datos) {
       fecha_resolucion: moduloId === 'habilitacion_examen' ? datos.fecha_resolucion || null : null,
       tema: esSorteo ? guardado.tema || null : null,
       fecha_examen: esSorteo ? guardado.fecha_examen || null : null,
-      nota: esAsignacionNotas ? String(datos.nota_teorico || datos.nota_especialidad) : null,
+      nota: esAsignacionNotas
+        ? String(destino.notas?.examen_teorico ?? destino.notas?.examen_especialidad ?? '')
+        : null,
       numero_intentos: usados,
       observaciones: datos.observaciones || null,
       created_at: hoy,
@@ -797,29 +945,37 @@ export function reabrirExamenMock(tramite, observaciones = null) {
     throw { message: 'El estudiante agotó los intentos permitidos para el Examen de Grado.' };
   }
 
+  const config = REAPERTURA_POR_ESTADO[t.estado_actual];
   const hoy = new Date().toISOString();
   const motivo = String(observaciones || '').trim()
-    || 'El estudiante solicitó volver a rendir el examen de grado.';
+    || (config.estado === 'habilitado_examen'
+      ? 'El estudiante solicitó volver a rendir únicamente el examen teórico; la especialidad aprobada se conserva.'
+      : config.estado === 'examen_teorico_aprobado'
+        ? 'El estudiante solicitó volver a rendir únicamente el examen de especialidad; el teórico aprobado se conserva.'
+        : 'El estudiante solicitó volver a rendir ambos exámenes con una nueva Resolución del HCC.');
 
   t.updated_at = hoy;
-  t.estado_actual = 'habilitado_examen';
+  t.estado_actual = config.estado;
   t.estudiante = { ...(t.estudiante || {}), numero_intentos: usados + 1 };
   t.hitos = { ...(t.hitos || {}) };
   t.hitos.modulos = { ...(t.hitos.modulos || {}) };
-  ['sorteo_teorico', 'sorteo_especialidad', 'asignacion_notas'].forEach((m) => {
+  // Se reinicia el sorteo del examen reprobado y las notas; el examen aprobado
+  // y la Resolución del HCC en curso se conservan salvo cuando se reprueban
+  // AMBOS, que exigen una nueva resolución.
+  [...config.limpiar, 'asignacion_notas'].forEach((m) => {
     delete t.hitos.modulos[m];
   });
   t.estados = [
     ...(t.estados || []),
-    { nombre_estado: 'habilitado_examen', descripcion: 'Examen reabierto', observaciones: motivo, created_at: hoy },
+    { nombre_estado: config.estado, descripcion: 'Examen reabierto', observaciones: motivo, created_at: hoy },
   ];
   t.historial_examen = [
     ...(t.historial_examen || []),
     {
       id_historial_examen: (t.historial_examen?.length || 0) + 1,
-      nombre_estado: 'habilitado_examen',
+      nombre_estado: config.estado,
       etapa: 'reapertura',
-      resultado: 're_solicitud',
+      resultado: config.resultado,
       numero_resolucion: null,
       fecha_resolucion: null,
       tema: null,
@@ -830,7 +986,7 @@ export function reabrirExamenMock(tramite, observaciones = null) {
       created_at: hoy,
     },
   ];
-  t.siguientes_estados = SIGUIENTES_POR_ESTADO.habilitado_examen;
+  t.siguientes_estados = SIGUIENTES_POR_ESTADO[config.estado] || [];
   t.secuencia = SECUENCIAS['Examen de Grado'];
   return t;
 }

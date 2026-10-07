@@ -20,7 +20,9 @@ use Tests\TestCase;
  * intentos, los sorteos que registran asistencia con tema y fecha, la
  * asignación de notas de ambos exámenes en un módulo aparte y posterior a los
  * sorteos, la reprobación automática por no asistir y la reapertura del trámite
- * cuando el estudiante reprobó cualquiera de los dos exámenes.
+ * cuando quedó algún examen sin aprobar. Reprobar UN SOLO examen conserva la
+ * nota del aprobado y la Resolución del HCC en curso; reprobar AMBOS exige una
+ * nueva Resolución y rendir de nuevo los dos exámenes.
  */
 class ExamenGradoFlujoTest extends TestCase
 {
@@ -389,7 +391,7 @@ class ExamenGradoFlujoTest extends TestCase
         $this->assertSame('examen_teorico_reprobado', $tramite->refresh()->estado_actual);
     }
 
-    public function test_los_resultados_de_un_intento_anterior_no_se_cargan_al_siguiente(): void
+    public function test_un_examen_aprobado_se_conserva_y_la_reapertura_retoma_solo_lo_reprobado(): void
     {
         $estudiante = $this->crearEstudiante(numero_intentos: 1);
         $tramite = $this->crearTramiteExamen($estudiante);
@@ -397,42 +399,62 @@ class ExamenGradoFlujoTest extends TestCase
 
         $this->habilitar($kardex, $tramite);
 
-        // Primer intento: aprueba el teórico y reproba la especialidad.
+        // Primer intento: aprueba el teórico (80) y reproba la especialidad (30).
         $this->sorteosAsistidos($tramite, $kardex);
         $this->modulo($kardex, $tramite, 'asignacion_notas', [
             'nota_teorico' => 80,
             'nota_especialidad' => 30,
         ])->assertCreated();
 
+        $tramite->refresh();
+
+        $this->assertSame('examen_especialidad_reprobado', $tramite->estado_actual);
+        $this->assertSame(80, $tramite->hitos['examen_aprobado']['examen_teorico']['nota']);
+
         $this->actingAs($kardex)
             ->postJson("/api/tramites/{$tramite->id_tramite}/examen/reabrir")
             ->assertOk();
 
-        $this->assertSame('habilitado_examen', $tramite->refresh()->estado_actual);
+        // La reapertura solo vuelve al punto en que se sortea la especialidad:
+        // el teórico aprobado se conserva (con su nota) y la resolución en curso
+        // sigue valiendo, así que no se pide una nueva habilitación.
+        $tramite->refresh();
 
-        // La reapertura deja en blanco los módulos del intento consumido.
-        $this->assertArrayNotHasKey('asignacion_notas', $tramite->hitos['modulos']);
-        $this->assertArrayNotHasKey('sorteo_teorico', $tramite->hitos['modulos']);
+        $this->assertSame('examen_teorico_aprobado', $tramite->estado_actual);
         $this->assertArrayNotHasKey('sorteo_especialidad', $tramite->hitos['modulos']);
+        $this->assertArrayNotHasKey('asignacion_notas', $tramite->hitos['modulos']);
+        $this->assertArrayHasKey('sorteo_teorico', $tramite->hitos['modulos']);
+        $this->assertArrayHasKey('habilitacion_examen', $tramite->hitos['modulos']);
+        $this->assertSame(80, $tramite->hitos['examen_aprobado']['examen_teorico']['nota']);
 
-        // Segundo intento: el reprobado es el teórico y el aprobado la
-        // especialidad. El teórico aprobado en el intento anterior ya no
-        // cuenta, así que el trámite NO puede quedar `aprobado` ni habilitar el
-        // reporte.
-        $this->sorteosAsistidos($tramite, $kardex);
-        $this->modulo($kardex, $tramite, 'asignacion_notas', [
-            'nota_teorico' => 45,
-            'nota_especialidad' => 90,
+        // Sin volver a sortear el teórico (se conserva), se sortea la
+        // especialidad y se le registra la nota: el aprobado conservado ya no
+        // exige un nuevo sorteo ni reasignación.
+        $this->modulo($kardex, $tramite, 'sorteo_especialidad', [
+            'asistio' => true,
+            'tema' => 'Tema de especialidad',
+            'fecha_examen' => '2026-11-10',
         ])->assertCreated();
 
-        $this->assertSame('examen_teorico_reprobado', $tramite->refresh()->estado_actual);
+        $this->assertSame('examen_especialidad_sorteado', $tramite->refresh()->estado_actual);
 
-        $this->modulo($kardex, $tramite, 'reporte')
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('datos');
+        $this->modulo($kardex, $tramite, 'asignacion_notas', [
+            'nota_teorico' => '',
+            'nota_especialidad' => 70,
+        ])->assertCreated();
+
+        $tramite->refresh();
+
+        $this->assertSame('aprobado', $tramite->estado_actual);
+        $this->assertSame(80, $tramite->hitos['examen_aprobado']['examen_teorico']['nota']);
+        $this->assertSame(70, $tramite->hitos['examen_aprobado']['examen_especialidad']['nota']);
+
+        $this->modulo($kardex, $tramite, 'reporte', [])->assertCreated();
+
+        $this->assertSame('titulado', $tramite->refresh()->estado_actual);
     }
 
-    public function test_la_reapertura_devuelve_el_tramite_a_habilitado_y_consume_un_intento(): void
+    public function test_reprobar_ambos_examenes_vuelve_a_intentos_y_exige_una_nueva_resolucion(): void
     {
         $estudiante = $this->crearEstudiante(numero_intentos: 1);
         $tramite = $this->crearTramiteExamen($estudiante);
@@ -452,7 +474,11 @@ class ExamenGradoFlujoTest extends TestCase
             'nota_especialidad' => '',
         ])->assertCreated();
 
-        $this->assertSame('examen_teorico_reprobado', $tramite->refresh()->estado_actual);
+        $tramite->refresh();
+
+        // Sin ninguna aprobación, el estado reabrible es `examen_ambos_reprobados`.
+        $this->assertSame('examen_ambos_reprobados', $tramite->estado_actual);
+        $this->assertArrayNotHasKey('examen_aprobado', $tramite->hitos);
 
         $this->actingAs($kardex)
             ->postJson("/api/tramites/{$tramite->id_tramite}/examen/reabrir", [
@@ -460,8 +486,20 @@ class ExamenGradoFlujoTest extends TestCase
             ])
             ->assertOk();
 
-        $this->assertSame('habilitado_examen', $tramite->refresh()->estado_actual);
+        // Con ambos reprobados la reapertura vuelve a la verificación de
+        // intentos: la resolución anterior deja de contar y hay que habilitar
+        // al estudiante de nuevo con una NUEVA Resolución del HCC.
+        $tramite->refresh();
+
+        $this->assertSame('intentos_verificados', $tramite->estado_actual);
         $this->assertSame(2, $estudiante->refresh()->numero_intentos);
+
+        // Se reinician los dos sorteos, las notas y la habilitación vigente.
+        $this->assertArrayNotHasKey('sorteo_teorico', $tramite->hitos['modulos']);
+        $this->assertArrayNotHasKey('sorteo_especialidad', $tramite->hitos['modulos']);
+        $this->assertArrayNotHasKey('asignacion_notas', $tramite->hitos['modulos']);
+        $this->assertArrayNotHasKey('habilitacion_examen', $tramite->hitos['modulos']);
+        $this->assertArrayNotHasKey('examen_aprobado', $tramite->hitos);
 
         $this->assertDatabaseHas('historial_estados_examen', [
             'id_tramite' => $tramite->id_tramite,
@@ -469,6 +507,73 @@ class ExamenGradoFlujoTest extends TestCase
             'resultado' => 're_solicitud',
             'numero_intentos' => 2,
         ]);
+
+        // Registrada la nueva resolución, el estudiante vuelve a quedar
+        // habilitado para rendir los dos exámenes.
+        $this->modulo($kardex, $tramite, 'habilitacion_examen', [
+            'numero_resolucion' => 'HCC-099',
+            'fecha_resolucion' => '2026-11-02',
+        ])->assertCreated();
+
+        $tramite->refresh();
+
+        $this->assertSame('habilitado_examen', $tramite->estado_actual);
+        $this->assertSame('HCC-099', $tramite->hitos['modulos']['habilitacion_examen']['numero_resolucion']);
+    }
+
+    public function test_una_reapertura_parcial_conserva_la_resolucion_y_no_pide_nueva_habilitacion(): void
+    {
+        $estudiante = $this->crearEstudiante(numero_intentos: 1);
+        $tramite = $this->crearTramiteExamen($estudiante);
+        $kardex = $this->crearUsuarioGestion();
+
+        $this->habilitar($kardex, $tramite);
+        $this->sorteosAsistidos($tramite, $kardex);
+
+        // Primer intento: el teórico reprobado (45) y la especialidad aprobada (90).
+        $this->modulo($kardex, $tramite, 'asignacion_notas', [
+            'nota_teorico' => 45,
+            'nota_especialidad' => 90,
+        ])->assertCreated();
+
+        $this->assertSame('examen_teorico_reprobado', $tramite->refresh()->estado_actual);
+
+        $this->actingAs($kardex)
+            ->postJson("/api/tramites/{$tramite->id_tramite}/examen/reabrir")
+            ->assertOk();
+
+        // Reprobar UN SOLO examen no devuelve a intentos: la resolución del HCC
+        // y la nota de especialidad se conservan y solo se repite el sorteo del
+        // teórico.
+        $tramite->refresh();
+
+        $this->assertSame('habilitado_examen', $tramite->estado_actual);
+        $this->assertArrayHasKey('habilitacion_examen', $tramite->hitos['modulos']);
+        $this->assertArrayHasKey('sorteo_especialidad', $tramite->hitos['modulos']);
+        $this->assertArrayNotHasKey('sorteo_teorico', $tramite->hitos['modulos']);
+        $this->assertArrayNotHasKey('asignacion_notas', $tramite->hitos['modulos']);
+        $this->assertSame(90, $tramite->hitos['examen_aprobado']['examen_especialidad']['nota']);
+
+        // Se sortea solo el teórico y, con la especialidad conservada, la
+        // asignación de notas llega directo a `aprobado` sin sortearla de nuevo.
+        $this->modulo($kardex, $tramite, 'sorteo_teorico', [
+            'asistio' => true,
+            'tema' => 'Tema teórico',
+            'fecha_examen' => '2026-11-05',
+        ])->assertCreated();
+
+        $this->assertSame('examen_teorico_sorteado', $tramite->refresh()->estado_actual);
+
+        $this->modulo($kardex, $tramite, 'asignacion_notas', [
+            'nota_teorico' => 60,
+            'nota_especialidad' => '',
+        ])->assertCreated();
+
+        $tramite->refresh();
+
+        $this->assertSame('aprobado', $tramite->estado_actual);
+        $this->assertSame(60, $tramite->hitos['examen_aprobado']['examen_teorico']['nota']);
+        $this->assertSame(90, $tramite->hitos['examen_aprobado']['examen_especialidad']['nota']);
     }
 
     public function test_no_se_reabre_un_tramite_que_no_reprobo(): void

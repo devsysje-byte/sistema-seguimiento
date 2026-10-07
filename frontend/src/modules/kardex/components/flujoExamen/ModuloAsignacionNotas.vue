@@ -83,23 +83,38 @@
             Examen teórico
           </p>
           <template v-if="asistioTeorico">
-            <div>
-              <label class="label" for="asignacion-nota-teorico">Nota (0 a 100)</label>
-              <input
-                id="asignacion-nota-teorico"
-                v-model="form.nota_teorico"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="input"
-                placeholder="0 - 100"
-              />
+            <!-- El examen ya fue aprobado en un intento anterior: su nota se
+                 conserva y no se vuelve a asignar. -->
+            <div v-if="conservadoTeorico" class="flex items-center justify-between gap-2">
+              <div>
+                <dt class="dato-label text-emerald-300">Nota conservada</dt>
+                <dd class="text-3xl font-extrabold text-emerald-300 mt-0.5">
+                  {{ notaTeorico }} <span class="text-xs font-semibold opacity-70">/ 100</span>
+                </dd>
+              </div>
+              <span class="text-[10px] font-bold uppercase tracking-wide bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full px-2.5 py-1">
+                Conservado
+              </span>
             </div>
-            <p v-if="notaReprobada(form.nota_teorico)" class="text-xs text-amber-300">
-              Con {{ form.nota_teorico }} puntos el examen teórico queda reprobado.
-            </p>
-            <p v-else class="dato-ayuda">Se aprueba con {{ notaMinima }} puntos o más.</p>
+            <template v-else>
+              <div>
+                <label class="label" for="asignacion-nota-teorico">Nota (0 a 100)</label>
+                <input
+                  id="asignacion-nota-teorico"
+                  v-model="form.nota_teorico"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  class="input"
+                  placeholder="0 - 100"
+                />
+              </div>
+              <p v-if="notaReprobada(form.nota_teorico)" class="text-xs text-amber-300">
+                Con {{ form.nota_teorico }} puntos el examen teórico queda reprobado.
+              </p>
+              <p v-else class="dato-ayuda">Se aprueba con {{ notaMinima }} puntos o más.</p>
+            </template>
           </template>
           <p v-else class="text-xs text-slate-400 leading-relaxed">
             El estudiante <strong class="text-red-300">NO ASISTIÓ</strong> al sorteo: el examen
@@ -113,23 +128,38 @@
             Examen de especialidad
           </p>
           <template v-if="asistioEspecialidad">
-            <div>
-              <label class="label" for="asignacion-nota-especialidad">Nota (0 a 100)</label>
-              <input
-                id="asignacion-nota-especialidad"
-                v-model="form.nota_especialidad"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="input"
-                placeholder="0 - 100"
-              />
+            <!-- El examen ya fue aprobado en un intento anterior: su nota se
+                 conserva y no se vuelve a asignar. -->
+            <div v-if="conservadoEspecialidad" class="flex items-center justify-between gap-2">
+              <div>
+                <dt class="dato-label text-emerald-300">Nota conservada</dt>
+                <dd class="text-3xl font-extrabold text-emerald-300 mt-0.5">
+                  {{ notaEspecialidad }} <span class="text-xs font-semibold opacity-70">/ 100</span>
+                </dd>
+              </div>
+              <span class="text-[10px] font-bold uppercase tracking-wide bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full px-2.5 py-1">
+                Conservado
+              </span>
             </div>
-            <p v-if="notaReprobada(form.nota_especialidad)" class="text-xs text-amber-300">
-              Con {{ form.nota_especialidad }} puntos el examen de especialidad queda reprobado.
-            </p>
-            <p v-else class="dato-ayuda">Se aprueba con {{ notaMinima }} puntos o más.</p>
+            <template v-else>
+              <div>
+                <label class="label" for="asignacion-nota-especialidad">Nota (0 a 100)</label>
+                <input
+                  id="asignacion-nota-especialidad"
+                  v-model="form.nota_especialidad"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  class="input"
+                  placeholder="0 - 100"
+                />
+              </div>
+              <p v-if="notaReprobada(form.nota_especialidad)" class="text-xs text-amber-300">
+                Con {{ form.nota_especialidad }} puntos el examen de especialidad queda reprobado.
+              </p>
+              <p v-else class="dato-ayuda">Se aprueba con {{ notaMinima }} puntos o más.</p>
+            </template>
           </template>
           <p v-else class="text-xs text-slate-400 leading-relaxed">
             El estudiante <strong class="text-red-300">NO ASISTIÓ</strong> al sorteo: el examen
@@ -220,6 +250,10 @@ const asistioTeorico = computed(() => ['asistio', 'aprobado', 'reprobado']
 const asistioEspecialidad = computed(() => ['asistio', 'aprobado', 'reprobado']
   .includes(props.sorteoEspecialidad?.resultado));
 
+/** ¿El examen fue aprobado en un intento anterior y su nota se conserva? */
+const conservadoTeorico = computed(() => props.sorteoTeorico?.conservado === true);
+const conservadoEspecialidad = computed(() => props.sorteoEspecialidad?.conservado === true);
+
 const form = reactive({
   nota_teorico: props.datos?.nota_teorico
     ?? props.sorteoTeorico?.nota
@@ -280,17 +314,18 @@ function etiquetaResultado(asistio, aprueba) {
 
 function guardar() {
   const datos = {
-    nota_teorico: asistioTeorico.value && form.nota_teorico !== ''
+    nota_teorico: conservadoTeorico.value ? '' : (asistioTeorico.value && form.nota_teorico !== ''
       ? Number(form.nota_teorico)
-      : '',
-    nota_especialidad: asistioEspecialidad.value && form.nota_especialidad !== ''
+      : ''),
+    nota_especialidad: conservadoEspecialidad.value ? '' : (asistioEspecialidad.value && form.nota_especialidad !== ''
       ? Number(form.nota_especialidad)
-      : '',
+      : ''),
   };
 
   const res = validarModulo('asignacion_notas', datos, {
-    asistio_teorico: asistioTeorico.value,
-    asistio_especialidad: asistioEspecialidad.value,
+    // Un examen conservado ya está aprobado: el validador no pide su nota.
+    asistio_teorico: conservadoTeorico.value ? 'conservado' : asistioTeorico.value,
+    asistio_especialidad: conservadoEspecialidad.value ? 'conservado' : asistioEspecialidad.value,
   });
 
   advertencias.value = res.advertencias;

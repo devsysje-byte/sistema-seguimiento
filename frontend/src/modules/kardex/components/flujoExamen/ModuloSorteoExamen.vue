@@ -19,9 +19,17 @@
           :size="18"
           :class="presente ? 'text-emerald-300' : 'text-red-400'"
         />
-        <p class="text-sm font-semibold" :class="presente ? 'text-emerald-200' : 'text-red-200'">
-          {{ presente ? 'Asistencia y sorteo registrados' : 'NO ASISTIÓ' }}
+        <p class="text-sm font-semibold flex-1" :class="presente ? 'text-emerald-200' : 'text-red-200'">
+          {{ conservado
+            ? 'Examen APROBADO en el intento anterior — nota conservada'
+            : (presente ? 'Asistencia y sorteo registrados' : 'NO ASISTIÓ') }}
         </p>
+        <span
+          v-if="conservado"
+          class="text-[10px] font-bold uppercase tracking-wide bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full px-2.5 py-1"
+        >
+          Conservado
+        </span>
       </div>
 
       <dl v-if="presente" class="grid sm:grid-cols-3 gap-2.5">
@@ -45,9 +53,12 @@
         </div>
       </dl>
 
-      <p v-if="presente" class="dato-ayuda">
+      <p v-if="presente && !conservado" class="dato-ayuda">
         La nota de este examen se registra en el módulo
         <span class="font-semibold text-slate-300">Asignación de Notas</span>.
+      </p>
+      <p v-else-if="presente" class="dato-ayuda">
+        Este examen ya fue aprobado: su nota no vuelve a sortearse ni a asignarse.
       </p>
       <p v-else class="dato-ayuda text-amber-300">
         La ausencia deja este examen REPROBADO sin nota; se confirmará al asignar las notas.
@@ -193,6 +204,8 @@ const confirmoAusencia = ref(false);
 
 const resumen = computed(() => props.registro || props.datos);
 const presente = computed(() => resumen.value?.resultado !== 'no_asistio');
+/** Sorteo de un examen ya aprobado que se conserva entre los dos intentos. */
+const conservado = computed(() => props.registro?.conservado === true);
 const mensajeBloqueo = computed(
   () => `Habilite al estudiante para sortear el ${etiqueta.value}.`,
 );

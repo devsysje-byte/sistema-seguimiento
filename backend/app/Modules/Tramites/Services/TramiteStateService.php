@@ -55,28 +55,46 @@ class TramiteStateService
             // 1. Verificación de intentos. Se rechaza cuando el estudiante ya
             //    agotó los intentos permitidos (`numero_intentos >= 3`).
             'solicitud_presentada' => ['intentos_verificados', 'rechazado'],
-            // 2. Habilitación del estudiante con la Resolución del HCC.
+            // 2. Habilitación del estudiante con la Resolución del HCC. Tras
+            //    reabrir con AMBOS exámenes reprobados, la reapertura devuelve el
+            //    trámite aquí y se registra una NUEVA resolución; cuando solo un
+            //    examen quedó reprobado, la resolución en curso se conserva y la
+            //    reapertura retoma desde el sorteo del examen reprobado.
             'intentos_verificados' => ['habilitado_examen', 'rechazado'],
             // 3. Sorteo de bolo del examen teórico. Registra la asistencia con el
             //    tema sorteado y la fecha; no asistir cierra el sorteo sin nota
             //    (resultado `no_asistio`) pero sigue en `examen_teorico_sorteado`,
             //    porque la reprobación recién se decide en la asignación de notas.
-            'habilitado_examen' => ['examen_teorico_sorteado', 'examen_teorico_reprobado'],
-            'examen_teorico_sorteado' => ['examen_teorico_aprobado', 'examen_teorico_reprobado', 'examen_especialidad_sorteado'],
-            // 4. Sorteo de bolo del examen de especialidad (misma dinámica): se
-            //    alcanza tanto si el teórico se rindió como si no.
+            //    En la re-solicitud de un examen teórico reprobado (con la
+            //    especialidad ya aprobada) la asignación de notas cierra directo
+            //    desde aquí, sin volver a sortear la especialidad.
+            'habilitado_examen' => ['examen_teorico_sorteado'],
+            'examen_teorico_sorteado' => ['examen_teorico_aprobado', 'examen_teorico_reprobado', 'examen_especialidad_sorteado', 'aprobado'],
+            // 4a. El teorico aprobado y la especialidad pendiente: estado al que
+            //     reabre un trámite que reprobó solo el examen de especialidad.
+            //     El teórico ya está aprobado y se conserva su nota.
             'examen_teorico_aprobado' => ['examen_especialidad_sorteado', 'examen_especialidad_reprobado'],
-            'examen_teorico_reprobado' => ['examen_especialidad_sorteado', 'examen_especialidad_reprobado', 'habilitado_examen'],
-            // 5. Asignación de notas: cierra los DOS exámenes juntos. Con las dos
-            //    notas en el mínimo queda `aprobado` (espera el reporte). Si el
-            //    teórico faltó aprobar, el trámite vuelve a `examen_teorico_reprobado`
-            //    aunque la especialidad se haya aprobado, porque titularse exige ambos.
-            'examen_especialidad_sorteado' => ['aprobado', 'examen_especialidad_reprobado', 'examen_teorico_reprobado'],
-            // Reapertura: reprobar cualquiera de los dos exámenes permite volver
-            // a solicitar el examen de grado. El contador de intentos sube con
-            // cada reapertura.
-            'examen_especialidad_reprobado' => ['habilitado_examen'],
-            // 6. Reporte en PDF y titulación. El reporte ES el último paso: al
+            // 4b. El teorico reprobado (con la especialidad ya aprobada) reabre
+            //     desde `habilitado_examen` para sortear UNICAMENTE el teórico;
+            //     la resolución del HCC en curso se conserva.
+            'examen_teorico_reprobado' => ['habilitado_examen'],
+            // 5. Sorteo de bolo del examen de especialidad (misma dinámica): se
+            //    alcanza tanto si el teórico se rindió como si no.
+            'examen_especialidad_sorteado' => ['aprobado', 'examen_especialidad_reprobado', 'examen_teorico_reprobado', 'examen_ambos_reprobados'],
+            // 6. Asignación de notas: cierra los DOS exámenes juntos. Con las dos
+            //    notas en el mínimo queda `aprobado` (espera el reporte). Si un
+            //    examen quedó por debajo del mínimo, el trámite cae en el estado
+            //    reabrible que señala qué examen faltó aprobar: `examen_teorico_reprobado`
+            //    (solo teórico, la especialidad se conserva), `examen_especialidad_reprobado`
+            //    (solo especialidad, el teórico se conserva) o `examen_ambos_reprobados`.
+            'examen_especialidad_reprobado' => ['examen_teorico_aprobado'],
+            // Reapertura: reprobar UN SOLO examen permite re-solicitar conservando
+            // la nota del examen aprobado (resolución en curso). Reprobar AMBOS
+            // exige una NUEVA resolución: la reapertura regresa a la verificación
+            // de intentos y KARDEX registra un nuevo N.º de Resolución del HCC.
+            // El contador de intentos sube con cada reapertura.
+            'examen_ambos_reprobados' => ['intentos_verificados'],
+            // 7. Reporte en PDF y titulación. El reporte ES el último paso: al
             //    generarlo el estudiante queda titulado, de modo que no queda
             //    un estado intermedio en el que el examen esté aprobado sin
             //    concluir. `reporte_examen_generado` se conserva por si un

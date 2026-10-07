@@ -47,6 +47,7 @@ export const ESTADOS_ERROR = [
   // Examen de Grado
   'examen_teorico_reprobado',
   'examen_especialidad_reprobado',
+  'examen_ambos_reprobados',
 ];
 
 /**
