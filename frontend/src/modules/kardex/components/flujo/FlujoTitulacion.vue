@@ -124,6 +124,9 @@
         />
       </template>
     </div>
+
+    <!-- Acta de reprobación (área imprimible fuera de pantalla, PDF en navegador) -->
+    <ActaReprobacionDefensa ref="actaReprobacion" :tramite="tramiteActa || tramite" :defensa="defensaActa" />
   </div>
 </template>
 
@@ -138,6 +141,7 @@ import {
   estadoBadgeTitulacion,
   rechazoPerfilTesis,
   validarModulo,
+  NOTA_MINIMA_DEFENSA,
 } from '@/modules/tesis/utils/flujoTitulacion';
 import { fechaLegible, iniciales } from '@/modules/kardex/utils/formato';
 import { EstadoBadge } from '@/modules/tramites';
@@ -150,6 +154,7 @@ import ModuloTribunalRevisor from './ModuloTribunalRevisor.vue';
 import ModuloDefensa from './ModuloDefensa.vue';
 import ModuloReporte from './ModuloReporte.vue';
 import ModuloPublicacion from './ModuloPublicacion.vue';
+import ActaReprobacionDefensa from './ActaReprobacionDefensa.vue';
 
 const props = defineProps({
   tramite: { type: Object, default: null },
@@ -163,6 +168,14 @@ const toastStore = useToastStore();
 
 const guardando = ref(false);
 const moduloPerfil = ref(null);
+const actaReprobacion = ref(null);
+
+// Datos de la defensa reprobada con la que se emite el acta en PDF.
+const defensaActa = ref(null);
+
+// Trámite actualizado con el que se emite el acta en PDF (incluye el
+// historial con la reprobación recién registrada).
+const tramiteActa = ref(null);
 
 const estudiante = computed(() => props.tramite?.estudiante || {});
 const estadoBadge = computed(() => estadoBadgeTitulacion(props.tramite));
@@ -196,6 +209,26 @@ async function guardar(moduloId, datos) {
   const actualizado = await kardexStore.guardarModuloFlujo(moduloId, datos);
   guardando.value = false;
   if (actualizado) {
+    // Defensa con nota insuficiente: el trámite queda REPROBADO, el flujo
+    // termina y se genera el acta en PDF para documentación.
+    if (moduloId === 'defensa' && defensaReprobada(datos)) {
+      toastStore.warning(
+        `Defensa REPROBADA con ${datos.nota_final} puntos (mínimo ${NOTA_MINIMA_DEFENSA}). `
+        + 'El flujo de titulación terminó; el estudiante deberá volver a solicitar la '
+        + 'modalidad de graduación.',
+        7000,
+      );
+      defensaActa.value = { ...(actualizado?.hitos?.modulos?.defensa || {}), ...datos };
+      tramiteActa.value = actualizado;
+      const generada = await actaReprobacion.value?.generar();
+      if (generada) {
+        toastStore.success('Acta de reprobación de defensa descargada en PDF.');
+      } else {
+        toastStore.error('No se pudo generar el acta de reprobación PDF.');
+      }
+      emit('guardado', actualizado);
+      return;
+    }
     toastStore.success(
       datos.accion === 'rechazar'
         ? 'Perfil rechazado. Se notificó al estudiante para que presente otro perfil.'
@@ -205,6 +238,12 @@ async function guardar(moduloId, datos) {
   } else {
     toastStore.error(kardexStore.errorMessage || 'No se pudo guardar el módulo.');
   }
+}
+
+/** ¿La nota de la defensa registrada reproba (por debajo del mínimo)? */
+function defensaReprobada(datos) {
+  const nota = Number(datos?.nota_final);
+  return !Number.isNaN(nota) && nota < NOTA_MINIMA_DEFENSA;
 }
 
 // Verificación de unicidad disparada desde el resumen del postulante.

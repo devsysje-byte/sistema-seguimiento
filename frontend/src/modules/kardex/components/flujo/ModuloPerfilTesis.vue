@@ -2,7 +2,7 @@
   <ModuloTarjeta
     numero="1"
     titulo="Perfil de Tesis"
-    descripcion="Verifique el título de tesis y los 3 documentos del postulante para aprobar o rechazar su perfil."
+    descripcion="Verifique el título de tesis y los 3 documentos del postulante para aprobar o rechazar su perfil (el PDF adjunto es opcional)."
     icono="file-text"
     :completado="completado"
     :en-progreso="enProgreso"
@@ -206,12 +206,12 @@
             >
               <AppIcon v-if="form.documentos[d.tipo].archivo" name="check-circle" :size="16" class="text-emerald-400 shrink-0" />
               <AppIcon v-else name="file" :size="16" class="shrink-0" />
-              <span class="truncate">{{ nombreArchivo(form.documentos[d.tipo].archivo) || 'Subir comprobante en PDF...' }}</span>
+              <span class="truncate">{{ nombreArchivo(form.documentos[d.tipo].archivo) || 'Adjuntar PDF (opcional)...' }}</span>
             </span>
             <input type="file" accept=".pdf" class="hidden" @change="handleArchivo(d.tipo, $event)">
             <span class="btn-ghost !py-1.5 pointer-events-none text-xs">
               <AppIcon name="plus" :size="13" />
-              PDF
+              PDF opc.
             </span>
           </label>
         </div>

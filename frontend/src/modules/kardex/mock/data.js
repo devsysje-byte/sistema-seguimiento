@@ -16,7 +16,7 @@ export const SECUENCIAS = {
     'tema_aprobado',
     'tribunal_asignado',
     'defensa_aprobada',
-    'reporte_generado',
+    'publicado',
     'titulado',
   ],
   'Trabajo Dirigido': [
@@ -55,13 +55,14 @@ export const SIGUIENTES_POR_ESTADO = {
   investigacion_en_desarrollo: ['documento_final_presentado', 'tribunal_asignado'],
   documento_final_presentado: ['comision_revisora', 'tribunal_asignado'],
   comision_revisora: ['suficiente', 'insuficiente', 'tribunal_asignado'],
-  suficiente: ['solicitud_fecha_defensa', 'tribunal_asignado', 'defensa_aprobada'],
+  suficiente: ['solicitud_fecha_defensa', 'tribunal_asignado', 'defensa_aprobada', 'reprobado'],
   insuficiente: ['comision_revisora'],
-  solicitud_fecha_defensa: ['defensa_programada', 'defensa_aprobada'],
-  defensa_programada: ['defensa_en_curso', 'defensa_aprobada'],
-  tribunal_asignado: ['defensa_aprobada', 'defensa_programada', 'defensa_en_curso'],
+  solicitud_fecha_defensa: ['defensa_programada', 'defensa_aprobada', 'reprobado'],
+  defensa_programada: ['defensa_en_curso', 'defensa_aprobada', 'reprobado'],
+  tribunal_asignado: ['defensa_aprobada', 'defensa_programada', 'defensa_en_curso', 'reprobado'],
   defensa_en_curso: ['defensa_aprobada', 'aprobado', 'reprobado'],
-  defensa_aprobada: ['reporte_generado', 'aprobado'],
+  defensa_aprobada: ['publicado', 'aprobado'],
+  publicado: ['titulado', 'aprobado'],
   reporte_generado: ['titulado', 'aprobado'],
   correcciones_90_dias: ['solicitud_fecha_defensa', 'reprobado'],
 
@@ -660,26 +661,40 @@ const ESTADOS_MODULOS = {
   aprobacion_tema: 'tema_aprobado',
   tribunal_revisor: 'tribunal_asignado',
   defensa: 'defensa_aprobada',
-  reporte: 'reporte_generado',
-  publicacion: 'titulado',
+  reporte: 'titulado',
+  publicacion: 'publicado',
 };
 
 // Estado al que pasa el trámite cuando KARDEX rechaza el perfil (el estudiante
 // debe presentar otro perfil con un título diferente).
 const PERFIL_RECHAZADO = 'perfil_rechazado';
 
+// Nota mínima para aprobar la defensa (espejo de `tesis.nota_minima_defensa`).
+const NOTA_MINIMA_DEFENSA = 51;
+
 // Simula POST /tramites/{id}/flujo/{modulo} (guardado de un módulo del flujo).
 export function aplicarModuloMock(tramite, moduloId, datos) {
   const t = clonar(tramite);
   const rechaza = moduloId === 'perfil_tesis' && datos.accion === 'rechazar';
-  const estado = rechaza ? PERFIL_RECHAZADO : ESTADOS_MODULOS[moduloId];
+  // La defensa con nota por debajo del mínimo deja el trámite REPROBADO
+  // (estado terminal): el flujo termina aquí (espejo del TramiteService).
+  const paso = Number(datos.paso ?? 2);
+  const reprobada = moduloId === 'defensa'
+    && paso !== 1
+    && datos.nota_final !== ''
+    && datos.nota_final !== null
+    && datos.nota_final !== undefined
+    && !Number.isNaN(Number(datos.nota_final))
+    && Number(datos.nota_final) < NOTA_MINIMA_DEFENSA;
+  const estado = rechaza
+    ? PERFIL_RECHAZADO
+    : (reprobada ? 'reprobado' : ESTADOS_MODULOS[moduloId]);
   if (!estado) {
     throw { message: 'El módulo del flujo no es reconocido.' };
   }
   const hoy = new Date().toISOString().slice(0, 10);
   // La defensa se registra en dos pasos. La clave `paso` no se persiste (espejo
   // del TramiteService): el paso 1 guarda los datos sin transicionar el estado.
-  const paso = Number(datos.paso ?? 2);
   const { paso: _paso, accion: _accion, ...datosGuardar } = datos;
   t.updated_at = new Date().toISOString();
   t.hitos = { ...(t.hitos || {}) };
@@ -698,6 +713,11 @@ export function aplicarModuloMock(tramite, moduloId, datos) {
   }
   t.estado_actual = estado;
   t.hitos[estado] = hoy;
+  const observacion = reprobada
+    ? `Defensa reprobada con nota ${datos.nota_final} (mínimo de aprobación: ${NOTA_MINIMA_DEFENSA}). `
+      + 'El flujo de titulación finaliza; el estudiante deberá volver a solicitar la '
+      + 'modalidad de graduación.'
+    : null;
   if (rechaza) {
     t.observaciones = datos.observaciones || t.observaciones;
   } else if (moduloId === 'aprobacion_tema' && datos.tutor_id) {
@@ -712,7 +732,7 @@ export function aplicarModuloMock(tramite, moduloId, datos) {
     {
       nombre_estado: estado,
       descripcion: estado,
-      observaciones: rechaza ? datos.observaciones || null : null,
+      observaciones: rechaza ? datos.observaciones || null : observacion,
       created_at: new Date().toISOString(),
     },
   ];

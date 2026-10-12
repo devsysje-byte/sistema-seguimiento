@@ -12,8 +12,8 @@ export const FASES_TESIS = [
   { id: 'investigacion', label: 'Investigación', icon: 'book', estados: ['tutor_asignado', 'tema_aprobado', 'investigacion_en_desarrollo', 'documento_final_presentado'] },
   { id: 'revision', label: 'Tribunal Revisor', icon: 'eye', estados: ['comision_revisora', 'tribunal_asignado', 'suficiente', 'insuficiente'] },
   { id: 'defensa', label: 'Defensa', icon: 'award', estados: ['solicitud_fecha_defensa', 'defensa_programada', 'defensa_en_curso', 'defensa_aprobada', 'correcciones_90_dias', 'aprobado', 'reprobado'] },
-  { id: 'reporte', label: 'Reporte', icon: 'bar-chart', estados: ['reporte_generado'] },
-  { id: 'publicacion', label: 'Publicación', icon: 'graduation', estados: ['titulado'] },
+  { id: 'publicacion', label: 'Publicación', icon: 'graduation', estados: ['publicado'] },
+  { id: 'reporte', label: 'Reporte', icon: 'bar-chart', estados: ['titulado'] },
 ];
 
 // Explicación amigable de cada estado para el seguimiento del estudiante.
@@ -34,6 +34,7 @@ export const DESCRIPCION_ESTADO = {
   defensa_programada: 'Tu fecha de defensa está programada. Prepárate para la sustentación.',
   defensa_en_curso: 'Tu defensa está en curso. La Comisión evaluará el resultado.',
   defensa_aprobada: '¡Excelente! Aprobaste tu defensa de tesis con éxito.',
+  publicado: 'Tu trabajo de investigación fue publicado. Kardex generará el reporte final.',
   correcciones_90_dias: 'Tu defensa no fue aprobada en esta oportunidad. Cuentas con 90 días para corregir y volver a solicitar una fecha de defensa.',
   aprobado: '¡Felicitaciones! Tu tesis de grado fue aprobada.',
   titulado: '¡Felicidades! Tu trámite de titulación concluyó: estás titulado.',

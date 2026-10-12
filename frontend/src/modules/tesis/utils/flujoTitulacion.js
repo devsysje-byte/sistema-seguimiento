@@ -16,8 +16,8 @@ export const MODULOS_FLUJO_TITULACION = [
   { id: 'aprobacion_tema', label: 'Aprobación del Tema', estado: 'tema_aprobado', pct: 40, icon: 'book', badge: 'Tema Aprobado' },
   { id: 'tribunal_revisor', label: 'Tribunal Revisor', estado: 'tribunal_asignado', pct: 60, icon: 'users', badge: 'Tribunal Asignado' },
   { id: 'defensa', label: 'Defensa', estado: 'defensa_aprobada', pct: 75, icon: 'award', badge: 'Defensa Aprobada' },
-  { id: 'reporte', label: 'Reporte', estado: 'reporte_generado', pct: 90, icon: 'file-text', badge: 'Reporte Generado' },
-  { id: 'publicacion', label: 'Publicación', estado: 'titulado', pct: 100, icon: 'globe', badge: 'Titulado' },
+  { id: 'publicacion', label: 'Publicación', estado: 'publicado', pct: 90, icon: 'globe', badge: 'Publicado' },
+  { id: 'reporte', label: 'Reporte', estado: 'titulado', pct: 100, icon: 'file-text', badge: 'Titulado' },
 ];
 
 // Porcentaje de avance por estado interno del trámite. Incluye los estados del
@@ -40,6 +40,7 @@ const PCT_POR_ESTADO = {
   defensa_en_curso: 62,
   tribunal_asignado: 60,
   defensa_aprobada: 75,
+  publicado: 90,
   reporte_generado: 90,
   aprobado: 100,
   titulado: 100,
@@ -73,6 +74,11 @@ export const MOTIVO_TITULO_REPETIDO =
 export const ROLES_TRIBUNAL = ['presidente', 'vocal', 'secretario'];
 
 export const RANGO_NOTA_DEFENSA = [0, 100];
+
+// Nota mínima para aprobar la defensa de tesis: con menos de 51 puntos el
+// trámite queda REPROBADO y el estudiante debe volver a solicitar la modalidad
+// de graduación (respetando los plazos reglamentarios).
+export const NOTA_MINIMA_DEFENSA = 51;
 
 /** Indica si el trámite usa el flujo de titulación por módulos. */
 export function esFlujoTitulacion(tramite) {
@@ -311,9 +317,7 @@ function camposDeModulo(moduloId, datos, tramite) {
 
     case 'publicacion':
       return filas([
-        { etiqueta: 'Documento final', valor: datos.archivo?.nombre },
-        { etiqueta: 'Fecha de titulación', valor: fechaLegible(datos.fecha_titulacion) },
-        { etiqueta: 'Enlace de registro', valor: datos.enlace_registro },
+        { etiqueta: 'Trabajo de investigación', valor: datos.archivo?.nombre },
       ]);
 
     default:
@@ -357,7 +361,8 @@ export function actualizacionesKardex(tramite) {
  *
  * El perfil es el módulo con decisión: con `accion: rechazar` solo exige la
  * observación (el motivo que verá el estudiante) y con `accion: aprobar` valida
- * el título presentado y los 3 documentos verificados.
+ * el título presentado y los 3 documentos verificados (el PDF adjunto es
+ * opcional).
  *
  * La defensa se registra en dos pasos: `paso: 1` valida solo la Resolución de
  * Aprobación Final y la fecha de la defensa; `paso: 2` (o sin `paso`, guardado
@@ -365,10 +370,11 @@ export function actualizacionesKardex(tramite) {
  *
  * @param {string} moduloId Identificador del módulo.
  * @param {Object} datos    Datos del formulario del módulo.
- * @returns {{ok:boolean, errores:string[]}} Resultado de la validación.
+ * @returns {{ok:boolean, errores:string[], advertencias:string[]}} Resultado de la validación.
  */
 export function validarModulo(moduloId, datos = {}) {
   const errores = [];
+  const advertencias = [];
   const val = (v) => String(v ?? '').trim() !== '';
 
   switch (moduloId) {
@@ -389,8 +395,6 @@ export function validarModulo(moduloId, datos = {}) {
         const item = docs[d.tipo];
         if (!item?.marcado) {
           errores.push(`Marque la verificación de: ${d.etiqueta}`);
-        } else if (!val(item.archivo?.nombre)) {
-          errores.push(`Adjunte el PDF de: ${d.etiqueta}`);
         }
       }
       break;
@@ -428,6 +432,14 @@ export function validarModulo(moduloId, datos = {}) {
           const nota = Number(datos.nota_final);
           if (Number.isNaN(nota) || nota < RANGO_NOTA_DEFENSA[0] || nota > RANGO_NOTA_DEFENSA[1]) {
             errores.push(`La nota debe estar entre ${RANGO_NOTA_DEFENSA[0]} y ${RANGO_NOTA_DEFENSA[1]}.`);
+          } else if (nota < NOTA_MINIMA_DEFENSA) {
+            // Una nota reprobada es válida: deja el trámite en estado
+            // terminal y el estudiante debe re-solicitar la modalidad.
+            advertencias.push(
+              `Con ${nota} puntos la defensa queda REPROBADO `
+              + `(mínimo de aprobación: ${NOTA_MINIMA_DEFENSA}). El flujo de titulación `
+              + 'termina aquí y el estudiante deberá volver a solicitar la modalidad de graduación.',
+            );
           }
         }
       }
@@ -436,13 +448,12 @@ export function validarModulo(moduloId, datos = {}) {
     case 'reporte':
       break;
     case 'publicacion':
-      if (!val(datos.archivo?.nombre) && !val(datos.enlace_publico)) {
-        errores.push('Adjunte el documento final en PDF o ingrese el enlace público.');
-      }
+      // La publicación no forma parte obligatoria del flujo registrado aquí;
+      // si se guarda, al menos puede aceptarse sin campos obligatorios.
       break;
     default:
       errores.push('Módulo no reconocido.');
   }
 
-  return { ok: errores.length === 0, errores };
+  return { ok: errores.length === 0, errores, advertencias };
 }

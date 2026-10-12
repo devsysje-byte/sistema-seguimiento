@@ -21,9 +21,9 @@ use Illuminate\Validation\ValidationException;
  * Casos de uso del lado del ESTUDIANTE en el Módulo de Tesis de Grado.
  *
  * Encapsula el flujo oficial del estudiante independiente del resto de
- * modalidades: presentación de la solicitud con el título de tesis y los 3
- * documentos obligatorios, y reenvío del perfil (con un título nuevo) tras su
- * rechazo. Reutiliza el motor genérico de trámites
+ * modalidades: presentación de la solicitud con el título de tesis (los 3
+ * documentos en PDF son opcionales) y reenvío del perfil (con un título nuevo)
+ * tras su rechazo. Reutiliza el motor genérico de trámites
  * (TramiteService/TramiteStateService) sin modificar su contrato.
  */
 class TesisService
@@ -141,8 +141,8 @@ class TesisService
     }
 
     /**
-     * Crea la solicitud de Tesis de Grado con el título propuesto y los 3
-     * documentos obligatorios.
+     * Crea la solicitud de Tesis de Grado con el título propuesto y, de ser el
+     * caso, los documentos en PDF (opcionales).
      *
      * El título se registra en el módulo de perfil del flujo de titulación
      * (`hitos.modulos.perfil_tesis.titulo`) para que KARDEX pueda verificar su

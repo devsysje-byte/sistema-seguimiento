@@ -54,6 +54,7 @@ class ReporteService
         'defensa_en_curso' => 'Defensa en curso',
         'tribunal_asignado' => 'Tribunal asignado',
         'defensa_aprobada' => 'Defensa aprobada',
+        'publicado' => 'Publicado',
         'reporte_generado' => 'Reporte generado',
         'aprobado' => 'Aprobado',
         'titulado' => 'Titulado',

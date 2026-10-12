@@ -7,13 +7,13 @@
       </div>
       <div>
         <h2 class="text-2xl font-bold text-white uppercase">Registro de Postulante</h2>
-        <p class="text-sm text-slate-400 mt-0.5">Busque por CI o registro universitario y asigne la modalidad de titulación.</p>
+        <p class="text-sm text-slate-400 mt-0.5">Busque por CI/RU y asigne la modalidad de titulación.</p>
       </div>
     </div>
 
     <!-- Búsqueda por CI/RU -->
     <form class="card p-4 sm:p-5" @submit.prevent="buscar">
-      <label class="label" for="identificador">Buscar por CI o Registro Universitario</label>
+      <label class="label" for="identificador">Filtrar por CI/RU</label>
       <div class="flex flex-col sm:flex-row gap-3">
         <div class="relative flex-1">
           <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
@@ -24,7 +24,7 @@
             v-model="identificador"
             type="text"
             class="input pl-10"
-            placeholder="Ej: 12345678 o RU-20004008"
+            placeholder=""
             autocomplete="off"
           />
         </div>
@@ -104,7 +104,7 @@
             <p class="text-slate-200 font-medium mt-0.5">{{ kardexStore.postulante.telefono || '—' }}</p>
           </div>
           <div>
-            <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Promedio global</p>
+            <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold"></p>
             <p class="text-slate-200 font-medium mt-0.5">{{ kardexStore.postulante.promedio_global ?? '—' }}</p>
           </div>
         </div>

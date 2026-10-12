@@ -18,14 +18,38 @@
           <dt class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Fecha de Defensa</dt>
           <dd class="text-sm font-semibold text-white mt-0.5">{{ fechaLegible(datos.fecha_defensa) }}</dd>
         </div>
-        <div class="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-2.5">
-          <dt class="text-[11px] uppercase tracking-wider text-emerald-300 font-semibold">Nota Final</dt>
-          <dd class="text-2xl font-extrabold text-emerald-300 mt-0.5">
+        <div
+          class="rounded-xl px-3.5 py-2.5"
+          :class="reprobada ? 'bg-red-500/10 border border-red-500/30' : 'bg-emerald-500/10 border border-emerald-500/30'"
+        >
+          <dt
+            class="text-[11px] uppercase tracking-wider font-semibold"
+            :class="reprobada ? 'text-red-300' : 'text-emerald-300'"
+          >
+            Nota Final
+          </dt>
+          <dd
+            class="text-2xl font-extrabold mt-0.5"
+            :class="reprobada ? 'text-red-300' : 'text-emerald-300'"
+          >
             {{ datos.nota_final }}
-            <span class="text-xs font-semibold text-emerald-500">/ 100</span>
+            <span class="text-xs font-semibold" :class="reprobada ? 'text-red-500' : 'text-emerald-500'">/ 100</span>
           </dd>
         </div>
       </dl>
+
+      <div
+        v-if="reprobada"
+        class="flex items-start gap-2.5 rounded-xl border border-red-500/40 bg-red-500/10 px-3.5 py-3"
+      >
+        <AppIcon name="alert-triangle" :size="16" class="shrink-0 mt-0.5 text-red-300" />
+        <p class="text-xs text-red-200 leading-relaxed">
+          <strong>DEFENSA REPROBADA</strong> — con {{ datos.nota_final }} puntos (mínimo de
+          aprobación: {{ notaMinima }}) el flujo de titulación termina aquí. El estudiante
+          deberá volver a solicitar la modalidad de graduación una vez cumplidos los plazos
+          reglamentarios.
+        </p>
+      </div>
     </div>
 
     <div v-else-if="bloqueado">
@@ -136,6 +160,10 @@
             class="input"
             placeholder="0 - 100"
           />
+          <p v-if="notaReprobada(form.nota_final)" class="text-xs text-amber-300">
+            Con {{ form.nota_final }} puntos la defensa queda REPROBADO (mínimo de aprobación: {{ notaMinima }}).
+          </p>
+          <p v-else class="dato-ayuda">Se aprueba con {{ notaMinima }} puntos o más.</p>
         </div>
 
         <ul v-if="errores.length" class="space-y-1">
@@ -145,8 +173,33 @@
           </li>
         </ul>
 
+        <ul v-if="advertencias.length" class="space-y-1">
+          <li v-for="(a, i) in advertencias" :key="i" class="flex items-start gap-2 text-sm text-amber-300">
+            <AppIcon name="info" :size="15" class="shrink-0 mt-0.5" />
+            {{ a }}
+          </li>
+        </ul>
+
+        <!-- Una nota reprobada es válida, pero deja el trámite en estado
+             terminal: se pide confirmación explícita antes de registrarla. -->
+        <label
+          v-if="hayReprobada"
+          class="flex items-start gap-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-3 cursor-pointer"
+        >
+          <input
+            v-model="confirmoReprobado"
+            type="checkbox"
+            class="mt-0.5 h-4 w-4 accent-amber-500"
+          />
+          <span class="text-xs text-amber-200 leading-relaxed">
+            Confirmo registrar esta nota, sabiendo que la defensa queda
+            <strong>REPROBADA</strong>, el flujo de titulación termina y el estudiante
+            deberá volver a solicitar la modalidad de graduación.
+          </span>
+        </label>
+
         <div class="flex justify-end">
-          <button type="submit" class="btn-warm px-6" :disabled="cargando">
+          <button type="submit" class="btn-warm px-6" :disabled="cargando || (hayReprobada && !confirmoReprobado)">
             <AppIcon v-if="cargando" name="loader" :size="18" class="animate-spin" />
             <AppIcon v-else name="award" :size="18" />
             <span class="uppercase tracking-wide">Registrar nota final</span>
@@ -159,7 +212,7 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue';
-import { validarModulo } from '@/modules/tesis/utils/flujoTitulacion';
+import { NOTA_MINIMA_DEFENSA, validarModulo } from '@/modules/tesis/utils/flujoTitulacion';
 import { fechaLegible } from '@/modules/kardex/utils/formato';
 import AppIcon from '@/ui/AppIcon.vue';
 import ModuloTarjeta from './ModuloTarjeta.vue';
@@ -174,6 +227,8 @@ const props = defineProps({
 
 const emit = defineEmits(['guardar']);
 
+const notaMinima = NOTA_MINIMA_DEFENSA;
+
 const form = reactive({
   numero_resolucion: props.datos?.numero_resolucion || '',
   fecha_defensa: props.datos?.fecha_defensa || '',
@@ -182,7 +237,22 @@ const form = reactive({
 
 const paso = ref('1');
 const errores = ref([]);
+const advertencias = ref([]);
+const confirmoReprobado = ref(false);
 const hoyISO = computed(() => new Date().toISOString().slice(0, 10));
+
+/** ¿La nota cargada en el formulario reproba la defensa? */
+function notaReprobada(nota) {
+  if (nota === '' || nota === null || nota === undefined) return false;
+  const n = Number(nota);
+  return !Number.isNaN(n) && n < notaMinima;
+}
+
+/** El formulario apunta a registrar una defensa reprobada. */
+const hayReprobada = computed(() => notaReprobada(form.nota_final));
+
+/** Defensa ya registrada con nota insuficiente (módulo completado). */
+const reprobada = computed(() => notaReprobada(props.datos?.nota_final));
 
 // El paso 1 (resolución + fecha) ya fue guardado: se dispone del dato en `hitos`.
 const paso1Completado = computed(
@@ -217,6 +287,7 @@ function irPaso(n) {
   if (n === 2 && !paso1Completado.value) return;
   paso.value = String(n);
   errores.value = [];
+  advertencias.value = [];
 }
 
 function obtenerDatos() {
@@ -240,9 +311,18 @@ function guardarPasoActual() {
   const res = validarModulo('defensa', datos);
   if (!res.ok) {
     errores.value = res.errores;
+    advertencias.value = res.advertencias || [];
+    return;
+  }
+  // Una nota reprobada es válida, pero exige la confirmación explícita.
+  if ((res.advertencias || []).length && !confirmoReprobado.value) {
+    errores.value = [];
+    advertencias.value = res.advertencias;
     return;
   }
   errores.value = [];
+  advertencias.value = [];
+  confirmoReprobado.value = false;
   emit('guardar', datos);
 }
 </script>

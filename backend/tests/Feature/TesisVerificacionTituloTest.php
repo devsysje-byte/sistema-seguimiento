@@ -175,6 +175,42 @@ class TesisVerificacionTituloTest extends TestCase
         $this->assertSame(self::TITULO, $tramite->hitos['modulos']['perfil_tesis']['titulo']);
     }
 
+    public function test_la_solicitud_acepta_el_titulo_sin_documentos_pdf(): void
+    {
+        $estudiante = $this->crearEstudianteConCuenta();
+        $this->crearModalidadTesis();
+
+        $response = $this->actingAs($estudiante->user)
+            ->postJson('/api/tesis/solicitud', ['titulo' => self::TITULO]);
+
+        $response->assertCreated();
+
+        $tramite = Tramite::where('id_estudiante', $estudiante->id_estudiante)->firstOrFail();
+        $this->assertSame(self::TITULO, $tramite->hitos['modulos']['perfil_tesis']['titulo']);
+        $this->assertCount(0, $tramite->documentos);
+    }
+
+    public function test_kardex_aproba_el_perfil_sin_pdf_adjunto(): void
+    {
+        $this->crearModalidadTesis();
+        $tramite = $this->crearTramiteConTitulo(self::TITULO, $this->crearEstudianteConCuenta());
+        $kardex = $this->crearUsuarioGestion();
+        $datos = $this->datosApruebaPerfil(self::TITULO);
+
+        // La verificación es obligatoria, pero el PDF adjunto es opcional.
+        foreach ($datos['documentos'] as $tipo => $_) {
+            $datos['documentos'][$tipo]['archivo'] = null;
+        }
+
+        $this->actingAs($kardex)
+            ->postJson("/api/tramites/{$tramite->id_tramite}/flujo/perfil_tesis", [
+                'datos' => $datos,
+            ])
+            ->assertCreated();
+
+        $this->assertSame('perfil_aprobado', $tramite->refresh()->estado_actual);
+    }
+
     public function test_la_verificacion_de_kardex_omite_el_tramite_consultado(): void
     {
         $this->crearModalidadTesis();
@@ -192,7 +228,8 @@ class TesisVerificacionTituloTest extends TestCase
     }
 
     /**
-     * Datos de la fase de solicitud: título y los 3 documentos obligatorios.
+     * Datos de la fase de solicitud: título y los 3 documentos en PDF
+     * (opcionales, aquí se adjuntan los tres).
      *
      * @return array<string, mixed>
      */

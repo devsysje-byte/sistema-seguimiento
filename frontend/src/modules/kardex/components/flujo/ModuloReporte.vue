@@ -1,6 +1,6 @@
 <template>
   <ModuloTarjeta
-    numero="5"
+    numero="6"
     titulo="Reporte"
     descripcion="Genere el reporte consolidado del trámite de titulación."
     icono="bar-chart"

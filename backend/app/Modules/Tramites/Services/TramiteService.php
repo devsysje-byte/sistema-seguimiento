@@ -74,8 +74,8 @@ class TramiteService extends BasePaginadoService
         'aprobacion_tema' => 'tema_aprobado',
         'tribunal_revisor' => 'tribunal_asignado',
         'defensa' => 'defensa_aprobada',
-        'reporte' => 'reporte_generado',
-        'publicacion' => 'titulado',
+        'reporte' => 'titulado',
+        'publicacion' => 'publicado',
     ];
 
     /**
@@ -84,6 +84,12 @@ class TramiteService extends BasePaginadoService
      * diferente.
      */
     private const PERFIL_RECHAZADO = 'perfil_rechazado';
+
+    /**
+     * Estado terminal al que pasa el trámite cuando la nota de la defensa de
+     * tesis queda por debajo del mínimo de aprobación.
+     */
+    private const DEFENSA_REPROBADA = 'reprobado';
 
     /**
      * Módulos que admiten una decisión de aprobación o rechazo.
@@ -117,6 +123,7 @@ class TramiteService extends BasePaginadoService
         'tribunal_asignado' => 60,
         'defensa_aprobada' => 75,
         'reporte_generado' => 90,
+        'publicado' => 90,
         'aprobado' => 100,
         'titulado' => 100,
         'reprobado' => 75,
@@ -151,6 +158,15 @@ class TramiteService extends BasePaginadoService
 
         if (! $tramite) {
             return null;
+        }
+
+        // El seguimiento del estudiante muestra las actualizaciones de Kardex y
+        // los intentos del Examen de Grado. Solo ese flujo tiene historial
+        // especializado, así que se carga únicamente cuando la modalidad aplica.
+        if ($tramite->modalidad->nombre === TramiteStateService::MODALIDAD_EXAMEN) {
+            $tramite->load(
+                'historialExamen:id_historial_examen,id_tramite,nombre_estado,etapa,resultado,numero_resolucion,fecha_resolucion,tema,fecha_examen,nota,numero_intentos,observaciones,created_at'
+            );
         }
 
         return $this->formatear($tramite);
@@ -199,7 +215,7 @@ class TramiteService extends BasePaginadoService
                 'observaciones' => 'Documentación inicial enviada.',
             ]);
 
-            foreach ($validated['documentos'] as $documento) {
+            foreach (($validated['documentos'] ?? []) as $documento) {
                 $this->documentos->guardar(
                     $tramite->id_tramite,
                     $user->id_usuario,
@@ -482,7 +498,14 @@ class TramiteService extends BasePaginadoService
 
         $this->validarDatosModulo($modulo, $datos, $paso, $rechaza, $tramite);
 
-        $objetivo = $rechaza ? self::PERFIL_RECHAZADO : self::MODULOS_FLUJO[$modulo];
+        // La defensa se aprueba con la nota mínima reglamentaria; con menos la
+        // nota deja el trámite REPROBADO (estado terminal) y el estudiante
+        // deberá volver a solicitar la modalidad de graduación.
+        $reprobada = $this->defensaReprobada($modulo, $datos, $paso);
+
+        $objetivo = $rechaza
+            ? self::PERFIL_RECHAZADO
+            : ($reprobada ? self::DEFENSA_REPROBADA : self::MODULOS_FLUJO[$modulo]);
         $pctActual = self::PCT_POR_ESTADO[$tramite->estado_actual] ?? 0;
         $pctObjetivo = self::PCT_POR_ESTADO[$objetivo] ?? 0;
 
@@ -491,21 +514,27 @@ class TramiteService extends BasePaginadoService
         $avanza = ! ($modulo === 'defensa' && $paso === 1);
         $transiciono = false;
 
-        // El rechazo es una decisión de reversión (mismo nivel de avance que el
-        // estado actual), por lo que se ejecuta siempre; el resto de módulos
-        // solo transicionan si aún no fueron superados.
-        $debeTransicionar = $avanza && ($pctObjetivo > $pctActual || $rechaza);
+        // El rechazo y la reprobación de la defensa son decisiones de cierre o
+        // reversión (mismo nivel de avance que el estado actual), por lo que se
+        // ejecutan siempre; el resto de módulos solo transicionan si aún no
+        // fueron superados.
+        $debeTransicionar = $avanza && ($pctObjetivo > $pctActual || $rechaza || $reprobada);
+
+        // Observación con la que se registra el cambio en el historial: el
+        // rechazo usa la que escribió KARDEX y la reprobación de la defensa
+        // documenta la nota obtenida frente al mínimo reglamentario.
+        $observacion = $rechaza
+            ? $this->observacionDeRechazo($datos)
+            : ($reprobada
+                ? "Defensa reprobada con nota {$datos['nota_final']} "
+                    .'(mínimo de aprobación: '.self::notaMinimaDefensa().'). '
+                    .'El flujo de titulación finaliza; el estudiante deberá '
+                    .'volver a solicitar la modalidad de graduación.'
+                : "Módulo '{$modulo}' del flujo de titulación completado.");
 
         if ($debeTransicionar) {
             try {
-                $this->stateService->transicionar(
-                    $tramite,
-                    $objetivo,
-                    $rechaza
-                        ? $this->observacionDeRechazo($datos)
-                        : "Módulo '{$modulo}' del flujo de titulación completado.",
-                    $actor->id_usuario
-                );
+                $this->stateService->transicionar($tramite, $objetivo, $observacion, $actor->id_usuario);
                 $transiciono = true;
             } catch (TransicionNoPermitidaException $e) {
                 throw ValidationException::withMessages([
@@ -550,7 +579,7 @@ class TramiteService extends BasePaginadoService
         // Solo se notifica un cambio de estado si realmente hubo transición;
         // el paso 1 de la defensa guarda datos sin avanzar el trámite.
         if ($transiciono) {
-            event(new EstadoTramiteCambiado($tramite, $objetivo, $rechaza ? ($datos['observaciones'] ?? null) : null));
+            event(new EstadoTramiteCambiado($tramite, $objetivo, ($rechaza || $reprobada) ? $observacion : null));
         }
 
         return $this->formatear($tramite);
@@ -569,6 +598,37 @@ class TramiteService extends BasePaginadoService
         }
 
         return ($datos['accion'] ?? 'aprobar') === 'rechazar';
+    }
+
+    /**
+     * Nota mínima para aprobar la defensa de tesis (`config/tesis.php`).
+     */
+    private static function notaMinimaDefensa(): int
+    {
+        return (int) config('tesis.nota_minima_defensa', 51);
+    }
+
+    /**
+     * Indica si la nota final de la defensa está por debajo del mínimo de
+     * aprobación: el trámite queda REPROBADO (estado terminal) y el flujo de
+     * titulación termina en este acto.
+     *
+     * @param  string  $modulo  Identificador del módulo.
+     * @param  array<string, mixed>  $datos  Datos del formulario del módulo.
+     * @param  int  $paso  Paso del módulo de defensa (1 = resolución + fecha).
+     */
+    private function defensaReprobada(string $modulo, array $datos, int $paso): bool
+    {
+        if ($modulo !== 'defensa' || $paso === 1) {
+            return false;
+        }
+
+        $nota = $datos['nota_final'] ?? null;
+        if ($nota === null || $nota === '' || ! is_numeric($nota)) {
+            return false;
+        }
+
+        return (float) $nota < self::notaMinimaDefensa();
     }
 
     /**
@@ -623,13 +683,12 @@ class TramiteService extends BasePaginadoService
                 }
 
                 // Los documentos verificados son los que el estudiante adjuntó
-                // en su solicitud (ver `config/tesis.php`).
+                // en su solicitud (ver `config/tesis.php`): la verificación es
+                // obligatoria, pero el PDF adjunto es opcional.
                 foreach (['nota_solicitud', 'certificado_notas', 'perfil_tesis'] as $tipo) {
                     $item = $datos['documentos'][$tipo] ?? null;
                     if (empty($item['marcado'])) {
                         $errores[] = "Marque la verificación del documento: {$tipo}.";
-                    } elseif (! $val($item['archivo']['nombre'] ?? null)) {
-                        $errores[] = "Adjunte el PDF del documento: {$tipo}.";
                     }
                 }
                 break;
@@ -685,9 +744,8 @@ class TramiteService extends BasePaginadoService
                 break;
 
             case 'publicacion':
-                if (! $val($datos['archivo']['nombre'] ?? null) && ! $val($datos['enlace_publico'] ?? null)) {
-                    $errores[] = 'Adjunte el documento final en PDF o ingrese el enlace público.';
-                }
+                // El trabajo de investigación en PDF es opcional: el módulo
+                // puede registrarse sin archivo adjunto.
                 break;
 
             default:

@@ -26,7 +26,7 @@
 
     <template v-else>
       <!-- ============================================================== -->
-      <!-- SIN TESIS ACTIVA: fase de solicitud (3 documentos obligatorios) -->
+       <!-- SIN TESIS ACTIVA: fase de solicitud (documentos PDF opcionales) -->
       <!-- ============================================================== -->
       <div v-if="!tesisActiva" class="space-y-6">
         <!-- Flujo que siguió el trámite en Kardex hasta su resultado -->
@@ -83,7 +83,7 @@
             </p>
           </div>
 
-          <!-- Solicitud de nueva tesis (3 documentos obligatorios) -->
+          <!-- Solicitud de nueva tesis (documentos PDF opcionales) -->
           <div v-if="puedeIniciarNueva" class="card overflow-hidden">
             <div class="h-2 bg-orange"></div>
             <div class="p-6 sm:p-8">
@@ -94,7 +94,7 @@
                   </div>
                   <div>
                     <h2 class="text-lg font-extrabold text-white">Solicitud de Tesis de Grado</h2>
-                    <p class="text-sm text-slate-400">Presenta tu solicitud con los 3 documentos obligatorios en PDF.</p>
+                    <p class="text-sm text-slate-400">Presenta tu solicitud; los 3 documentos en PDF son opcionales.</p>
                   </div>
                 </div>
               </div>
@@ -132,7 +132,7 @@
                 </div>
 
                 <div v-for="(ruta, tipo) in tesisStore.config.tipos_documento" :key="tipo">
-                  <label class="label">{{ ruta }} (PDF) · obligatorio</label>
+                  <label class="label">{{ ruta }} (PDF) · opcional</label>
                   <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', archivos[tipo] ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40']">
                     <span class="flex items-center gap-2 text-sm min-w-0" :class="archivos[tipo] ? 'text-orange-200' : 'text-slate-400'">
                       <AppIcon v-if="archivos[tipo]" name="check-circle" :size="18" class="text-emerald-400 shrink-0" />
@@ -150,7 +150,7 @@
                 <div class="sm:col-span-2 flex items-center justify-between gap-3 pt-2">
                   <p v-if="faltantes.length" class="text-xs text-slate-400 inline-flex items-center gap-1.5">
                     <AppIcon name="info" :size="14" />
-                    Faltan subir: {{ faltantes.join(', ') }}
+                    Documentos sin adjuntar (opcional): {{ faltantes.join(', ') }}
                   </p>
                   <p v-else-if="!tituloValido" class="text-xs text-slate-400 inline-flex items-center gap-1.5">
                     <AppIcon name="info" :size="14" />
@@ -158,9 +158,9 @@
                   </p>
                   <p v-else class="text-xs font-semibold text-emerald-300 inline-flex items-center gap-1.5">
                     <AppIcon name="check" :size="14" />
-                    Documentación completa para enviar.
+                    Documentación lista para enviar.
                   </p>
-                  <button type="submit" class="btn-primary px-6 py-2.5 shrink-0" :disabled="tesisStore.enviando || faltantes.length > 0 || !tituloValido">
+                  <button type="submit" class="btn-primary px-6 py-2.5 shrink-0" :disabled="tesisStore.enviando || !tituloValido">
                     <AppIcon v-if="tesisStore.enviando" name="loader" :size="15" class="animate-spin" />
                     <AppIcon v-else name="send" :size="15" />
                     {{ tesisStore.enviando ? 'Enviando...' : 'Enviar Solicitud' }}
@@ -488,8 +488,9 @@
 <script setup>
 // Vista del Módulo de Tesis de Grado (lado del estudiante).
 // Dos modos:
-//   - Sin tesis activa: formulario de solicitud con los 3 documentos
-//     obligatorios (Nota de Solicitud, Certificado de Notas, Perfil de Tesis).
+//   - Sin tesis activa: formulario de solicitud con el título y los 3
+//     documentos opcionales en PDF (Nota de Solicitud, Certificado de Notas,
+//     Perfil de Tesis).
 //   - Con tesis activa: seguimiento del flujo oficial (estado, fase, hitos,
 //     cuenta regresiva del plazo, fecha de defensa y documentos), el detalle de
 //     cada actualización registrada por Kardex y la opción de reenviar el perfil
@@ -582,11 +583,11 @@ const necesitaSolicitar = computed(() => {
 // Fecha mínima seleccionable para la fecha sugerida (hoy).
 const hoyISO = computed(() => new Date().toISOString().slice(0, 10));
 
-// Documentos obligatorios que aún no se subieron en el formulario.
+// Documentos opcionales que aún no se subieron en el formulario.
 const faltantes = computed(() =>
   Object.entries(tesisStore.config.tipos_documento)
     .filter(([tipo]) => !archivos.value[tipo])
-    .map(([, etiqueta]) => etiqueta)
+    .map(([, etiqueta]) => etiqueta),
 );
 
 // Un título es válido si tiene la extensión mínima exigida por el backend.
@@ -669,22 +670,19 @@ async function sincronizarTramite() {
   }
 }
 
-/** Asocia un archivo seleccionado a su tipo de documento obligatorio. */
+/** Asocia un archivo seleccionado a su tipo de documento (opcional). */
 function handleArchivo(event, tipo) {
   const file = event.target.files[0];
   archivos.value[tipo] = file || null;
 }
 
 /**
- * Envía la solicitud de tesis con el título y los 3 documentos como FormData
- * multipart. El título queda registrado en el perfil para que Kardex verifique
- * su unicidad antes de aprobarlo.
+ * Envía la solicitud de tesis con el título como FormData multipart y, si el
+ * estudiante lo adjuntó, los documentos en PDF (son opcionales). El título
+ * queda registrado en el perfil para que Kardex verifique su unicidad antes de
+ * aprobarlo.
  */
 async function enviarSolicitud() {
-  if (faltantes.value.length) {
-    toastStore.warning('Debe adjuntar los 3 documentos obligatorios.');
-    return;
-  }
   if (tituloSolicitud.value.trim().length < 10) {
     toastStore.warning('Ingrese el título de su tesis (mínimo 10 caracteres).');
     return;
@@ -695,6 +693,7 @@ async function enviarSolicitud() {
 
   formData.append('titulo', tituloSolicitud.value.trim());
   tipos.forEach((tipo, index) => {
+    if (!archivos.value[tipo]) return;
     formData.append(`documentos[${index}][archivo]`, archivos.value[tipo]);
     formData.append(`documentos[${index}][tipo]`, tipo);
   });

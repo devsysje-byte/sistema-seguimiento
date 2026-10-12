@@ -145,8 +145,9 @@ const modulos = [
     { to: '/kardex', label: 'Panel General', icono: 'dash-grid' },
     { to: '/kardex/postulante', label: 'Registro de Postulante', icono: 'user-plus' },
     { to: '/kardex/tesis', label: 'Tesis de Grado', icono: 'book' },
-    { to: '/kardex/trabajo-dirigido', label: 'Trabajo Dirigido', icono: 'folder' },
     { to: '/kardex/examen', label: 'Examen de Grado', icono: 'graduation' },
+    { to: '/kardex/trabajo-dirigido', label: 'Trabajo Dirigido', icono: 'folder' },
+    { to: '/kardex/excelencia-academica', label: 'Excelencia Academica', icono: 'award' }, 
     { to: '/kardex/reporte', label: 'Reporte de Modalidad', icono: 'chart' },
 ];
 

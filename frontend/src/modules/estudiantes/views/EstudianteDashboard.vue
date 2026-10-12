@@ -24,7 +24,7 @@
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Registro Universitario" :value="perfilEstudiante.registro_universitario" icon="file-text" tone="amber" />
         <StatCard label="Email" :value="perfilEstudiante.email || '—'" icon="mail" tone="rose" />
-        <StatCard label="Promedio Global" :value="perfilEstudiante.promedio_global ?? '—'" icon="chart" tone="orange" />
+        <StatCard label="" :value="perfilEstudiante.promedio_global ?? '—'" icon="chart" tone="orange" />
         <StatCard
           label="Estado del Trámite"
           :value="tramitesStore.tramiteActivo ? formatoEstado(tramitesStore.tramiteActivo.estado_actual) : '—'"
@@ -99,7 +99,14 @@
       </div>
 
       <div v-else class="space-y-6">
-        <div v-if="tramitesStore.tramiteActivo && !esTesisActivo" class="card overflow-hidden">
+        <div v-if="tramitesStore.tramiteActivo && esExamenActivo" class="card overflow-hidden">
+          <div class="h-2 bg-orange"></div>
+          <div class="p-6 sm:p-8">
+            <SeguimientoExamenGrado :tramite="tramitesStore.tramiteActivo" />
+          </div>
+        </div>
+
+        <div v-else-if="tramitesStore.tramiteActivo && !esTesisActivo" class="card overflow-hidden">
           <div class="h-2 bg-orange"></div>
           <div class="p-6 sm:p-8">
             <TimelineTramite :tramite="tramitesStore.tramiteActivo" title="Seguimiento de mi Titulación" />
@@ -194,6 +201,8 @@ import { TimelineTramite, useTramitesStore, formatoEstado, ESTADOS_TERMINALES } 
 import { useTesisStore, reoptarInfo } from '@/modules/tesis';
 import { ref, computed, watch, onMounted } from 'vue';
 import { useEstudianteStore } from '../stores/estudiante';
+import SeguimientoExamenGrado from '../components/SeguimientoExamenGrado.vue';
+import { esFlujoExamen } from '@/modules/examen/utils/flujoExamen';
 import { AppShell } from '@/modules/layout';
 import AppIcon from '@/ui/AppIcon.vue';
 import StatCard from '@/ui/StatCard.vue';
@@ -237,6 +246,10 @@ const reoptar = computed(() => reoptarInfo(tramitesStore.tramiteActivo, {
 // portal no duplica la línea de tiempo (la muestra el módulo dedicado), solo
 // el resumen/estado con acceso al módulo.
 const esTesisActivo = computed(() => tramitesStore.tramiteActivo?.modalidad?.nombre === 'Tesis de Grado');
+
+// true si el trámite activo es de la modalidad Examen de Grado: el seguimiento
+// muestra los intentos del examen y las actualizaciones de Kardex.
+const esExamenActivo = computed(() => esFlujoExamen(tramitesStore.tramiteActivo));
 
 // Permite iniciar una nueva solicitud solo si no hay trámite activo o ya terminó.
 const mostrarInicioSolicitud = computed(() => !tramitesStore.tramiteActivo || tramiteTerminado.value);

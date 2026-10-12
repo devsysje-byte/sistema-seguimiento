@@ -117,19 +117,24 @@ class TramiteStateService
             // por el flujo heredado (investigación) o registrar el tema (nuevo).
             'tutor_asignado' => ['tema_aprobado', 'investigacion_en_desarrollo'],
             'tema_aprobado' => ['tribunal_asignado'],
-            'tribunal_asignado' => ['defensa_aprobada', 'solicitud_fecha_defensa'],
-            'defensa_aprobada' => ['reporte_generado'],
+            'tribunal_asignado' => ['defensa_aprobada', 'solicitud_fecha_defensa', 'reprobado'],
+            'defensa_aprobada' => ['publicado'],
+            'publicado' => ['titulado'],
             'reporte_generado' => ['titulado'],
             // 4. Flujo heredado: investigación, comisión revisora y defensa.
             'investigacion_en_desarrollo' => ['documento_final_presentado', 'tribunal_asignado'],
             'documento_final_presentado' => ['comision_revisora', 'tribunal_asignado'],
             'comision_revisora' => ['suficiente', 'insuficiente', 'tribunal_asignado'],
             'insuficiente' => ['comision_revisora'],
-            // Puentes hacia el estado objetivo del módulo de defensa.
-            'suficiente' => ['solicitud_fecha_defensa', 'defensa_aprobada'],
-            'solicitud_fecha_defensa' => ['defensa_programada', 'defensa_aprobada'],
-            'defensa_programada' => ['defensa_en_curso', 'defensa_aprobada'],
-            'defensa_en_curso' => ['aprobado', 'correcciones_90_dias', 'defensa_aprobada'],
+            // Puentes hacia el estado objetivo del módulo de defensa. Registrar
+            // la nota final de la defensa puede cerrar el trámite como
+            // `defensa_aprobada` (nota mínima alcanzada) o `reprobado` (nota por
+            // debajo del mínimo): en ese caso el flujo termina y el estudiante
+            // debe volver a solicitar la modalidad de graduación.
+            'suficiente' => ['solicitud_fecha_defensa', 'defensa_aprobada', 'reprobado'],
+            'solicitud_fecha_defensa' => ['defensa_programada', 'defensa_aprobada', 'reprobado'],
+            'defensa_programada' => ['defensa_en_curso', 'defensa_aprobada', 'reprobado'],
+            'defensa_en_curso' => ['aprobado', 'correcciones_90_dias', 'defensa_aprobada', 'reprobado'],
             // Tras reprobar la defensa, el estudiante tiene 90 días para corregir
             // y volver a solicitar una fecha; si no, la gestión lo pasa a `reprobado`.
             'correcciones_90_dias' => ['solicitud_fecha_defensa', 'reprobado'],

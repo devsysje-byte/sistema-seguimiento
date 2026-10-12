@@ -9,9 +9,9 @@ use Illuminate\Foundation\Http\FormRequest;
  * Validación de la fase de solicitud del Módulo de Tesis de Grado.
  *
  * Exige que el estudiante proponga el título de su tesis (es el que KARDEX
- * verificará antes de aprobar el perfil) y que adjunte OBLIGATORIAMENTE los 3
- * documentos oficiales: Nota de Solicitud, Certificado de Notas y Perfil de
- * Tesis de Grado.
+ * verificará antes de aprobar el perfil). Los 3 documentos oficiales (Nota de
+ * Solicitud, Certificado de Notas y Perfil de Tesis de Grado) son OPCIONALES:
+ * si se adjuntan, cada archivo debe ser un PDF válido.
  */
 class SolicitudTesisRequest extends FormRequest
 {
@@ -29,30 +29,30 @@ class SolicitudTesisRequest extends FormRequest
 
         return [
             'titulo' => ['required', 'string', 'min:10', 'max:255'],
-            'documentos' => ['required', 'array', 'min:3'],
+            'documentos' => ['nullable', 'array'],
             'documentos.*.archivo' => ['required', 'file', 'mimes:pdf', 'max:5120'],
             'documentos.*.tipo' => ['required', 'string', 'in:'.implode(',', $tipos)],
         ];
     }
 
     /**
-     * Verifica que estén presentes exactamente los 3 documentos obligatorios.
+     * Si se adjuntan documentos, verifica que los tipos sean válidos y no
+     * estén repetidos (el PDF es opcional, pero lo que se envía debe ser
+     * correcto).
      */
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            $tiposSubidos = collect($this->input('documentos', []))
-                ->pluck('tipo')
-                ->filter()
-                ->all();
+            $documentos = collect($this->input('documentos', []));
 
-            $tiposRequeridos = array_keys(config('tesis.tipos_documento', []));
-            $faltantes = array_values(array_diff($tiposRequeridos, $tiposSubidos));
+            $tiposSubidos = $documentos->pluck('tipo')->filter()->values();
 
-            if (! empty($faltantes)) {
+            $duplicados = $tiposSubidos->duplicates()->values();
+
+            if ($duplicados->isNotEmpty()) {
                 $validator->errors()->add(
                     'documentos',
-                    'Son obligatorios los 3 documentos: '.implode(', ', $faltantes).'.'
+                    'Documento duplicado: '.implode(', ', $duplicados).'.'
                 );
             }
         });

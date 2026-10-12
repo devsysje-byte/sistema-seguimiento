@@ -4,8 +4,8 @@ use App\Modules\Tesis\Http\Controllers\TesisController;
 use App\Support\Roles;
 
 // Flujo del estudiante en el Módulo de Tesis de Grado.
-Route::middleware(['auth:sanctum', 'role:' . Roles::ESTUDIANTE])->group(function () {
-    // Presenta la solicitud con los 3 documentos obligatorios (multipart).
+Route::middleware(['auth:sanctum', 'role:'.Roles::ESTUDIANTE])->group(function () {
+    // Presenta la solicitud con el título y los documentos PDF opcionales (multipart).
     Route::post('/tesis/solicitud', [TesisController::class, 'store']);
 
     // Reenvía el perfil corregido tras su rechazo por el Consejo Universitario.

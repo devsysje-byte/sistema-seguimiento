@@ -61,22 +61,22 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="label">Nombres</label>
-                  <input v-model="reg.nombres" class="input" placeholder="Nombre(s)" required>
+                  <input v-model="reg.nombres" class="input" placeholder="" required>
                 </div>
                 <div>
                   <label class="label">Apellidos</label>
-                  <input v-model="reg.apellidos" class="input" placeholder="Apellido(s)" required>
+                  <input v-model="reg.apellidos" class="input" placeholder="" required>
                 </div>
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="label">CI</label>
-                  <input v-model="reg.ci" class="input" placeholder="1234567" required>
+                  <input v-model="reg.ci" class="input" placeholder="" required>
                 </div>
                 <div>
                   <label class="label">Registro Universitario</label>
-                  <input v-model="reg.registro_universitario" class="input" placeholder="2020-0001" required>
+                  <input v-model="reg.registro_universitario" class="input" placeholder="" required>
                 </div>
               </div>
 
@@ -89,11 +89,11 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="label">Email</label>
-                  <input v-model="reg.email" type="email" class="input" placeholder="correo@upea.bo">
+                  <input v-model="reg.email" type="email" class="input" placeholder="">
                 </div>
                 <div>
                   <label class="label">Teléfono</label>
-                  <input v-model="reg.telefono" class="input" placeholder="59170000000">
+                  <input v-model="reg.telefono" class="input" placeholder="">
                 </div>
               </div>
 

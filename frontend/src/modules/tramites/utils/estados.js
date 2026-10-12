@@ -27,6 +27,7 @@ export const ESTADOS_OK = [
   'tema_aprobado',
   'tribunal_asignado',
   'defensa_aprobada',
+  'publicado',
   'reporte_generado',
   'titulado',
   'monografia_aprobada',

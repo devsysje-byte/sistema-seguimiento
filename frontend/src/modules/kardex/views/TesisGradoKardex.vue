@@ -24,7 +24,7 @@
             v-model="identificador"
             type="text"
             class="input pl-10"
-            placeholder="Ej: 6654321 o RU-2018-0112"
+            placeholder=""
             autocomplete="off"
           />
         </div>
@@ -53,8 +53,8 @@
     <EmptyState
       v-if="!kardexStore.postulante && !kardexStore.errorMessage"
       icon="search"
-      title="Consultar flujo del postulante"
-      message="Filtre por CI o registro universitario para visualizar el estado actual del flujo de titulación."
+      title="Consultar flujo de Tesis Grado del Estudiante"
+      message="Filtre por Cédula de Identidad o Registro Universitario para actualizar el estado actual del flujo de titulación."
     />
 
     <template v-if="kardexStore.postulante">

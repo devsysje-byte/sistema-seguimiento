@@ -16,9 +16,9 @@ use Illuminate\Validation\ValidationException;
 /**
  * Controlador del flujo del estudiante en el Módulo de Tesis de Grado.
  *
- * Capa delgada: solicitud con 3 documentos, reenvío del perfil y consulta de
- * configuración del módulo. La lógica vive en TesisService y la autorización
- * por rol está en las rutas y en cada FormRequest.
+ * Capa delgada: solicitud (con documentos PDF opcionales), reenvío del perfil
+ * y consulta de configuración del módulo. La lógica vive en TesisService y la
+ * autorización por rol está en las rutas y en cada FormRequest.
  */
 class TesisController extends Controller
 {

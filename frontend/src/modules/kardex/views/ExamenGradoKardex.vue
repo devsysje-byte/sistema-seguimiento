@@ -8,9 +8,7 @@
       <div>
         <h2 class="text-2xl font-bold text-white uppercase">Examen de Grado</h2>
         <p class="text-sm text-slate-400 mt-0.5">
-          Habilite al estudiante, registre los sorteos de cada examen y asigne las notas. Si
-          reprobó solo un examen, su nota aprobada se conserva y re-sortea únicamente el otro;
-          reprobar ambos exige una nueva Resolución del HCC. Titularse exige aprobar ambos con 51 o más.
+          Habilite al estudiante, registre los sorteos de cada examen y asigne las notas.
         </p>
       </div>
     </div>
@@ -28,7 +26,7 @@
             v-model="identificador"
             type="text"
             class="input pl-10"
-            placeholder="Ej: 6654321 o RU-2018-0112"
+            placeholder=""
             autocomplete="off"
           />
         </div>
@@ -57,8 +55,8 @@
     <EmptyState
       v-if="!kardexStore.postulante && !kardexStore.errorMessage"
       icon="search"
-      title="Consultar postulante del examen de grado"
-      message="Filtre por CI o registro universitario para habilitar al estudiante y registrar sus sorteos."
+      title="Consultar flujo del postulante al examen de grado"
+      message="Filtre por Cédula de Idenitdad  o Registro Universitario para habilitar al estudiante y registrar sus sorteos."
     />
 
     <template v-if="kardexStore.postulante">

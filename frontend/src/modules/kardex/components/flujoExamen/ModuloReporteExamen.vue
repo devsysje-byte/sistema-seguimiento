@@ -197,10 +197,6 @@
             <p class="doc-brand-text__line">El Alto — Bolivia</p>
           </div>
         </div>
-        <div class="doc-header__right">
-          <p class="doc-tagline">REPORTE OFICIAL</p>
-          <p class="doc-tagline2">Emitido: {{ fechaEmision }}</p>
-        </div>
       </header>
 
       <section class="doc-info">
@@ -266,7 +262,7 @@
         <table class="doc-tabla">
           <thead>
             <tr>
-              <th class="doc-tabla__desc">Resolución</th>
+              <th class="doc-tabla__resolucion">Resolución</th>
               <th class="doc-tabla__fecha">Fecha</th>
               <th class="doc-tabla__desc">Examen teórico</th>
               <th class="doc-tabla__desc">Examen de especialidad</th>
@@ -274,7 +270,7 @@
           </thead>
           <tbody>
             <tr v-for="r in resoluciones" :key="r.id_historial_examen">
-              <td class="doc-tabla__desc">
+              <td class="doc-tabla__resolucion">
                 {{ r.numero }}<template v-if="r.vigente"> (Vigente)</template>
               </td>
               <td class="doc-tabla__fecha">{{ fechaLegible(r.fecha) || '—' }}</td>
@@ -309,17 +305,14 @@
       </section>
 
       <footer class="doc-footer">
+        
         <div class="doc-firma">
-          <span class="doc-firma__linea"></span>
-          <p class="doc-firma__cargo">Kardex Académico</p>
+          <span class=""></span>
+          <p class="doc-firma__cargo"></p>
         </div>
         <div class="doc-firma">
           <span class="doc-firma__linea"></span>
-          <p class="doc-firma__cargo">Decano</p>
-        </div>
-        <div class="doc-firma">
-          <span class="doc-firma__linea"></span>
-          <p class="doc-firma__cargo">Director de Carrera</p>
+          <p class="doc-firma__cargo">Kardex</p>
         </div>
       </footer>
     </div>
@@ -521,8 +514,12 @@ function notaDe(etapa) {
   return `${nota} / 100 · ${Number(nota) >= NOTA_MINIMA ? 'Aprobado' : 'Reprobado'}`;
 }
 
+/* Márgenes de 1.5 cm iguales en los cuatro lados. html2pdf captura el HTML
+   dentro de esa área (página − márgenes), por lo que `.reporte-pagina` debe
+   medir exactamente el ancho útil y NO llevar padding propio: si el HTML es
+   más ancho que el área de captura se recorta por los costados. */
 const OPCIONES_PDF = {
-  margin: [10, 10, 10, 10],
+  margin: [15, 15, 15, 15],
   image: { type: 'jpeg', quality: 0.98 },
   html2canvas: { scale: 3, useCORS: true, allowTaint: false, logging: false, backgroundColor: '#ffffff' },
   jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
@@ -557,7 +554,7 @@ function paginar(pdf) {
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8);
     pdf.setTextColor(120, 120, 120);
-    pdf.text(`Página ${i} / ${total}`, ancho - 10, alto - 5, { align: 'right' });
+    pdf.text(`Página ${i} / ${total}`, ancho - 15, alto - 7, { align: 'right' });
   }
 }
 
@@ -644,10 +641,13 @@ async function visualizar() {
 }
 
 .reporte-pagina {
-  width: 816px;
-  height: 981px;
+  width: 100%;               /* igual al área de captura de html2pdf: no sobra
+                                ancho, así nada se recorta a izquierda/derecha */
+  min-height: 941px;         /* ≈ 249 mm: altura útil de la carta con margen de
+                                1.5 cm (249.4 mm), 3 px menos para que html2pdf
+                                no genere una segunda página vacía */
   box-sizing: border-box;
-  padding: 22px 30px;
+  padding: 0;                /* el margen de 1.5 cm lo pone jsPDF, no el HTML */
   background: #ffffff;
   color: #000000;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
@@ -655,8 +655,10 @@ async function visualizar() {
   font-size: 10px;
   line-height: 1.4;
   overflow: hidden;
+  overflow-wrap: anywhere;   /* ninguna palabra larga desborda el contenido */
   display: flex;
   flex-direction: column;
+  align-items: stretch;      /* fuerza a los hijos a ocupar el ancho útil */
 }
 
 /* --- Encabezado --- */
@@ -667,6 +669,7 @@ async function visualizar() {
   gap: 16px;
   padding-bottom: 8px;
   border-bottom: 2px solid #000;
+  width: 100%;               /* ocupa todo el ancho útil */
 }
 
 .doc-header__brand {
@@ -694,6 +697,7 @@ async function visualizar() {
 
 .doc-header__right {
   text-align: right;
+  flex-shrink: 0;
 }
 
 .doc-tagline {
@@ -714,15 +718,19 @@ async function visualizar() {
 /* --- Datos del estudiante y del trámite --- */
 .doc-info {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: 12px;
   margin-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .doc-info__estudiante,
 .doc-info__meta {
   border: 1px solid #000;
   padding: 7px 9px;
+  min-width: 0;              /* la columna no crece más allá de su ancho */
+  overflow-wrap: anywhere;
 }
 
 .doc-info h3 {
@@ -745,9 +753,14 @@ async function visualizar() {
   margin: 14px 0 10px;
 }
 
-/* --- Secciones --- */
+/* --- Secciones ---
+   Centradas y sin desbordar. `box-sizing: border-box` evita que el
+   padding/border sumen al ancho del contenedor padre. */
 .doc-seccion {
-  margin-bottom: 10px;
+  margin: 0 0 10px 0;
+  width: 100%;
+  box-sizing: border-box;
+  page-break-inside: avoid;  /* la sección (y su tabla) no se parte entre páginas */
 }
 
 .doc-seccion__titulo {
@@ -763,10 +776,15 @@ async function visualizar() {
   margin-bottom: 5px;
 }
 
-/* --- Tablas --- */
+/* --- Tablas ---
+   `table-layout: fixed` obliga a respetar los anchos de columna;
+   `width: 100%` + `margin: 0 auto` centra la tabla dentro de la sección. */
 .doc-tabla {
   width: 100%;
+  margin: 0;
   border-collapse: collapse;
+  table-layout: fixed;
+  box-sizing: border-box;
 }
 
 .doc-tabla th,
@@ -775,6 +793,10 @@ async function visualizar() {
   padding: 4px 6px;
   text-align: left;
   vertical-align: top;
+  box-sizing: border-box;
+  word-wrap: break-word;        /* rompe palabras largas */
+  overflow-wrap: break-word;
+  white-space: normal;          /* permite bajar de línea */
 }
 
 .doc-tabla th {
@@ -785,14 +807,34 @@ async function visualizar() {
   letter-spacing: 0.04em;
 }
 
-.doc-tabla__nro,
-.doc-tabla__fecha {
-  width: 74px;
+/* Anchos de columna: deben sumar 100% en cada tabla para que ninguna
+   columna (sobre todo la primera, pegada al margen izquierdo) se recorte */
+.doc-tabla__desc {
+  width: 30%;
 }
 
-.doc-tabla__nota,
+.doc-tabla__detalle {
+  width: 70%;
+}
+
+.doc-tabla__tema {
+  width: 30%;
+}
+
+.doc-tabla__resolucion {
+  width: 28%;
+}
+
+.doc-tabla__fecha {
+  width: 12%;
+}
+
+.doc-tabla__nota {
+  width: 10%;
+}
+
 .doc-tabla__estado {
-  width: 82px;
+  width: 18%;
 }
 
 .doc-tabla__estado,
@@ -801,18 +843,20 @@ async function visualizar() {
   text-align: center;
 }
 
-.doc-tabla__tema {
-  width: 44%;
+/* Evita que una fila se parta entre páginas al imprimir */
+.doc-tabla tr {
+  page-break-inside: avoid;
 }
 
 /* --- Firmas --- */
 .doc-footer {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
   margin-top: auto;
   padding-top: 18px;
   text-align: center;
+  page-break-inside: avoid;  /* las firmas no se parten entre páginas */
 }
 
 .doc-firma__linea {
