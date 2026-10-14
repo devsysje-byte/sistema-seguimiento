@@ -1081,9 +1081,24 @@ function similitudTitulos(consulta, candidato) {
   return Math.round(dice * 100);
 }
 
-// Estados terminales que dejan de considerarse "en curso" en el resumen.
+// Estados terminales por modalidad (espejo de TERMINALES_POR_MODALIDAD del
+// backend). En Examen de Grado aprobar no cierra el flujo: todavía falta el
+// reporte, así que el único logro terminal es `titulado`.
+const TERMINALES_POR_MODALIDAD = {
+  'Examen de Grado': ['rechazado', 'titulado'],
+};
 const ESTADOS_TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'titulado'];
-const esEnCurso = (estado) => !ESTADOS_TERMINALES.includes(estado);
+const ESTADOS_FALLO = ['reprobado', 'rechazado'];
+
+// Terminales de una modalidad (mismo fallback que el backend).
+const terminalesDe = (modalidad) => TERMINALES_POR_MODALIDAD[modalidad] || ESTADOS_TERMINALES;
+
+// Terminales de ÉXITO de una modalidad: los que no son rechazo ni reprobación.
+const exitososDe = (modalidad) =>
+  terminalesDe(modalidad).filter((estado) => !ESTADOS_FALLO.includes(estado));
+
+// En curso mientras no haya alcanzado un estado terminal de su modalidad.
+const esEnCurso = (estado, modalidad) => !terminalesDe(modalidad).includes(estado);
 
 // Simula GET /kardex/resumen (resumen estadístico del dashboard).
 export function resumenMock() {
@@ -1096,12 +1111,13 @@ export function resumenMock() {
 
   const modalidades = MODALIDADES_MOCK.map((m) => {
     const trámites = totalPorModalidad(m.id_modalidad);
+    const exitosos = exitososDe(m.nombre);
     return {
       id_modalidad: m.id_modalidad,
       nombre: m.nombre,
       total: trámites.length,
-      aprobados: trámites.filter((t) => t.estado_actual === 'aprobado').length,
-      en_curso: trámites.filter((t) => esEnCurso(t.estado_actual)).length,
+      aprobados: trámites.filter((t) => exitosos.includes(t.estado_actual)).length,
+      en_curso: trámites.filter((t) => esEnCurso(t.estado_actual, m.nombre)).length,
     };
   });
 
@@ -1118,8 +1134,8 @@ export function resumenMock() {
     },
     totales: {
       tramites: tramites.length,
-      aprobados: tramites.filter((t) => t.estado_actual === 'aprobado').length,
-      en_curso: tramites.filter((t) => esEnCurso(t.estado_actual)).length,
+      aprobados: modalidades.reduce((suma, m) => suma + m.aprobados, 0),
+      en_curso: modalidades.reduce((suma, m) => suma + m.en_curso, 0),
     },
   };
 }

@@ -7,8 +7,10 @@ use App\Models\Modalidad;
 use App\Models\Tramite;
 use App\Models\User;
 use App\Modules\Tramites\Services\TramiteService;
+use App\Modules\Tramites\Services\TramiteStateService;
 use App\Support\CredencialesEstudiante;
 use App\Support\Roles;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -197,32 +199,52 @@ class KardexService
      * Agrega en SQL los totales por modalidad, estudiantes y tutores para la
      * vista principal del dashboard (panel general).
      *
+     * El verde (`aprobados`) cuenta los trámites cuyo flujo YA culminó de forma
+     * aprobatoria según su modalidad: `titulado` en todas y `aprobado` en las
+     * que cierran ahí. En Examen de Grado `aprobado` todavía espera el reporte,
+     * así que no cuenta como finalizado y permanece en curso.
+     *
      * @return array{modalidades: array<int, array<string, mixed>>, estudiantes: array<string, int>, tutores: array<string, int>, totales: array<string, int>}
      */
     public function resumen(): array
     {
         $porModalidad = Modalidad::query()
             ->withCount('tramites')
-            ->withCount(['tramites as aprobados' => fn ($q) => $q->where('estado_actual', 'aprobado')])
-            ->withCount([
-                'tramites as en_curso' => fn ($q) => $q->whereNotIn(
-                    'estado_actual',
-                    ['aprobado', 'reprobado', 'rechazado'],
-                ),
-            ])
+            ->withCount(['tramites as aprobados_count' => fn (Builder $q) => $q->where('estado_actual', 'aprobado')])
+            ->withCount(['tramites as titulados_count' => fn (Builder $q) => $q->where('estado_actual', 'titulado')])
+            ->withCount(['tramites as fallos_count' => fn (Builder $q) => $q->whereIn('estado_actual', TramiteStateService::fallos())])
             ->where('activo', true)
             ->orderBy('nombre')
             ->get()
-            ->map(fn (Modalidad $modalidad) => [
-                'id_modalidad' => $modalidad->id_modalidad,
-                'nombre' => $modalidad->nombre,
-                'total' => (int) $modalidad->tramites_count,
-                'aprobados' => (int) $modalidad->aprobados,
-                'en_curso' => (int) $modalidad->en_curso,
-            ])
+            ->map(function (Modalidad $modalidad) {
+                $exitosos = TramiteStateService::terminalesExitososDe($modalidad->nombre);
+                $aprobados = (int) $modalidad->titulados_count;
+                if (in_array('aprobado', $exitosos, true)) {
+                    $aprobados += (int) $modalidad->aprobados_count;
+                }
+                $total = (int) $modalidad->tramites_count;
+                $fallos = (int) $modalidad->fallos_count;
+
+                return [
+                    'id_modalidad' => $modalidad->id_modalidad,
+                    'nombre' => $modalidad->nombre,
+                    'total' => $total,
+                    'aprobados' => $aprobados,
+                    'en_curso' => max($total - $aprobados - $fallos, 0),
+                ];
+            })
             ->all();
 
-        $enCursoEstados = ['aprobado', 'reprobado', 'rechazado'];
+        $totalTramites = (int) Tramite::query()->count();
+        $aprobados = (int) Tramite::query()
+            ->where(function (Builder $q) {
+                $q->where('estado_actual', 'titulado')
+                    ->orWhere(fn (Builder $sub) => $sub
+                        ->where('estado_actual', 'aprobado')
+                        ->whereHas('modalidad', fn (Builder $m) => $m->where('nombre', '!=', TramiteStateService::MODALIDAD_EXAMEN)));
+            })
+            ->count();
+        $fallos = (int) Tramite::query()->whereIn('estado_actual', TramiteStateService::fallos())->count();
 
         return [
             'modalidades' => $porModalidad,
@@ -236,9 +258,9 @@ class KardexService
                 'activos' => (int) Tramite::query()->whereNotNull('id_tutor')->distinct()->count('id_tutor'),
             ],
             'totales' => [
-                'tramites' => (int) Tramite::query()->count(),
-                'aprobados' => (int) Tramite::query()->where('estado_actual', 'aprobado')->count(),
-                'en_curso' => (int) Tramite::query()->whereNotIn('estado_actual', $enCursoEstados)->count(),
+                'tramites' => $totalTramites,
+                'aprobados' => $aprobados,
+                'en_curso' => max($totalTramites - $aprobados - $fallos, 0),
             ],
         ];
     }

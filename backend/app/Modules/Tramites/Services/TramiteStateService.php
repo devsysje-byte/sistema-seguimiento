@@ -169,6 +169,13 @@ class TramiteStateService
     private const TERMINALES = ['aprobado', 'reprobado', 'rechazado', 'titulado'];
 
     /**
+     * Estados de fallo: cierran el flujo sin titulación (rechazo o reprobación).
+     *
+     * @var array<int, string>
+     */
+    private const FALLOS = ['reprobado', 'rechazado'];
+
+    /**
      * Estados de Examen de Grado que NO cierran el tr??mite.
      *
      * `aprobado` es terminal para el resto de las modalidades, pero en Examen
@@ -217,6 +224,36 @@ class TramiteStateService
     public static function terminalesDe(string $modalidadNombre): array
     {
         return self::TERMINALES_POR_MODALIDAD[$modalidadNombre] ?? self::TERMINALES;
+    }
+
+    /**
+     * Estados terminales de ÉXITO (aprobación o titulación) de una modalidad.
+     *
+     * Son los estados terminales que no son un rechazo ni una reprobación, y
+     * los usa el panel general del KARDEX para pintar en verde los trámites ya
+     * culminados. En Examen de Grado el único logro terminal es `titulado` (en
+     * `aprobado` todavía falta emitir el reporte); en el resto de las
+     * modalidades son `aprobado` y `titulado`.
+     *
+     * @param  string  $modalidadNombre  Nombre de la modalidad de titulación.
+     * @return array<int, string>
+     */
+    public static function terminalesExitososDe(string $modalidadNombre): array
+    {
+        return array_values(array_diff(
+            self::terminalesDe($modalidadNombre),
+            self::FALLOS,
+        ));
+    }
+
+    /**
+     * Estados que cierran el flujo sin titulación (rechazo o reprobación).
+     *
+     * @return array<int, string>
+     */
+    public static function fallos(): array
+    {
+        return self::FALLOS;
     }
 
     /**
