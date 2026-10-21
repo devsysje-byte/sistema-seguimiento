@@ -99,11 +99,9 @@
       </div>
 
       <div v-else class="space-y-6">
-        <div v-if="tramitesStore.tramiteActivo && esExamenActivo" class="card overflow-hidden">
-          <div class="h-2 bg-orange"></div>
-          <div class="p-6 sm:p-8">
-            <SeguimientoExamenGrado :tramite="tramitesStore.tramiteActivo" />
-          </div>
+        <!-- Examen de Grado: el seguimiento ya renderiza sus propias tarjetas -->
+        <div v-if="tramitesStore.tramiteActivo && esExamenActivo">
+          <SeguimientoExamenGrado :tramite="tramitesStore.tramiteActivo" />
         </div>
 
         <div v-else-if="tramitesStore.tramiteActivo && !esTesisActivo" class="card overflow-hidden">
@@ -199,7 +197,7 @@
 // (seguimiento del trámite activo y acceso al módulo dedicado de Tesis).
 import { TimelineTramite, useTramitesStore, formatoEstado, ESTADOS_TERMINALES } from '@/modules/tramites';
 import { useTesisStore, reoptarInfo } from '@/modules/tesis';
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useEstudianteStore } from '../stores/estudiante';
 import SeguimientoExamenGrado from '../components/SeguimientoExamenGrado.vue';
 import { esFlujoExamen } from '@/modules/examen/utils/flujoExamen';
@@ -248,17 +246,57 @@ const reoptar = computed(() => reoptarInfo(tramitesStore.tramiteActivo, {
 const esTesisActivo = computed(() => tramitesStore.tramiteActivo?.modalidad?.nombre === 'Tesis de Grado');
 
 // true si el trámite activo es de la modalidad Examen de Grado: el seguimiento
-// muestra los intentos del examen y las actualizaciones de Kardex.
+// muestra el avance en tarjetas, los intentos y la última actualización.
 const esExamenActivo = computed(() => esFlujoExamen(tramitesStore.tramiteActivo));
+
+// Seguimiento en vivo del Examen de Grado: mientras el portal esté abierto con
+// esta modalidad, el trámite activo se refresca en segundo plano (silencioso,
+// sin indicador de carga) para que los módulos que va registrando Kardex se
+// reflejen al instante en las tarjetas del estudiante, sin recargar la página.
+const INTERVALO_REFRESCO_MS = 60000;
+let timerRefresco = null;
+let refrescando = false;
+
+async function refrescarTramiteSilencioso() {
+    if (refrescando) return;
+    refrescando = true;
+    try {
+        await tramitesStore.cargarTramiteActivo(true);
+    } finally {
+        refrescando = false;
+    }
+}
+
+// Al volver a la pestaña del navegador se refresca de inmediato.
+function alVolverPestana() {
+    if (document.visibilityState === 'visible' && esExamenActivo.value) {
+        refrescarTramiteSilencioso();
+    }
+}
+
+watch(esExamenActivo, (activo) => {
+    clearInterval(timerRefresco);
+    timerRefresco = null;
+    if (activo) {
+        timerRefresco = setInterval(refrescarTramiteSilencioso, INTERVALO_REFRESCO_MS);
+    }
+}, { immediate: true });
 
 // Permite iniciar una nueva solicitud solo si no hay trámite activo o ya terminó.
 const mostrarInicioSolicitud = computed(() => !tramitesStore.tramiteActivo || tramiteTerminado.value);
 
-// Carga inicial: perfil y trámite activo.
+// Carga inicial: perfil y trámite activo. El listener de pestaña alimenta el
+// refresco en vivo del Examen de Grado.
 onMounted(async () => {
     await estudianteStore.cargarPerfil(true);
     sinPerfil.value = !estudianteStore.perfilEstudiante;
     await tramitesStore.cargarTramiteActivo();
+    document.addEventListener('visibilitychange', alVolverPestana);
+});
+
+onUnmounted(() => {
+    clearInterval(timerRefresco);
+    document.removeEventListener('visibilitychange', alVolverPestana);
 });
 
 // El perfil pudo llegar ya cargado desde el login; en ese caso no es "sin perfil".

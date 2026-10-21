@@ -2,7 +2,7 @@
   <ModuloTarjeta
     numero="5"
     titulo="Publicación"
-    descripcion="Adjunte el Trabajo de Investigación (PDF) — opcional"
+    descripcion="Verifique el trabajo de investigación (PDF) subido por el estudiante para concluir la publicación."
     icono="graduation"
     :completado="completado"
     :en-progreso="enProgreso"
@@ -28,50 +28,54 @@
       </div>
     </div>
 
-    <form v-else @submit.prevent="guardar" class="grid gap-4">
-      <div>
-        <label class="label">Trabajo de Investigación (PDF) — opcional</label>
-        <label
-          :class="['flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', form.archivo ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40']"
-        >
-          <span
-            class="flex items-center gap-2 text-sm min-w-0"
-            :class="form.archivo ? 'text-orange-200' : 'text-slate-400'"
+    <div v-else-if="!enProgreso && !bloqueado" class="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-slate-400">
+      <AppIcon name="clock" :size="15" class="inline mr-1.5" />
+      Este módulo se habilitará cuando el estudiante suba su trabajo de investigación tras aprobar la defensa.
+    </div>
+
+    <div v-else class="space-y-3">
+      <div class="rounded-xl bg-white/5 border border-white/10 p-3.5">
+        <p class="text-sm font-semibold text-white">Trabajo de Investigación subido por el estudiante</p>
+        <div class="mt-2 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-900/40 px-3.5 py-2.5">
+          <span class="flex items-center gap-2 text-sm min-w-0" :class="archivo?.nombre ? 'text-slate-200' : 'text-slate-500'">
+            <AppIcon :name="archivo?.nombre ? 'file-text' : 'alert-triangle'" :size="16" class="shrink-0 text-orange-300" />
+            <span class="truncate">{{ archivo?.nombre || 'El estudiante aún no ha adjuntado el archivo.' }}</span>
+          </span>
+          <a
+            v-if="archivo?.ruta"
+            :href="assetUrl(archivo.ruta)"
+            target="_blank"
+            rel="noopener"
+            class="btn-ghost !py-1.5 text-xs shrink-0"
           >
-            <AppIcon v-if="form.archivo" name="check-circle" :size="16" class="text-emerald-400 shrink-0" />
-            <AppIcon v-else name="file" :size="16" class="shrink-0" />
-            <span class="truncate">{{ form.archivo?.name || 'Subir trabajo de investigación en PDF...' }}</span>
-          </span>
-          <input type="file" accept=".pdf" class="hidden" @change="handleArchivo">
-          <span class="btn-ghost !py-1.5 pointer-events-none text-xs">
-            <AppIcon name="plus" :size="13" />
-            PDF
-          </span>
-        </label>
-        <button v-if="form.archivo" type="button" class="text-xs text-red-400 mt-2 hover:text-red-300" @click="eliminarArchivo">Quitar archivo</button>
+            <AppIcon name="link" :size="13" />
+            Ver PDF
+          </a>
+        </div>
       </div>
 
-      <ul v-if="errores.length" class="sm:col-span-2 space-y-1">
+      <ul v-if="errores.length" class="space-y-1">
         <li v-for="(e, i) in errores" :key="i" class="flex items-start gap-2 text-sm text-red-400">
           <AppIcon name="alert-triangle" :size="15" class="shrink-0 mt-0.5" />
           {{ e }}
         </li>
       </ul>
 
-      <div class="sm:col-span-2 flex justify-end">
-        <button type="submit" class="btn-warm px-6" :disabled="cargando">
+      <div class="flex justify-end">
+        <button type="button" class="btn-warm px-6" :disabled="cargando || !archivo?.nombre" @click="guardar">
           <AppIcon v-if="cargando" name="loader" :size="18" class="animate-spin" />
           <AppIcon v-else name="check" :size="18" />
-          <span class="uppercase tracking-wide">Guardar y actualizar flujo</span>
+          <span class="uppercase tracking-wide">Validar y cerrar publicación</span>
         </button>
       </div>
-    </form>
+    </div>
   </ModuloTarjeta>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { validarModulo } from '@/modules/tesis/utils/flujoTitulacion';
+import { assetUrl } from '@/core/http/storage';
 import AppIcon from '@/ui/AppIcon.vue';
 import ModuloTarjeta from './ModuloTarjeta.vue';
 
@@ -90,6 +94,8 @@ const form = reactive({
 });
 
 const errores = ref([]);
+
+const archivo = computed(() => props.datos?.archivo || null);
 
 function handleArchivo(event) {
   form.archivo = event.target.files[0] || null;

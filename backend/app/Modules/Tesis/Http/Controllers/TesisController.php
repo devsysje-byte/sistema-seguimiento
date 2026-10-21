@@ -3,6 +3,8 @@
 namespace App\Modules\Tesis\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Tesis\Http\Requests\ActualizarPerfilTesisRequest;
+use App\Modules\Tesis\Http\Requests\PublicacionDocumentoRequest;
 use App\Modules\Tesis\Http\Requests\ReenviarDocumentoRequest;
 use App\Modules\Tesis\Http\Requests\ReenviarPerfilRequest;
 use App\Modules\Tesis\Http\Requests\SolicitarFechaDefensaRequest;
@@ -35,6 +37,25 @@ class TesisController extends Controller
             return response()->json($tramite, 201);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    /**
+     * PUT /api/tesis/{id}/perfil
+     */
+    public function actualizarPerfil(ActualizarPerfilTesisRequest $request, int $id): JsonResponse
+    {
+        try {
+            $tramite = $this->tesisService->actualizarPerfil($request->validated(), $id, $request->user());
+
+            return response()->json($tramite);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => $e->validator->errors()->first(),
+                'errors' => $e->errors(),
+            ], 422);
         }
     }
 
@@ -89,6 +110,27 @@ class TesisController extends Controller
     }
 
     /**
+     * POST /api/tesis/{id}/publicacion
+     */
+    public function subirPublicacion(PublicacionDocumentoRequest $request, int $id): JsonResponse
+    {
+        try {
+            $tramite = $this->tesisService->subirPublicacion(
+                $id,
+                $request->user(),
+                $request->file('documento_publicacion'),
+                $request->validated('observaciones')
+            );
+
+            return response()->json($tramite);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => $e->validator->errors()->first()], 422);
+        }
+    }
+
+    /**
      * POST /api/tesis/{id}/solicitar-fecha-defensa
      */
     public function solicitarFechaDefensa(SolicitarFechaDefensaRequest $request, int $id): JsonResponse
@@ -120,6 +162,7 @@ class TesisController extends Controller
             'dias_correccion' => config('tesis.dias_correccion'),
             'dias_remodalidad' => config('tesis.dias_remodalidad'),
             'tipos_documento' => config('tesis.tipos_documento'),
+            'tipos_documento_publicacion' => config('tesis.tipos_documento_publicacion'),
             'estado_reenvio' => $this->tesisService->estadoReenvio(),
         ]);
     }

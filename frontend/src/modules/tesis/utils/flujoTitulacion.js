@@ -448,8 +448,9 @@ export function validarModulo(moduloId, datos = {}) {
     case 'reporte':
       break;
     case 'publicacion':
-      // La publicación no forma parte obligatoria del flujo registrado aquí;
-      // si se guarda, al menos puede aceptarse sin campos obligatorios.
+      if (!val(datos.archivo?.nombre)) {
+        errores.push('Debe existir un documento de publicación subido por el estudiante.');
+      }
       break;
     default:
       errores.push('Módulo no reconocido.');

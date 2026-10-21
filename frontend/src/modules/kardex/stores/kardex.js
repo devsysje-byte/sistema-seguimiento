@@ -190,6 +190,28 @@ export const useKardexStore = defineStore('kardex', {
             }
         },
         /**
+         * Refresca en segundo plano el postulante ya visible (auto-actualización
+         * de la pantalla). A diferencia de `consultar` no toca `cargando` ni
+         * `errorMessage` y, si la petición falla, conserva los datos que ya están
+         * en pantalla: la actualización automática nunca debe reemplazar un
+         * trámite real por el respaldo de demostración.
+         *
+         * @param {string} identificador CI o R.U. del postulante consultado.
+         * @returns {Promise<Object|null>} Datos nuevos o null si no se pudo refrescar.
+         */
+        async refrescar(identificador) {
+            if (!identificador || this.cargando) return null;
+            try {
+                const { data } = await kardexService.consultar(identificador);
+                this.simulado = false;
+                this.postulante = data.postulante;
+                this.tramite = data.tramite;
+                return data;
+            } catch (error) {
+                return null;
+            }
+        },
+        /**
          * Actualiza el estado del trámite (avanza por el flujo). En modo
          * simulado muta el trámite local de demostración.
          *

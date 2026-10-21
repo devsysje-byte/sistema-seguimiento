@@ -2,7 +2,7 @@
   <ModuloTarjeta
     numero="1"
     titulo="Perfil de Tesis"
-    descripcion="Verifique el título de tesis y los 3 documentos del postulante para aprobar o rechazar su perfil (el PDF adjunto es opcional)."
+    descripcion="Revise el título y los 3 documentos presentados por el postulante, verifíquelos y apruebe o rechace su perfil. El estudiante sube los PDF; aquí solo se validan."
     icono="file-text"
     :completado="completado"
     :en-progreso="enProgreso"
@@ -81,28 +81,27 @@
 
     <!-- Revisión del perfil -->
     <form v-else @submit.prevent="aprobar">
-      <!-- Título presentado por el estudiante + verificación de unicidad -->
+      <!-- Título presentado por el estudiante: editable para corregir errores
+           ortográficos; la corrección se persiste al aprobar el perfil. -->
       <div class="rounded-xl bg-white/5 border border-white/10 p-3.5">
-        <label class="label" for="perfil-titulo">Título de tesis de grado presentado</label>
-        <div class="flex flex-col sm:flex-row gap-2.5">
-          <div class="relative flex-1">
-            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-              <AppIcon name="file-text" :size="17" />
-            </span>
-            <input
-              id="perfil-titulo"
-              ref="inputTitulo"
-              v-model="form.titulo"
-              type="text"
-              class="input pl-10"
-              placeholder="Ej: Sistemas de riego eficientes para cultivos de altura"
-              autocomplete="off"
-            />
-          </div>
+        <label class="label" for="perfil-titulo">Título de tesis de grado presentado por el estudiante</label>
+        <textarea
+          id="perfil-titulo"
+          v-model="form.titulo"
+          rows="2"
+          maxlength="255"
+          class="input resize-none"
+          placeholder="El estudiante aún no registró un título de tesis."
+        ></textarea>
+        <div class="mt-2.5 flex flex-wrap items-center justify-between gap-2.5">
+          <p class="flex items-center gap-1.5 text-xs text-slate-400">
+            <AppIcon name="info" :size="13" class="shrink-0" />
+            Puede corregir errores ortográficos; verifique la unicidad del título y el resultado se guardará al aprobar el perfil.
+          </p>
           <button
             type="button"
             class="btn-primary shrink-0 justify-center"
-            :disabled="!form.titulo.trim() || kardexStore.verificandoTitulo"
+            :disabled="form.titulo.trim().length < 10 || kardexStore.verificandoTitulo"
             @click="verificarTitulo"
           >
             <AppIcon v-if="kardexStore.verificandoTitulo" name="loader" :size="16" class="animate-spin" />
@@ -110,9 +109,9 @@
             <span class="uppercase tracking-wide">Verificar</span>
           </button>
         </div>
-        <p class="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
-          <AppIcon name="info" :size="13" />
-          Comprueba si el título ya fue registrado en otro trámite o si existen tesis de grado similares.
+        <p v-if="tituloSinVerificar" class="mt-2 flex items-center gap-1.5 text-xs text-amber-300">
+          <AppIcon name="alert-triangle" :size="13" class="shrink-0" />
+          El título fue modificado: verifíquelo nuevamente antes de aprobar el perfil.
         </p>
 
         <!-- Resultado de la verificación -->
@@ -177,7 +176,7 @@
         </div>
       </div>
 
-      <!-- Documentos verificados -->
+      <!-- Documentos presentados por el estudiante: solo se verifican -->
       <div class="space-y-3 mt-3.5">
         <div
           v-for="d in DOCUMENTOS_PERFIL"
@@ -197,23 +196,30 @@
             </span>
           </label>
 
-          <label
-            :class="['mt-3 flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border-2 border-dashed cursor-pointer transition', form.documentos[d.tipo].archivo ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40']"
-          >
+          <div class="mt-3 flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-white/10 bg-slate-900/40">
             <span
               class="flex items-center gap-2 text-sm min-w-0"
-              :class="form.documentos[d.tipo].archivo ? 'text-orange-200' : 'text-slate-400'"
+              :class="form.documentos[d.tipo].archivo ? 'text-slate-200' : 'text-slate-500'"
             >
-              <AppIcon v-if="form.documentos[d.tipo].archivo" name="check-circle" :size="16" class="text-emerald-400 shrink-0" />
-              <AppIcon v-else name="file" :size="16" class="shrink-0" />
-              <span class="truncate">{{ nombreArchivo(form.documentos[d.tipo].archivo) || 'Adjuntar PDF (opcional)...' }}</span>
+              <AppIcon
+                :name="form.documentos[d.tipo].archivo ? 'file-text' : 'alert-triangle'"
+                :size="16"
+                class="shrink-0"
+                :class="form.documentos[d.tipo].archivo ? 'text-orange-300' : 'text-amber-400'"
+              />
+              <span class="truncate">{{ nombreArchivo(form.documentos[d.tipo].archivo) || 'El estudiante no adjuntó este PDF.' }}</span>
             </span>
-            <input type="file" accept=".pdf" class="hidden" @change="handleArchivo(d.tipo, $event)">
-            <span class="btn-ghost !py-1.5 pointer-events-none text-xs">
-              <AppIcon name="plus" :size="13" />
-              PDF opc.
-            </span>
-          </label>
+            <a
+              v-if="form.documentos[d.tipo].archivo?.ruta"
+              :href="assetUrl(form.documentos[d.tipo].archivo.ruta)"
+              target="_blank"
+              rel="noopener"
+              class="btn-ghost !py-1.5 text-xs shrink-0"
+            >
+              <AppIcon name="link" :size="13" />
+              Ver PDF
+            </a>
+          </div>
         </div>
       </div>
 
@@ -285,7 +291,7 @@
           v-if="!rechazar"
           type="submit"
           class="btn-warm justify-center"
-          :disabled="cargando || tituloDuplicado"
+          :disabled="cargando || tituloDuplicado || tituloSinVerificar"
         >
           <AppIcon v-if="cargando" name="loader" :size="18" class="animate-spin" />
           <AppIcon v-else name="check" :size="18" />
@@ -299,7 +305,9 @@
 <script setup>
 // Módulo 1 del flujo de titulación: revisión del PERFIL DE TESIS por parte de
 // KARDEX. Integra la verificación de unicidad del título presentado por el
-// estudiante y la decisión de aprobar o rechazar el perfil:
+// estudiante (que KARDEX puede corregir —p. ej. errores ortográficos— antes de
+// decidir; la corrección se persiste al aprobar) y la decisión de aprobar o
+// rechazar el perfil:
 //
 //   - Aprobar: exige título verificado (sin trabajos con el mismo título) y los
 //     3 documentos marcados; el trámite avanza a `perfil_aprobado`.
@@ -316,6 +324,7 @@ import {
 import { useKardexStore } from '../../stores/kardex';
 import { fechaLegible } from '../../utils/formato';
 import { EstadoBadge } from '@/modules/tramites';
+import { assetUrl } from '@/core/http/storage';
 import AppIcon from '@/ui/AppIcon.vue';
 import ModuloTarjeta from './ModuloTarjeta.vue';
 
@@ -333,9 +342,16 @@ const emit = defineEmits(['guardar', 'consultar-coincidencia']);
 
 const kardexStore = useKardexStore();
 
-const inputTitulo = ref(null);
 const rechazar = ref(false);
 const errores = ref([]);
+
+// Último título del estudiante copiado al formulario (para no pisar las
+// correcciones de KARDEX cuando el estudiante no cambia el suyo).
+const ultimoTituloEstudiante = ref(null);
+
+// Título con el que se verificó la unicidad por última vez; si el formulario
+// se desvía de él, la verificación debe repetirse antes de aprobar.
+const tituloVerificado = ref('');
 
 const form = reactive({
   titulo: '',
@@ -354,6 +370,13 @@ const tituloPresentado = computed(() => tituloPerfilTesis(props.tramite));
 
 const tituloAprobado = computed(() => props.datos?.titulo || tituloPresentado.value);
 const tituloRechazado = computed(() => tituloPresentado.value);
+
+// true cuando el título en pantalla (posiblemente corregido por KARDEX) aún no
+// fue verificado tras la última modificación.
+const tituloSinVerificar = computed(() => {
+  const titulo = form.titulo.trim();
+  return titulo.length >= 10 && titulo !== tituloVerificado.value;
+});
 
 // true cuando la verificación encontró otro trabajo con el mismo título.
 const tituloDuplicado = computed(
@@ -398,7 +421,12 @@ const documentosDelTramite = computed(() => {
 watch(
   [tituloPresentado, documentosDelTramite],
   ([titulo, documentos]) => {
-    if (!form.titulo.trim() && titulo) form.titulo = titulo;
+    // El título llega del estudiante; solo se copia al formulario cuando él
+    // presenta uno nuevo, para no sobrescribir las correcciones de KARDEX.
+    if (titulo && titulo !== ultimoTituloEstudiante.value) {
+      ultimoTituloEstudiante.value = titulo;
+      form.titulo = titulo;
+    }
 
     for (const d of DOCUMENTOS_PERFIL) {
       const previo = documentos[d.tipo];
@@ -415,33 +443,41 @@ watch(
   { immediate: true },
 );
 
-// Al entrar en revisión se verifica el título presentado: KARDEX debe ver el
-// resultado de la unicidad antes de decidir.
+// Al entrar en revisión —o cuando el estudiante cambia el título que está en
+// pantalla, gracias al auto-refresco de la vista— se verifica la unicidad:
+// KARDEX debe ver el resultado vigente antes de decidir.
 watch(
-  () => props.enProgreso,
-  (enProgreso) => {
+  [() => props.enProgreso, tituloPresentado],
+  ([enProgreso]) => {
     if (enProgreso) verificarTitulo();
   },
   { immediate: true },
 );
 
-function handleArchivo(tipo, event) {
-  const file = event.target.files[0];
-  form.documentos[tipo].archivo = file || null;
-}
+// Al corregir el título, la verificación previa deja de ser válida: se limpia
+// el resultado para que KARDEX verifique la versión vigente antes de aprobar.
+watch(
+  () => form.titulo,
+  (titulo) => {
+    if (titulo.trim() !== tituloVerificado.value) {
+      kardexStore.limpiarVerificacionTitulo();
+    }
+  },
+);
 
 /**
- * Nombre del archivo en pantalla: el que KARDEX acaba de subir (`name`) o el
- * que el estudiante adjuntó en su solicitud (`nombre`).
+ * Nombre del archivo en pantalla: el que el estudiante adjuntó en su solicitud
+ * (`nombre`).
  */
 function nombreArchivo(archivo) {
   return archivo?.name || archivo?.nombre || '';
 }
 
-/** Verifica la unicidad del título capturado, excluyendo el propio trámite. */
+/** Verifica la unicidad del título en pantalla (incluidas correcciones de KARDEX). */
 async function verificarTitulo() {
   const titulo = form.titulo.trim();
-  if (!titulo || kardexStore.verificandoTitulo) return null;
+  if (titulo.length < 10 || kardexStore.verificandoTitulo) return null;
+  tituloVerificado.value = titulo;
   return kardexStore.verificarTitulo(titulo, props.tramite?.id_tramite || null);
 }
 
@@ -507,5 +543,5 @@ function rechazarPerfil() {
 }
 
 // Permite que la vista dispare la verificación desde el resumen del postulante.
-defineExpose({ verificarTitulo, enfocar: () => inputTitulo.value?.focus() });
+defineExpose({ verificarTitulo });
 </script>

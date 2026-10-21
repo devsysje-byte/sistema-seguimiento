@@ -302,7 +302,11 @@
 // En el flujo por módulos (Tesis de Grado) la verificación de unicidad del
 // título vive dentro del Módulo 1 "Perfil de Tesis", donde KARDEX aprueba o
 // rechaza el perfil del postulante.
-import { ref, computed, onMounted } from 'vue';
+//
+// Mientras hay un postulante en pantalla la vista se auto-actualiza cada 15 s
+// para reflejar sin re-buscar el título y los documentos que el estudiante
+// guardó en su perfil.
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useKardexStore } from '@/modules/kardex';
 import { fechaLegible, iniciales } from '@/modules/kardex/utils/formato';
 import { TimelineTramite, EstadoBadge, formatoEstado, ESTADOS_TERMINALES, useTramitesStore } from '@/modules/tramites';
@@ -384,9 +388,28 @@ const sincronizarEstado = () => {
   nuevoEstado.value = lista[0] || null;
   tutorSeleccionado.value = '';
 };
+// Auto-actualización: mientras hay un postulante en pantalla se re-consulta su
+// trámite para que el módulo "Perfil de Tesis" reciba el título y los PDFs que
+// el estudiante guardó, sin necesidad de pulsar "Buscar" de nuevo. La consulta
+// es silenciosa (acción `refrescar`): no altera la carga en curso ni sustituye
+// los datos reales si la API falla.
+const INTERVALO_ACTUALIZACION_MS = 15000;
+let temporizadorActualizacion = null;
+
+const actualizarPostulante = () => {
+  if (document.hidden || kardexStore.cargando || kardexStore.simulado) return;
+  const ci = kardexStore.postulante?.ci;
+  if (ci) kardexStore.refrescar(String(ci));
+};
+
 onMounted(() => {
   sincronizarEstado();
   tramitesStore.cargarDocentes();
+  temporizadorActualizacion = setInterval(actualizarPostulante, INTERVALO_ACTUALIZACION_MS);
+});
+
+onUnmounted(() => {
+  clearInterval(temporizadorActualizacion);
 });
 
 /** Filtra el flujo del postulante por CI/RU. */

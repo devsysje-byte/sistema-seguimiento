@@ -21,6 +21,22 @@ class SolicitudTesisRequest extends FormRequest
     }
 
     /**
+     * Recorta los espacios extremos del título antes de validarlo.
+     *
+     * Sin esto, Laravel trimea el campo con su middleware global y un título de
+     * solo espacios llega como `null`, produciendo el engañoso "The titulo field
+     * is required." aunque el estudiante sí haya escrito algo. Recortando aquí,
+     * `required` y `min:10` se evalúan sobre el texto real y los mensajes son
+     * correctos.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('titulo') && is_string($this->input('titulo'))) {
+            $this->merge(['titulo' => trim($this->input('titulo'))]);
+        }
+    }
+
+    /**
      * @return array<string, array<int, mixed>>
      */
     public function rules(): array
@@ -32,6 +48,22 @@ class SolicitudTesisRequest extends FormRequest
             'documentos' => ['nullable', 'array'],
             'documentos.*.archivo' => ['required', 'file', 'mimes:pdf', 'max:5120'],
             'documentos.*.tipo' => ['required', 'string', 'in:'.implode(',', $tipos)],
+        ];
+    }
+
+    /**
+     * Mensajes de validación del título en español (evita el genérico en inglés
+     * cuando el título queda vacío tras recortar espacios).
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'titulo.required' => 'Ingrese el título de su tesis de grado.',
+            'titulo.string' => 'El título de su tesis de grado debe ser texto.',
+            'titulo.min' => 'El título de su tesis debe tener al menos 10 caracteres.',
+            'titulo.max' => 'El título de su tesis no debe superar los 255 caracteres.',
         ];
     }
 

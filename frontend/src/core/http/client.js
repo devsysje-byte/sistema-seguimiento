@@ -6,6 +6,10 @@ import { API_URL } from '@/core/config/env';
  *
  * - baseURL: apunta a la API de Laravel (leída desde `core/config/env`).
  * - Envía/recibe JSON y adjunta automáticamente el token Bearer a cada petición.
+ *   NO se fija un Content-Type por defecto: axios añade `application/json` solo
+ *   cuando el cuerpo es un objeto, y con FormData el navegador debe escribir
+ *   `multipart/form-data` junto con su `boundary` (fijarlo a mano elimina el
+ *   boundary y el backend recibe el body vacío).
  * - Detecta sesiones expiradas (401) y redirige a la pantalla de login.
  *
  * Los servicios de cada módulo (`src/modules/<dominio>/services`) usan esta instancia;
@@ -13,7 +17,7 @@ import { API_URL } from '@/core/config/env';
  */
 const http = axios.create({
     baseURL: API_URL,
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+    headers: { 'Accept': 'application/json' }
 });
 
 // Interceptor de petición: agrega el header Authorization con el token de

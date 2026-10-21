@@ -37,11 +37,11 @@
           <div class="mx-auto w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300 mb-4">
             <AppIcon name="award" :size="34" />
           </div>
-          <h2 class="text-2xl font-extrabold text-emerald-300">{{ titulado ? '¡FELICIDADES! TITULADO' : '¡FELICIDADES! APROBADO' }}</h2>
+          <h2 class="text-2xl font-extrabold text-emerald-300">{{ titulado ? 'TRAMITE CONCLUIDO' : '¡FELICIDADES! APROBADO' }}</h2>
           <p class="mt-2 text-sm font-medium text-emerald-400 max-w-md mx-auto">
             {{
               titulado
-                ? 'Tu trámite de titulación concluyó con éxito: estás titulado. Ya no puedes realizar más solicitudes de trámite.'
+                ? 'Tu trámite de titulación concluyó con éxito,Ya no puedes realizar más solicitudes de trámite.'
                 : 'Tu tesis de grado fue aprobada. Has culminado tu modalidad de titulación y ya no puedes realizar más solicitudes de trámite.'
             }}
           </p>
@@ -152,7 +152,7 @@
                     <AppIcon name="info" :size="14" />
                     Documentos sin adjuntar (opcional): {{ faltantes.join(', ') }}
                   </p>
-                  <p v-else-if="!tituloValido" class="text-xs text-slate-400 inline-flex items-center gap-1.5">
+                  <p v-else-if="!tituloSolicitudValido" class="text-xs text-slate-400 inline-flex items-center gap-1.5">
                     <AppIcon name="info" :size="14" />
                     Ingrese el título de su tesis (mínimo 10 caracteres).
                   </p>
@@ -160,7 +160,7 @@
                     <AppIcon name="check" :size="14" />
                     Documentación lista para enviar.
                   </p>
-                  <button type="submit" class="btn-primary px-6 py-2.5 shrink-0" :disabled="tesisStore.enviando || !tituloValido">
+                  <button type="submit" class="btn-primary px-6 py-2.5 shrink-0" :disabled="tesisStore.enviando || !tituloSolicitudValido">
                     <AppIcon v-if="tesisStore.enviando" name="loader" :size="15" class="animate-spin" />
                     <AppIcon v-else name="send" :size="15" />
                     {{ tesisStore.enviando ? 'Enviando...' : 'Enviar Solicitud' }}
@@ -214,6 +214,81 @@
               <AppIcon :name="fase.icon" :size="18" class="mx-auto mb-1" :class="estadoFase(fase).icono" />
               <p class="text-[11px] font-bold uppercase tracking-wide" :class="estadoFase(fase).texto">{{ fase.label }}</p>
             </div>
+          </div>
+        </div>
+
+        <!-- Perfil de tesis: título y PDFs opcionales (editable en verificación) -->
+        <div v-if="perfilEditable" class="card overflow-hidden">
+          <div class="h-2 bg-orange"></div>
+          <div class="p-6 sm:p-8">
+            <div class="flex flex-wrap items-center gap-4">
+              <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300">
+                <AppIcon name="file-text" :size="26" />
+              </div>
+              <div>
+                <h3 class="text-lg font-extrabold text-white">Tu perfil de tesis</h3>
+                <p class="text-sm text-slate-400">Registra o corrige el título y adjunta los 3 documentos en PDF (opcionales) mientras tu solicitud está en verificación.</p>
+              </div>
+            </div>
+
+            <form @submit.prevent="guardarPerfilEdicion" class="mt-6 grid sm:grid-cols-2 gap-5">
+              <div class="sm:col-span-2">
+                <label class="label" for="titulo-perfil-seguimiento">Título de tesis de grado · obligatorio</label>
+                <div class="relative">
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <AppIcon name="file-text" :size="18" />
+                  </span>
+                  <input
+                    id="titulo-perfil-seguimiento"
+                    v-model="tituloPerfilEdicion"
+                    type="text"
+                    class="input pl-10"
+                    placeholder="Ej: Sistemas de riego eficientes para cultivos de altura en el altiplano boliviano"
+                    autocomplete="off"
+                  />
+                </div>
+                <p class="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
+                  <AppIcon name="info" :size="13" />
+                  KARDEX verificará que el título no esté repetido en otro trabajo de grado antes de aprobar tu perfil.
+                </p>
+              </div>
+
+              <div v-for="(ruta, tipo) in tesisStore.config.tipos_documento" :key="'edicion-' + tipo">
+                <label class="label">{{ ruta }} (PDF) · opcional</label>
+                <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition', documentosEdicion[tipo] ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40']">
+                  <span class="flex items-center gap-2 text-sm min-w-0" :class="documentosEdicion[tipo] ? 'text-orange-200' : 'text-slate-400'">
+                    <AppIcon v-if="documentosEdicion[tipo]" name="check-circle" :size="18" class="text-emerald-400 shrink-0" />
+                    <AppIcon v-else name="file-text" :size="18" class="shrink-0" />
+                    <span class="truncate">{{ documentosEdicion[tipo]?.name || documentoExistente(tipo)?.nombre_archivo || 'Selecciona el archivo...' }}</span>
+                  </span>
+                  <input type="file" accept=".pdf" class="hidden" @change="handleArchivoEdicion($event, tipo)">
+                  <span class="btn-ghost !py-2 pointer-events-none">
+                    <AppIcon name="plus" :size="15" />
+                    Subir
+                  </span>
+                </label>
+              </div>
+
+              <div class="sm:col-span-2 flex items-center justify-between gap-3 pt-2">
+                <p v-if="!tituloEdicionValido" class="text-xs text-slate-400 inline-flex items-center gap-1.5">
+                  <AppIcon name="info" :size="14" />
+                  El título debe tener al menos 10 caracteres.
+                </p>
+                <p v-else-if="!hayCambiosPerfil" class="text-xs text-slate-400 inline-flex items-center gap-1.5">
+                  <AppIcon name="info" :size="14" />
+                  Modifica el título o adjunta un PDF para guardar.
+                </p>
+                <p v-else class="text-xs font-semibold text-emerald-300 inline-flex items-center gap-1.5">
+                  <AppIcon name="check" :size="14" />
+                  Cambios listos para guardar.
+                </p>
+                <button type="submit" class="btn-primary px-6 py-2.5 shrink-0" :disabled="tesisStore.enviando || !tituloEdicionValido || !hayCambiosPerfil">
+                  <AppIcon v-if="tesisStore.enviando" name="loader" :size="15" class="animate-spin" />
+                  <AppIcon v-else name="send" :size="15" />
+                  {{ tesisStore.enviando ? 'Guardando...' : 'Guardar Perfil' }}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 
@@ -357,6 +432,47 @@
           </div>
         </div>
 
+        <!-- Trabajo de investigación: subida tras defensa aprobada -->
+        <div v-if="tramite.estado_actual === 'defensa_aprobada'" class="card overflow-hidden">
+          <div class="h-2 bg-orange"></div>
+          <div class="p-6 sm:p-8">
+            <div class="flex flex-wrap items-center gap-4">
+              <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300">
+                <AppIcon name="book" :size="26" />
+              </div>
+              <div>
+                <h3 class="text-lg font-extrabold text-white">Trabajo de Investigación</h3>
+                <p class="text-sm text-slate-400">Tu defensa fue aprobada. Sube el PDF de tu trabajo de investigación para que KARDEX lo valide y cierre tu flujo.</p>
+              </div>
+            </div>
+
+            <p v-if="publicacionSubida" class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-emerald-300">
+              <AppIcon name="check-circle" :size="16" />
+              Trabajo enviado el {{ formatoFechaLarga(tramite.hitos.modulos.publicacion.fecha_publicacion) }}. KARDEX lo está validando.
+            </p>
+
+            <form v-else @submit.prevent="enviarPublicacion" class="mt-5 flex flex-wrap items-center gap-3">
+              <label :class="['flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition min-w-0 sm:max-w-md flex-1', archivoPublicacion ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40']">
+                <span class="flex items-center gap-2 text-sm min-w-0" :class="archivoPublicacion ? 'text-orange-200' : 'text-slate-400'">
+                  <AppIcon v-if="archivoPublicacion" name="check-circle" :size="18" class="text-emerald-400 shrink-0" />
+                  <AppIcon v-else name="file-text" :size="18" class="shrink-0" />
+                  <span class="truncate">{{ archivoPublicacion?.name || 'Selecciona el archivo PDF...' }}</span>
+                </span>
+                <input type="file" accept=".pdf" class="hidden" @change="handlePublicacion">
+                <span class="btn-ghost !py-2 pointer-events-none">
+                  <AppIcon name="plus" :size="15" />
+                  Subir
+                </span>
+              </label>
+              <button type="submit" class="btn-primary px-6 py-2.5" :disabled="tesisStore.enviando || !archivoPublicacion">
+                <AppIcon v-if="tesisStore.enviando" name="loader" :size="15" class="animate-spin" />
+                <AppIcon v-else name="send" :size="15" />
+                {{ tesisStore.enviando ? 'Enviando...' : 'Enviar Trabajo' }}
+              </button>
+            </form>
+          </div>
+        </div>
+
         <!-- Documentos presentados -->
         <div class="card overflow-hidden">
           <div class="p-6">
@@ -437,7 +553,7 @@
         </div>
         <div class="flex justify-end gap-2 pt-1">
           <button type="button" class="btn-ghost px-4 py-2.5" @click="mostrarReenvio = false">Cancelar</button>
-          <button type="submit" class="btn-primary px-5 py-2.5" :disabled="tesisStore.enviando || !tituloValido">
+          <button type="submit" class="btn-primary px-5 py-2.5" :disabled="tesisStore.enviando || !tituloReenvioValido">
             <AppIcon v-if="tesisStore.enviando" name="loader" :size="15" class="animate-spin" />
             <AppIcon v-else name="send" :size="15" />
             {{ tesisStore.enviando ? 'Enviando...' : 'Enviar Perfil Corregido' }}
@@ -497,7 +613,7 @@
 //     si el Consejo lo rechazó. El trámite se sondea periódicamente para que el
 //     estudiante vea los cambios de estado que Kardex vaya registrando sin
 //     tener que recargar la página.
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { EstadoBadge, useTramitesStore, formatoEstado, ESTADOS_TERMINALES } from '@/modules/tramites';
 import { useEstudianteStore } from '@/modules/estudiantes';
@@ -591,7 +707,10 @@ const faltantes = computed(() =>
 );
 
 // Un título es válido si tiene la extensión mínima exigida por el backend.
-const tituloValido = computed(() => (tituloReenvio.value || tituloSolicitud.value).trim().length >= 10);
+// Cada formulario valida su propio campo: el de solicitud y el de reenvío
+// comparten pantalla y un campo no debe decidir la validez del otro.
+const tituloSolicitudValido = computed(() => tituloSolicitud.value.trim().length >= 10);
+const tituloReenvioValido = computed(() => tituloReenvio.value.trim().length >= 10);
 
 // Título rechazado y observación del último rechazo de perfil de Kardex.
 const rechazoPerfil = computed(() => rechazoPerfilTesis(tramite.value));
@@ -599,6 +718,92 @@ const rechazoPerfil = computed(() => rechazoPerfilTesis(tramite.value));
 // Título vigente del trámite (el registrado con el perfil, sea el aceptado o el
 // que está en revisión tras un reenvío).
 const tituloVigente = computed(() => tituloPerfilTesis(tramite.value));
+
+// true cuando el estudiante ya subió su trabajo de investigación (publicación).
+const publicacionSubida = computed(
+  () => Boolean(tramite.value?.hitos?.modulos?.publicacion?.archivo?.nombre)
+);
+
+// ---------------------------------------------------------------------------
+// Edición del perfil de tesis (título + 3 PDFs opcionales) mientras la
+// solicitud del estudiante sigue en verificación (estado `solicitud_presentada`).
+// ---------------------------------------------------------------------------
+const tituloPerfilEdicion = ref('');
+const documentosEdicion = ref({ nota_solicitud: null, certificado_notas: null, perfil_tesis: null });
+
+// Pre-carga el título vigente del trámite al entrar en seguimiento.
+watch(tituloVigente, (valor) => {
+  tituloPerfilEdicion.value = valor || '';
+}, { immediate: true });
+
+// true mientras la solicitud está en verificación y el estudiante puede corregir su perfil.
+const perfilEditable = computed(() => tramite.value?.estado_actual === 'solicitud_presentada');
+
+const tituloEdicionValido = computed(() => tituloPerfilEdicion.value.trim().length >= 10);
+
+const hayCambiosPerfil = computed(() => {
+  const tituloCambiado = tituloPerfilEdicion.value.trim() !== (tituloVigente.value || '').trim();
+  return tituloCambiado || Object.values(documentosEdicion.value).some(Boolean);
+});
+
+/** Documento previo del trámite para un tipo de la fase de solicitud. */
+function documentoExistente(tipo) {
+  return tramite.value?.documentos?.find((d) => d.tipo_documento === tipo) || null;
+}
+
+/** Asocia un archivo seleccionado a su tipo durante la edición del perfil. */
+function handleArchivoEdicion(event, tipo) {
+  const file = event.target.files[0];
+  documentosEdicion.value[tipo] = file || null;
+  event.target.value = '';
+}
+
+/**
+ * Detalle legible de un fallo HTTP para los toasts de error: la primera
+ * validación que reportó el backend, su mensaje, o un aviso de conexión cuando
+ * ni siquiera hubo respuesta (backend apagado o red caída).
+ *
+ * @param {Error} error    Error de axios.
+ * @param {string} defecto Mensaje si la respuesta no trae detalles.
+ * @returns {string} Texto para el toast.
+ */
+function detalleDeError(error, defecto) {
+  if (!error.response) {
+    return 'No hay conexión con el servidor. Verifique que el backend esté activo e intente de nuevo.';
+  }
+  const errores = error.response.data?.errors;
+  const primero = errores && Object.values(errores).find((lista) => Array.isArray(lista) && lista.length);
+  return primero?.[0] || error.response.data?.message || defecto;
+}
+
+/**
+ * Guarda el título corregido y los PDFs adjuntados (opcionales) contra
+ * POST /tesis/{id}/perfil. Al tener éxito se limpian los archivos elegidos y se
+ * recarga el trámite para reflejar el título y los documentos nuevos.
+ */
+async function guardarPerfilEdicion() {
+  const formData = new FormData();
+  formData.append('titulo', tituloPerfilEdicion.value.trim());
+
+  let indice = 0;
+  for (const [tipo, archivo] of Object.entries(documentosEdicion.value)) {
+    if (archivo) {
+      formData.append(`documentos[${indice}][archivo]`, archivo);
+      formData.append(`documentos[${indice}][tipo]`, tipo);
+      indice += 1;
+    }
+  }
+
+  try {
+    await tesisStore.actualizarPerfil(tramite.value.id_tramite, formData);
+    toastStore.success('Perfil de tesis actualizado: título y documentos guardados.');
+    documentosEdicion.value = { nota_solicitud: null, certificado_notas: null, perfil_tesis: null };
+    await tramitesStore.cargarTramiteActivo();
+    ultimoEstadoVisto = tramite.value?.estado_actual || null;
+  } catch (error) {
+    toastStore.error('Error al guardar: ' + detalleDeError(error, 'Verifique los datos'));
+  }
+}
 
 /** Abre el modal de reenvío con el título rechazado a la vista. */
 function abrirReenvio() {
@@ -706,7 +911,7 @@ async function enviarSolicitud() {
     await tramitesStore.cargarTramiteActivo();
     ultimoEstadoVisto = tramite.value?.estado_actual || null;
   } catch (error) {
-    toastStore.error('Error al enviar: ' + (error.response?.data?.message || 'Verifique los datos'));
+    toastStore.error('Error al enviar: ' + detalleDeError(error, 'Verifique los datos'));
   }
 }
 
@@ -735,7 +940,7 @@ async function enviarReenvio() {
     tituloReenvio.value = '';
     toastStore.success('Perfil reenviado. Queda pendiente del Consejo Universitario.');
   } catch (error) {
-    toastStore.error('Error al reenviar: ' + (error.response?.data?.message || 'Verifique los datos'));
+    toastStore.error('Error al reenviar: ' + detalleDeError(error, 'Verifique los datos'));
   }
 }
 
@@ -761,7 +966,7 @@ async function enviarReenvioDocumento() {
     observacionesReenvioDocumento.value = '';
     toastStore.success('Documento corregido enviado. Queda en evaluación de la Comisión Revisora.');
   } catch (error) {
-    toastStore.error('Error al enviar: ' + (error.response?.data?.message || 'Verifique los datos'));
+    toastStore.error('Error al enviar: ' + detalleDeError(error, 'Verifique los datos'));
   }
 }
 
@@ -779,7 +984,7 @@ async function enviarSolicitudFecha() {
     fechaSugerida.value = '';
     toastStore.success('Solicitud de fecha de defensa enviada. Kardex o Secretaría la programará.');
   } catch (error) {
-    toastStore.error('Error al solicitar: ' + (error.response?.data?.message || 'Verifique los datos'));
+    toastStore.error('Error al solicitar: ' + detalleDeError(error, 'Verifique los datos'));
   }
 }
 
@@ -814,7 +1019,9 @@ function estadoFase(fase) {
 
 /** Etiqueta legible de un tipo de documento subido. */
 function etiquetaDocumento(tipo) {
-  return tesisStore.config.tipos_documento?.[tipo] || tipo;
+  return tesisStore.config.tipos_documento?.[tipo]
+    || tesisStore.config.tipos_documento_publicacion?.[tipo]
+    || tipo;
 }
 
 /** Formatea una fecha (YYYY-MM-DD) en formato largo en español. */
@@ -823,5 +1030,29 @@ function formatoFechaLarga(iso) {
   return new Date(iso + 'T00:00:00').toLocaleDateString('es-BO', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
+}
+
+const archivoPublicacion = ref(null);
+
+function handlePublicacion(event) {
+  archivoPublicacion.value = event.target.files[0] || null;
+}
+
+async function enviarPublicacion() {
+  if (!archivoPublicacion.value) return;
+  const formData = new FormData();
+  formData.append('documento_publicacion', archivoPublicacion.value);
+  try {
+    const { data } = await tesisStore.subirPublicacion(tramite.value.id_tramite, formData);
+    if (tramite.value) {
+      tramite.value = data;
+    } else {
+      tramitesStore.tramiteActivo = data;
+    }
+    archivoPublicacion.value = null;
+    toastStore.success('Trabajo de investigación enviado. Kardex validará la publicación.');
+  } catch (error) {
+    toastStore.error('Error al enviar: ' + (error.response?.data?.message || 'Verifique el archivo'));
+  }
 }
 </script>

@@ -227,6 +227,63 @@ class TesisVerificacionTituloTest extends TestCase
             ->assertJsonPath('verificacion.unico', true);
     }
 
+    public function test_el_estudiante_guarda_el_perfil_con_titulo_de_espacios_internos(): void
+    {
+        $this->crearModalidadTesis();
+        $estudiante = $this->crearEstudianteConCuenta();
+        $tramite = $this->crearTramiteEditable(self::TITULO, $estudiante);
+
+        $nuevoTitulo = 'Modelo  predictivo   de demanda   electrica en campus';
+
+        // Se envía por POST (no PUT): PHP no parsea multipart en PUT, así que el
+        // título llegaría vacío y sería rechazado por error.
+        $this->actingAs($estudiante->user)
+            ->post("/api/tesis/{$tramite->id_tramite}/perfil", ['titulo' => $nuevoTitulo])
+            ->assertOk();
+
+        $this->assertSame(
+            $nuevoTitulo,
+            $tramite->refresh()->hitos['modulos']['perfil_tesis']['titulo'],
+            'El título con espacios internos se conserva tal cual.',
+        );
+    }
+
+    public function test_el_estudiante_guarda_el_perfil_recortando_espacios_extremos(): void
+    {
+        $this->crearModalidadTesis();
+        $estudiante = $this->crearEstudianteConCuenta();
+        $tramite = $this->crearTramiteEditable(self::TITULO, $estudiante);
+
+        $this->actingAs($estudiante->user)
+            ->post("/api/tesis/{$tramite->id_tramite}/perfil", [
+                'titulo' => '   Modelo predictivo de demanda electrica   ',
+            ])
+            ->assertOk();
+
+        $this->assertSame(
+            'Modelo predictivo de demanda electrica',
+            $tramite->refresh()->hitos['modulos']['perfil_tesis']['titulo'],
+            'Los espacios extremos se recortan antes de guardar.',
+        );
+    }
+
+    public function test_no_se_acepta_un_titulo_de_solo_espacios_en_el_perfil(): void
+    {
+        $this->crearModalidadTesis();
+        $estudiante = $this->crearEstudianteConCuenta();
+        $tramite = $this->crearTramiteEditable(self::TITULO, $estudiante);
+
+        $this->actingAs($estudiante->user)
+            ->postJson("/api/tesis/{$tramite->id_tramite}/perfil", ['titulo' => '               '])
+            ->assertJsonValidationErrors('titulo');
+
+        $this->assertSame(
+            self::TITULO,
+            $tramite->refresh()->hitos['modulos']['perfil_tesis']['titulo'],
+            'El título previo no se pierde cuando el nuevo es solo espacios.',
+        );
+    }
+
     /**
      * Datos de la fase de solicitud: título y los 3 documentos en PDF
      * (opcionales, aquí se adjuntan los tres).
@@ -307,5 +364,17 @@ class TesisVerificacionTituloTest extends TestCase
                 ],
             ],
         ]);
+    }
+
+    /**
+     * Trámite de tesis editable por el estudiante (`solicitud_presentada`), que
+     * es el estado en el que puede corregir su título vía PUT /tesis/{id}/perfil.
+     */
+    private function crearTramiteEditable(string $titulo, ?Estudiante $estudiante = null): Tramite
+    {
+        $tramite = $this->crearTramiteConTitulo($titulo, $estudiante);
+        $tramite->update(['estado_actual' => 'solicitud_presentada']);
+
+        return $tramite;
     }
 }

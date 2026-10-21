@@ -17,9 +17,7 @@ export const tramitesService = {
     },
     /** Crea un trámite enviando un FormData multipart (solicitud del estudiante). */
     crear(formData) {
-        return http.post('/tramites', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        return http.post('/tramites', formData);
     },
     /** Lista las solicitudes en proceso (Kardex/Dirección). Respuesta paginada { data, meta }. */
     pendientes(params = {}) {

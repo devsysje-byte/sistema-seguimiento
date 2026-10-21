@@ -35,4 +35,8 @@ return [
         'certificado_notas' => 'Certificado de Notas',
         'perfil_tesis' => 'Perfil de Tesis de Grado',
     ],
+
+    'tipos_documento_publicacion' => [
+        'trabajo_publicacion' => 'Trabajo de Investigación',
+    ],
 ];

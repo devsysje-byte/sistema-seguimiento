@@ -39,7 +39,8 @@ export const useTesisStore = defineStore('tesis', {
             return this.config;
         },
         /**
-         * Presenta la solicitud con el título de tesis y los 3 documentos obligatorios.
+         * Presenta la solicitud con el título de tesis (obligatorio) y los 3
+         * documentos PDF (opcionales).
          *
          * @param {FormData} formData `titulo` y documentos `documentos[...]` (nota, certificado, perfil).
          * @returns {Promise<Object>} Trámite creado.
@@ -48,6 +49,25 @@ export const useTesisStore = defineStore('tesis', {
             this.enviando = true;
             try {
                 const response = await tesisService.crearSolicitud(formData);
+                this.enviando = false;
+                return response;
+            } catch (error) {
+                this.enviando = false;
+                throw error;
+            }
+        },
+        /**
+         * Corrige el título del perfil y sube los PDFs opcionales mientras la
+         * solicitud sigue en verificación.
+         *
+         * @param {number|string} id Identificador del trámite de tesis.
+         * @param {FormData} formData `titulo` y documentos `documentos[...]` opcionales.
+         * @returns {Promise<Object>} Trámite actualizado.
+         */
+        async actualizarPerfil(id, formData) {
+            this.enviando = true;
+            try {
+                const response = await tesisService.actualizarPerfil(id, formData);
                 this.enviando = false;
                 return response;
             } catch (error) {
@@ -102,6 +122,24 @@ export const useTesisStore = defineStore('tesis', {
             this.enviando = true;
             try {
                 const response = await tesisService.solicitarFechaDefensa(id, fechaSugerida);
+                this.enviando = false;
+                return response;
+            } catch (error) {
+                this.enviando = false;
+                throw error;
+            }
+        },
+        /**
+         * Sube el trabajo de investigación (publicación) tras aprobar la defensa.
+         *
+         * @param {number|string} id Identificador del trámite de tesis.
+         * @param {FormData} formData `documento_publicacion` y `observaciones` opcionales.
+         * @returns {Promise<Object>} Trámite actualizado.
+         */
+        async subirPublicacion(id, formData) {
+            this.enviando = true;
+            try {
+                const response = await tesisService.subirPublicacion(id, formData);
                 this.enviando = false;
                 return response;
             } catch (error) {

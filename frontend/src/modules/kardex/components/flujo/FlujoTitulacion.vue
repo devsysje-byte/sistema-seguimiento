@@ -81,6 +81,7 @@
           :datos="m.datos"
           :docentes="docentes"
           :cargando="i === proximoPendiente && guardando"
+          :titulo-perfil="tituloPerfilTramite"
           @guardar="(datos) => guardar(m.id, datos)"
         />
         <ModuloTribunalRevisor
@@ -120,6 +121,8 @@
           :bloqueado="m.bloqueado"
           :datos="m.datos"
           :cargando="i === proximoPendiente && guardando"
+          :tramite="tramite"
+          :simulado="kardexStore.simulado"
           @guardar="(datos) => guardar(m.id, datos)"
         />
       </template>
@@ -142,6 +145,7 @@ import {
   rechazoPerfilTesis,
   validarModulo,
   NOTA_MINIMA_DEFENSA,
+  tituloPerfilTesis,
 } from '@/modules/tesis/utils/flujoTitulacion';
 import { fechaLegible, iniciales } from '@/modules/kardex/utils/formato';
 import { EstadoBadge } from '@/modules/tramites';
@@ -184,6 +188,8 @@ const proximoPendiente = computed(() => proximoModuloPendiente(props.tramite));
 
 // Motivo y observación del último rechazo del perfil (los ve el estudiante).
 const rechazoPerfil = computed(() => rechazoPerfilTesis(props.tramite));
+
+const tituloPerfilTramite = computed(() => tituloPerfilTesis(props.tramite));
 
 const modulos = computed(() => {
   const proximo = proximoPendiente.value;

@@ -39,8 +39,23 @@ class TesisService
     /** Documento final presentado a la Comisión Revisora (y sus correcciones). */
     public const DOC_FINAL = 'documento_final';
 
+    /** Trabajo de investigación (publicación) subido por el estudiante. */
+    public const DOC_PUBLICACION = 'trabajo_publicacion';
+
+    /** Módulo del flujo donde se registra el trabajo de investigación. */
+    private const MODULO_PUBLICACION = 'publicacion';
+
+    /**
+     * Estado desde el que el estudiante puede subir su trabajo de investigación:
+     * con la defensa aprobada, KARDEX valida la publicación para cerrar el flujo.
+     */
+    private const ESTADO_PUBLICACION = 'defensa_aprobada';
+
     /** Estados desde los que el estudiante puede solicitar (o re-solicitar) su fecha de defensa. */
     private const ESTADOS_SOLICITUD_DEFENSA = ['suficiente', 'correcciones_90_dias', 'solicitud_fecha_defensa'];
+
+    /** Estado en el que el estudiante aún puede corregir su perfil (título y PDFs). */
+    private const ESTADO_EDICION_PERFIL = 'solicitud_presentada';
 
     /** Estados terminales que permiten iniciar una nueva solicitud. */
     private const TERMINALES = ['aprobado', 'reprobado', 'rechazado'];
@@ -259,6 +274,75 @@ class TesisService
     }
 
     /**
+     * Actualiza el título del perfil y (opcionalmente) los documentos PDF de la
+     * fase de solicitud mientras la solicitud sigue en verificación.
+     *
+     * El estudiante puede corregir su título antes de que KARDEX/Consejo lo
+     * revisen: si cambia, se re-verifica la unicidad contra otros trabajos de
+     * grado (el propio trámite queda excluido) y se registra en el módulo de
+     * perfil. Los PDFs enviados reemplazan a los previos del mismo tipo; los
+     * documentos siguen siendo opcionales.
+     *
+     * @param  array<string, mixed>  $validated  `titulo` y `documentos[...]` opcionales.
+     * @return array Trámite formateado para el seguimiento del estudiante.
+     *
+     * @throws AuthorizationException Si no es su trámite.
+     * @throws ValidationException Si no es de tesis, la solicitud ya avanzó de
+     *                             `solicitud_presentada` o el título está
+     *                             repetido.
+     */
+    public function actualizarPerfil(array $validated, int $id, User $user): array
+    {
+        $tramite = Tramite::with('modalidad')->findOrFail($id);
+
+        if (! $tramite->perteneceA($user)) {
+            throw new AuthorizationException('No autorizado');
+        }
+
+        $this->verificarEsTesis($tramite);
+
+        if ($tramite->estado_actual !== self::ESTADO_EDICION_PERFIL) {
+            throw ValidationException::withMessages([
+                'estado' => 'Solo puede modificar el título y los documentos de su perfil mientras la solicitud está en verificación.',
+            ]);
+        }
+
+        $titulo = trim((string) ($validated['titulo'] ?? ''));
+        $tituloActual = $this->tituloDePerfil($tramite);
+
+        // Solo se re-verifica cuando el estudiante cambia el título: el vigente
+        // ya superó la comprobación de unicidad al crearse o al reenviarse.
+        if ($tituloActual === null || ! $this->verificacionTitulo->esIgual($titulo, $tituloActual)) {
+            $duplicado = $this->verificacionTitulo->duplicado($titulo, (int) $tramite->id_tramite);
+
+            if ($duplicado !== null) {
+                throw ValidationException::withMessages([
+                    'titulo' => $this->mensajeTituloRepetido($duplicado),
+                ]);
+            }
+        }
+
+        $documentos = collect($validated['documentos'] ?? []);
+
+        DB::transaction(function () use ($tramite, $user, $titulo, $documentos) {
+            foreach ($documentos as $documento) {
+                $this->documentos->reemplazar(
+                    $tramite->id_tramite,
+                    $user->id_usuario,
+                    $documento['archivo'],
+                    $documento['tipo'],
+                );
+            }
+
+            $this->registrarTituloPerfil($tramite, $titulo);
+        });
+
+        $tramite->refresh()->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor');
+
+        return $this->tramiteService->formatear($tramite);
+    }
+
+    /**
      * Mensaje que ve el estudiante cuando su título ya está registrado.
      *
      * @param  array<string, mixed>  $duplicado  Coincidencia exacta devuelta por la verificación.
@@ -419,6 +503,65 @@ class TesisService
         $tramite->refresh()->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor');
 
         event(new EstadoTramiteCambiado($tramite, $nuevoEstado, $observaciones));
+
+        return $this->tramiteService->formatear($tramite);
+    }
+
+    /**
+     * Sube el trabajo de investigación (publicación) tras aprobar la defensa.
+     *
+     * El documento queda registrado en el módulo de publicación, pero el trámite
+     * NO avanza: KARDEX valida la publicación desde su flujo para cerrarlo
+     * (`publicado`).
+     *
+     * @return array Trámite formateado para el seguimiento del estudiante.
+     *
+     * @throws AuthorizationException Si no es su trámite.
+     * @throws ValidationException Si el trámite no es de tesis o no está en
+     *                             `defensa_aprobada`.
+     */
+    public function subirPublicacion(int $id, User $user, UploadedFile $documento, ?string $observaciones): array
+    {
+        $tramite = Tramite::with('modalidad')->findOrFail($id);
+
+        if (! $tramite->perteneceA($user)) {
+            throw new AuthorizationException('No autorizado');
+        }
+
+        $this->verificarEsTesis($tramite);
+
+        if ($tramite->estado_actual !== self::ESTADO_PUBLICACION) {
+            throw ValidationException::withMessages([
+                'estado' => 'Solo puede subir su trabajo de investigación cuando la defensa fue aprobada.',
+            ]);
+        }
+
+        DB::transaction(function () use ($tramite, $user, $documento, $observaciones) {
+            $this->documentos->guardar(
+                $tramite->id_tramite,
+                $user->id_usuario,
+                $documento,
+                self::DOC_PUBLICACION,
+            );
+
+            $hitos = $tramite->hitos ?? [];
+            $modulos = $hitos['modulos'] ?? [];
+            $modulos[self::MODULO_PUBLICACION] = array_replace(
+                $modulos[self::MODULO_PUBLICACION] ?? [],
+                [
+                    'archivo' => [
+                        'nombre' => $documento->getClientOriginalName(),
+                        'tamanio' => round($documento->getSize() / 1024, 2),
+                    ],
+                    'fecha_publicacion' => Carbon::now()->toDateString(),
+                    'observaciones' => $observaciones,
+                ],
+            );
+            $hitos['modulos'] = $modulos;
+            $tramite->update(['hitos' => $hitos]);
+        });
+
+        $tramite->refresh()->load('modalidad', 'estudiante.user', 'documentos', 'estados.responsable', 'tutor');
 
         return $this->tramiteService->formatear($tramite);
     }

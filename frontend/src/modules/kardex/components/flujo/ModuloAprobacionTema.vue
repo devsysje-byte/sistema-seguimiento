@@ -119,7 +119,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { validarModulo } from '@/modules/tesis/utils/flujoTitulacion';
 import { fechaLegible } from '@/modules/kardex/utils/formato';
 import AppIcon from '@/ui/AppIcon.vue';
@@ -132,6 +132,7 @@ const props = defineProps({
   datos: { type: Object, default: null },
   docentes: { type: Array, default: () => [] },
   cargando: { type: Boolean, default: false },
+  tituloPerfil: { type: String, default: '' },
 });
 
 const emit = defineEmits(['guardar']);
@@ -189,4 +190,15 @@ function guardar() {
   errores.value = [];
   emit('guardar', datos);
 }
+
+watch(
+  () => props.tituloPerfil,
+  (titulo) => {
+    const limpio = String(titulo || '').trim();
+    if (limpio && !form.tema_investigacion.trim()) {
+      form.tema_investigacion = limpio;
+    }
+  },
+  { immediate: true },
+);
 </script>

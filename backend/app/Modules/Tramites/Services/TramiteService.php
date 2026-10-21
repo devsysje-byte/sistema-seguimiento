@@ -744,8 +744,17 @@ class TramiteService extends BasePaginadoService
                 break;
 
             case 'publicacion':
-                // El trabajo de investigación en PDF es opcional: el módulo
-                // puede registrarse sin archivo adjunto.
+                // El trabajo de investigación (PDF) lo sube el estudiante tras
+                // aprobar la defensa; KARDEX solo valida que esté adjunto para
+                // cerrar el flujo (`publicado`).
+                $tieneDocumento = $tramite !== null
+                    && $tramite->documentos()
+                        ->where('tipo_documento', 'trabajo_publicacion')
+                        ->exists();
+
+                if (! $tieneDocumento) {
+                    $errores[] = 'El estudiante aún no adjuntó su trabajo de investigación.';
+                }
                 break;
 
             default:
