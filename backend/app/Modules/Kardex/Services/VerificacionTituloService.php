@@ -3,18 +3,19 @@
 namespace App\Modules\Kardex\Services;
 
 use App\Models\Tramite;
+use App\Modules\Tramites\Services\FlujoTitulacionModalidad;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 /**
- * Verificación de unicidad del título de una tesis de grado.
+ * Verificación de unicidad del título de un trabajo de grado.
  *
- * KARDEX necesita confirmar, antes de aprobar un perfil, que la tesis no repita
- * (ni se parezca demasiado a) otro trabajo ya registrado. El título lo presenta
- * el estudiante junto con su perfil (`hitos.modulos.perfil_tesis.titulo`) y se
- * confirma luego en el módulo de aprobación del tema
- * (`hitos.modulos.aprobacion_tema.tema_investigacion`), por lo que la búsqueda
- * se hace sobre el JSON `hitos` de los trámites.
+ * KARDEX necesita confirmar, antes de aprobar un perfil, que el trabajo no
+ * repita (ni se parezca demasiado a) otro ya registrado. El título lo presenta
+ * el estudiante junto con su perfil (`hitos.modulos.perfil_tesis.titulo` o
+ * `hitos.modulos.perfil_proyecto.titulo`) y se confirma luego en el módulo de
+ * aprobación del tema (`hitos.modulos.aprobacion_tema.tema_investigacion`), por
+ * lo que la búsqueda se hace sobre el JSON `hitos` de los trámites.
  *
  * Estrategia en dos pasos para no cargar la tabla completa:
  *  1. Prefiltro barato en SQL con los términos significativos del título
@@ -184,16 +185,23 @@ class VerificacionTituloService
      * Extrae el título de tesis registrado en el trámite.
      *
      * El título propuesto por el estudiante vive en el módulo de perfil
-     * (`perfil_tesis.titulo`); si el trámite aún no lo registra, se recurre al
-     * tema confirmado por KARDEX en el módulo de aprobación del tema.
+     * (`perfil_tesis.titulo` / `perfil_proyecto.titulo`); si el trámite aún no
+     * lo registra, se recurre al tema confirmado por KARDEX en el módulo de
+     * aprobación del tema.
      */
     private function tituloDe(Tramite $tramite): ?string
     {
         $modulos = $tramite->hitos['modulos'] ?? [];
 
-        $titulo = $modulos['perfil_tesis']['titulo']
-            ?? $modulos['aprobacion_tema']['tema_investigacion']
-            ?? null;
+        foreach (FlujoTitulacionModalidad::perfiles() as $perfil) {
+            $titulo = $modulos[$perfil]['titulo'] ?? null;
+
+            if (is_string($titulo) && trim($titulo) !== '') {
+                return trim($titulo);
+            }
+        }
+
+        $titulo = $modulos['aprobacion_tema']['tema_investigacion'] ?? null;
 
         return is_string($titulo) && trim($titulo) !== '' ? trim($titulo) : null;
     }

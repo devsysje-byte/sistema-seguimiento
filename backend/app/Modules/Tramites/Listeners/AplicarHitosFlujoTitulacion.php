@@ -1,28 +1,35 @@
 <?php
 
-namespace App\Modules\Tesis\Listeners;
+namespace App\Modules\Tramites\Listeners;
 
 use App\Modules\Tramites\Events\EstadoTramiteCambiado;
+use App\Modules\Tramites\Services\FlujoTitulacionModalidad;
 use Carbon\Carbon;
 
 /**
- * Alimenta los `hitos` de una tesis cada vez que avanza de estado.
+ * Alimenta los `hitos` de los trámites del flujo de titulación cada vez que
+ * avanzan de estado.
  *
  * Registra la fecha de cada estado alcanzado y calcula las fechas clave del
  * flujo oficial: plazo de presentación del documento (3-12 meses desde la
  * aprobación del perfil), plazo de correcciones (90 días) y fecha de defensa.
- * Solo actúa sobre trámites de la modalidad Tesis de Grado; el resto no se
- * ve afectado (desacoplamiento por evento, el módulo de Tesis es adherente).
+ * Solo actúa sobre trámites de las modalidades que comparten el flujo de
+ * titulación por módulos (Tesis de Grado y Trabajo Dirigido); el resto no se
+ * ve afectado (desacoplamiento por evento).
  */
-class AplicarHitosTesis
+class AplicarHitosFlujoTitulacion
 {
     public function handle(EstadoTramiteCambiado $event): void
     {
         $tramite = $event->tramite->loadMissing('modalidad');
 
-        if (($tramite->modalidad->nombre ?? null) !== 'Tesis de Grado') {
+        $modalidad = $tramite->modalidad->nombre ?? null;
+
+        if ($modalidad === null || ! FlujoTitulacionModalidad::esTitulacion($modalidad)) {
             return;
         }
+
+        $config = FlujoTitulacionModalidad::configDe($modalidad);
 
         $hitos = $tramite->hitos ?? [];
         $hoy = Carbon::now()->startOfDay();
@@ -31,13 +38,13 @@ class AplicarHitosTesis
 
         if ($event->nuevoEstado === 'perfil_aprobado') {
             $hitos['limite_presentacion'] = $hoy->copy()
-                ->addMonths((int) config('tesis.plazo_presentacion_meses'))
+                ->addMonths((int) config($config.'.plazo_presentacion_meses'))
                 ->toDateString();
         }
 
         if ($event->nuevoEstado === 'correcciones_90_dias') {
             $hitos['limite_correccion'] = $hoy->copy()
-                ->addDays((int) config('tesis.dias_correccion'))
+                ->addDays((int) config($config.'.dias_correccion'))
                 ->toDateString();
         }
 

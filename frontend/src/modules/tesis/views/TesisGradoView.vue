@@ -367,7 +367,7 @@
         </div>
 
         <!-- Countdown del periodo de presentación / correcciones -->
-        <CountdownTesis v-if="countdownCfg" v-bind="countdownCfg" />
+        <CountdownTitulacion v-if="countdownCfg" v-bind="countdownCfg" />
 
         <!-- Solicitud de fecha de defensa (la solicita el estudiante a Kardex/Secretaría) -->
         <div v-if="puedeSolicitarFechaDefensa(tramite.estado_actual)"
@@ -615,7 +615,7 @@
 //     tener que recargar la página.
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { EstadoBadge, useTramitesStore, formatoEstado, ESTADOS_TERMINALES } from '@/modules/tramites';
+import { EstadoBadge, useTramitesStore, formatoEstado, ESTADOS_TERMINALES, CountdownTitulacion } from '@/modules/tramites';
 import { useEstudianteStore } from '@/modules/estudiantes';
 import { useAuthStore } from '@/modules/auth';
 import { useToastStore } from '@/core/stores/toast';
@@ -623,7 +623,6 @@ import { assetUrl } from '@/core/http/storage';
 import { AppShell } from '@/modules/layout';
 import AppIcon from '@/ui/AppIcon.vue';
 import UiModal from '@/ui/UiModal.vue';
-import CountdownTesis from '../components/CountdownTesis.vue';
 import TesisActualizacionesKardex from '../components/TesisActualizacionesKardex.vue';
 import { useTesisStore } from '../stores/tesis';
 import { FASES_TESIS, DESCRIPCION_ESTADO, faseDe, countdownDe, puedeSolicitarFechaDefensa, reoptarInfo } from '../utils/flujo';

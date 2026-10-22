@@ -11,6 +11,7 @@ export { useTramitesStore } from './stores/tramites';
 export { default as TimelineTramite } from './components/TimelineTramite.vue';
 export { default as EstadisticasModalidades } from './components/EstadisticasModalidades.vue';
 export { default as EstadoBadge } from './components/EstadoBadge.vue';
+export { default as CountdownTitulacion } from './components/CountdownTitulacion.vue';
 export * from './utils/estados';
 
 export default {

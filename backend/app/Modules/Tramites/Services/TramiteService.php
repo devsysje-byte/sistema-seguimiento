@@ -64,13 +64,17 @@ class TramiteService extends BasePaginadoService
     ];
 
     /**
-     * Módulos del flujo de titulación de la Tesis de Grado y el estado objetivo
-     * al que avanza cada uno al aprobarse (espejo del frontend).
+     * Módulos del flujo de titulación y el estado objetivo al que avanza cada
+     * uno al aprobarse (espejo del frontend).
+     *
+     * El primer módulo (el del perfil) cambia de identificador según la
+     * modalidad (`perfil_tesis` / `perfil_proyecto`), por eso el mapa se arma
+     * en {@see self::modulosFlujoDe()} a partir de este catálogo común y del
+     * identificador registrado para cada modalidad.
      *
      * @var array<string, string>
      */
-    private const MODULOS_FLUJO = [
-        'perfil_tesis' => 'perfil_aprobado',
+    private const MODULOS_FLUJO_TITULACION = [
         'aprobacion_tema' => 'tema_aprobado',
         'tribunal_revisor' => 'tribunal_asignado',
         'defensa' => 'defensa_aprobada',
@@ -90,13 +94,6 @@ class TramiteService extends BasePaginadoService
      * tesis queda por debajo del mínimo de aprobación.
      */
     private const DEFENSA_REPROBADA = 'reprobado';
-
-    /**
-     * Módulos que admiten una decisión de aprobación o rechazo.
-     *
-     * @var array<int, string>
-     */
-    private const MODULOS_DECISION = ['perfil_tesis'];
 
     /**
      * Porcentaje de avance por estado (incluye estados heredados) para saber si
@@ -468,17 +465,21 @@ class TramiteService extends BasePaginadoService
      */
     public function guardarModuloFlujo(int $id, string $modulo, array $datos, User $actor): array
     {
-        if (! array_key_exists($modulo, self::MODULOS_FLUJO)) {
+        $tramite = Tramite::with('modalidad')->findOrFail($id);
+
+        $modalidad = $tramite->modalidad->nombre;
+
+        if (! FlujoTitulacionModalidad::esTitulacion($modalidad)) {
             throw ValidationException::withMessages([
-                'datos' => ['El módulo del flujo no es reconocido.'],
+                'modulo' => ['El flujo de módulos solo aplica a las modalidades del flujo de titulación.'],
             ]);
         }
 
-        $tramite = Tramite::with('modalidad')->findOrFail($id);
+        $modulosFlujo = $this->modulosFlujoDe($modalidad);
 
-        if ($tramite->modalidad->nombre !== 'Tesis de Grado') {
+        if (! array_key_exists($modulo, $modulosFlujo)) {
             throw ValidationException::withMessages([
-                'modulo' => ['El flujo de módulos solo aplica a la modalidad Tesis de Grado.'],
+                'datos' => ['El módulo del flujo no es reconocido.'],
             ]);
         }
 
@@ -494,18 +495,18 @@ class TramiteService extends BasePaginadoService
         $paso = (int) ($datos['paso'] ?? 2);
 
         // Módulos con decisión: el perfil se aprueba o se rechaza.
-        $rechaza = $this->rechazaModulo($modulo, $datos);
+        $rechaza = $this->rechazaModulo($modulo, $datos, $modalidad);
 
-        $this->validarDatosModulo($modulo, $datos, $paso, $rechaza, $tramite);
+        $this->validarDatosModulo($modulo, $datos, $paso, $rechaza, $tramite, $modalidad);
 
         // La defensa se aprueba con la nota mínima reglamentaria; con menos la
         // nota deja el trámite REPROBADO (estado terminal) y el estudiante
         // deberá volver a solicitar la modalidad de graduación.
-        $reprobada = $this->defensaReprobada($modulo, $datos, $paso);
+        $reprobada = $this->defensaReprobada($modulo, $datos, $paso, $modalidad);
 
         $objetivo = $rechaza
             ? self::PERFIL_RECHAZADO
-            : ($reprobada ? self::DEFENSA_REPROBADA : self::MODULOS_FLUJO[$modulo]);
+            : ($reprobada ? self::DEFENSA_REPROBADA : $modulosFlujo[$modulo]);
         $pctActual = self::PCT_POR_ESTADO[$tramite->estado_actual] ?? 0;
         $pctObjetivo = self::PCT_POR_ESTADO[$objetivo] ?? 0;
 
@@ -524,10 +525,10 @@ class TramiteService extends BasePaginadoService
         // rechazo usa la que escribió KARDEX y la reprobación de la defensa
         // documenta la nota obtenida frente al mínimo reglamentario.
         $observacion = $rechaza
-            ? $this->observacionDeRechazo($datos)
+            ? $this->observacionDeRechazo($datos, $modalidad)
             : ($reprobada
                 ? "Defensa reprobada con nota {$datos['nota_final']} "
-                    .'(mínimo de aprobación: '.self::notaMinimaDefensa().'). '
+                    .'(mínimo de aprobación: '.$this->notaMinimaDefensa($modalidad).'). '
                     .'El flujo de titulación finaliza; el estudiante deberá '
                     .'volver a solicitar la modalidad de graduación.'
                 : "Módulo '{$modulo}' del flujo de titulación completado.");
@@ -586,14 +587,33 @@ class TramiteService extends BasePaginadoService
     }
 
     /**
+     * Módulos del flujo de titulación de una modalidad y el estado objetivo al
+     * que avanza cada uno.
+     *
+     * El identificador del módulo del perfil depende de la modalidad
+     * (`perfil_tesis` / `perfil_proyecto`); el resto es común.
+     *
+     * @return array<string, string>
+     */
+    private function modulosFlujoDe(string $modalidad): array
+    {
+        $perfil = FlujoTitulacionModalidad::perfilDe($modalidad);
+
+        return array_merge([$perfil => 'perfil_aprobado'], self::MODULOS_FLUJO_TITULACION);
+    }
+
+    /**
      * Indica si KARDEX está rechazando (en lugar de aprobar) el módulo enviado.
+     *
+     * En el flujo de titulación el único módulo con decisión es el del perfil.
      *
      * @param  string  $modulo  Identificador del módulo.
      * @param  array<string, mixed>  $datos  Datos del formulario del módulo.
+     * @param  string  $modalidad  Nombre de la modalidad del trámite.
      */
-    private function rechazaModulo(string $modulo, array $datos): bool
+    private function rechazaModulo(string $modulo, array $datos, string $modalidad): bool
     {
-        if (! in_array($modulo, self::MODULOS_DECISION, true)) {
+        if ($modulo !== FlujoTitulacionModalidad::perfilDe($modalidad)) {
             return false;
         }
 
@@ -601,11 +621,11 @@ class TramiteService extends BasePaginadoService
     }
 
     /**
-     * Nota mínima para aprobar la defensa de tesis (`config/tesis.php`).
+     * Nota mínima para aprobar la defensa de la modalidad.
      */
-    private static function notaMinimaDefensa(): int
+    private function notaMinimaDefensa(string $modalidad): int
     {
-        return (int) config('tesis.nota_minima_defensa', 51);
+        return (int) config(FlujoTitulacionModalidad::configDe($modalidad).'.nota_minima_defensa', 51);
     }
 
     /**
@@ -616,8 +636,9 @@ class TramiteService extends BasePaginadoService
      * @param  string  $modulo  Identificador del módulo.
      * @param  array<string, mixed>  $datos  Datos del formulario del módulo.
      * @param  int  $paso  Paso del módulo de defensa (1 = resolución + fecha).
+     * @param  string  $modalidad  Nombre de la modalidad del trámite.
      */
-    private function defensaReprobada(string $modulo, array $datos, int $paso): bool
+    private function defensaReprobada(string $modulo, array $datos, int $paso, string $modalidad): bool
     {
         if ($modulo !== 'defensa' || $paso === 1) {
             return false;
@@ -628,7 +649,7 @@ class TramiteService extends BasePaginadoService
             return false;
         }
 
-        return (float) $nota < self::notaMinimaDefensa();
+        return (float) $nota < $this->notaMinimaDefensa($modalidad);
     }
 
     /**
@@ -636,14 +657,15 @@ class TramiteService extends BasePaginadoService
      * escribió (obligatoria) o un texto por defecto que explica la causa.
      *
      * @param  array<string, mixed>  $datos  Datos del formulario del módulo.
+     * @param  string  $modalidad  Nombre de la modalidad del trámite.
      */
-    private function observacionDeRechazo(array $datos): string
+    private function observacionDeRechazo(array $datos, string $modalidad): string
     {
         $observacion = trim((string) ($datos['observaciones'] ?? ''));
 
         return $observacion !== ''
             ? $observacion
-            : 'Perfil de tesis rechazado por KARDEX.';
+            : ucfirst(FlujoTitulacionModalidad::etiquetaPerfilDe($modalidad)).' rechazado por KARDEX.';
     }
 
     /**
@@ -655,16 +677,26 @@ class TramiteService extends BasePaginadoService
      * @param  bool  $rechaza  true cuando KARDEX rechaza el módulo en lugar de aprobarlo.
      * @param  Tramite|null  $tramite  Trámite que se está procesando (para no
      *                                 comparar el título consigo mismo).
+     * @param  string  $modalidad  Nombre de la modalidad del trámite.
      *
      * @throws ValidationException
      */
-    private function validarDatosModulo(string $modulo, array $datos, int $paso = 2, bool $rechaza = false, ?Tramite $tramite = null): void
-    {
+    private function validarDatosModulo(
+        string $modulo,
+        array $datos,
+        int $paso = 2,
+        bool $rechaza = false,
+        ?Tramite $tramite = null,
+        string $modalidad = FlujoTitulacionModalidad::MODALIDAD_TESIS,
+    ): void {
         $val = static fn ($v) => is_string($v) && trim($v) !== '';
         $errores = [];
 
         switch ($modulo) {
             case 'perfil_tesis':
+            case 'perfil_proyecto':
+                $etiqueta = FlujoTitulacionModalidad::etiquetaTituloDe($modalidad);
+
                 // Rechazar el perfil exige el motivo: es lo que el estudiante
                 // verá en su flujo para corregir y volver a presentar.
                 if ($rechaza) {
@@ -676,16 +708,16 @@ class TramiteService extends BasePaginadoService
 
                 $titulo = trim((string) ($datos['titulo'] ?? ''));
                 if ($titulo === '') {
-                    $errores[] = 'Ingrese el título de tesis presentado por el estudiante.';
+                    $errores[] = 'Ingrese el título de '.$etiqueta.' presentado por el estudiante.';
                 } elseif ($this->verificacionTitulo->duplicado($titulo, $tramite?->id_tramite, $tramite?->id_estudiante) !== null) {
-                    $errores[] = 'Ya existe un trabajo de grado registrado con el mismo título de tesis. '
+                    $errores[] = 'Ya existe un trabajo de grado registrado con el mismo título de '.$etiqueta.'. '
                         .'Rechace el perfil para que el estudiante presente un título diferente.';
                 }
 
                 // Los documentos verificados son los que el estudiante adjuntó
-                // en su solicitud (ver `config/tesis.php`): la verificación es
-                // obligatoria, pero el PDF adjunto es opcional.
-                foreach (['nota_solicitud', 'certificado_notas', 'perfil_tesis'] as $tipo) {
+                // en su solicitud (ver `config/<modalidad>.php`): la verificación
+                // es obligatoria, pero el PDF adjunto es opcional.
+                foreach (array_keys(FlujoTitulacionModalidad::tiposDocumentoDe($modalidad)) as $tipo) {
                     $item = $datos['documentos'][$tipo] ?? null;
                     if (empty($item['marcado'])) {
                         $errores[] = "Marque la verificación del documento: {$tipo}.";

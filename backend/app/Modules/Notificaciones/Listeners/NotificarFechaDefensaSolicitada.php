@@ -3,14 +3,15 @@
 namespace App\Modules\Notificaciones\Listeners;
 
 use App\Modules\Notificaciones\Services\NotificacionService;
-use App\Modules\Tesis\Events\FechaDefensaSolicitada;
+use App\Modules\Tramites\Events\FechaDefensaSolicitada;
+use App\Modules\Tramites\Services\FlujoTitulacionModalidad;
 use App\Support\Roles;
 
 /**
- * Listener del evento \App\Modules\Tesis\Events\FechaDefensaSolicitada.
+ * Listener del evento \App\Modules\Tramites\Events\FechaDefensaSolicitada.
  *
  * Avisa a los roles de gestión que un estudiante solicitó una fecha para su
- * defensa de tesis, con la fecha sugerida (si la indicó).
+ * defensa, con la fecha sugerida (si la indicó).
  */
 class NotificarFechaDefensaSolicitada
 {
@@ -18,10 +19,16 @@ class NotificarFechaDefensaSolicitada
     {
         $event->tramite->loadMissing('modalidad');
 
-        $mensaje = "{$event->estudiante->nombres} {$event->estudiante->apellidos} solicitó una fecha para su defensa de tesis.";
+        $modalidad = $event->tramite->modalidad->nombre ?? null;
+
+        $etiqueta = $modalidad !== null && FlujoTitulacionModalidad::esTitulacion($modalidad)
+            ? FlujoTitulacionModalidad::etiquetaTituloDe($modalidad)
+            : 'tesis';
+
+        $mensaje = "{$event->estudiante->nombres} {$event->estudiante->apellidos} solicitó una fecha para su {$etiqueta}.";
 
         if ($event->fechaSugerida) {
-            $mensaje .= ' Fecha sugerida: ' . $event->fechaSugerida . '.';
+            $mensaje .= ' Fecha sugerida: '.$event->fechaSugerida.'.';
         }
 
         NotificacionService::paraUsuarios(

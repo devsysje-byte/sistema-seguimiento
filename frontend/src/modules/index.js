@@ -17,6 +17,7 @@ import docentesModule from './docentes';
 import notificacionesModule from './notificaciones';
 import tesisModule from './tesis';
 import tramitesModule from './tramites';
+import trabajodirigidoModule from './trabajodirigido';
 import usuariosModule from './usuarios';
 import kardexModule from './kardex';
 import excelenciaModule from './excelencia';
@@ -29,6 +30,7 @@ export const modules = [
     notificacionesModule,
     tesisModule,
     tramitesModule,
+    trabajodirigidoModule,
     usuariosModule,
     kardexModule,
     excelenciaModule,

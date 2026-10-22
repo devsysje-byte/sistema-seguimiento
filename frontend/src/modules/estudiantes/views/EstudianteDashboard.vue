@@ -116,6 +116,32 @@
           </router-link>
         </div>
 
+        <router-link
+          v-else-if="tramitesStore.tramiteActivo && esTrabajoDirigidoActivo"
+          to="/estudiante/trabajo-dirigido"
+          class="card overflow-hidden relative block group hover:ring-2 hover:ring-orange-500/40 transition-all duration-200"
+        >
+          <div class="absolute inset-x-0 top-0 h-2 bg-orange"></div>
+          <div class="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300 group-hover:bg-orange-500/20 group-hover:scale-105 transition-all duration-200">
+                <AppIcon name="folder" :size="28" />
+              </div>
+              <div>
+                <h2 class="text-lg font-extrabold text-white transition-colors duration-200 group-hover:text-orange-300">Trabajo Dirigido · En Curso</h2>
+                <p class="text-sm text-slate-400">
+                  Estado:
+                  <span class="font-semibold text-orange-300">{{ formatoEstado(tramitesStore.tramiteActivo.estado_actual) }}</span>
+                </p>
+              </div>
+            </div>
+            <span class="btn-warm px-5 py-2.5">
+              <AppIcon name="arrow-left" :size="15" class="rotate-180" />
+              Continuar con el seguimiento
+            </span>
+          </div>
+        </router-link>
+
         <div v-else-if="tramitesStore.tramiteActivo && !esTesisActivo" class="card overflow-hidden">
           <div class="h-2 bg-orange"></div>
           <div class="p-6 sm:p-8">
@@ -149,7 +175,7 @@
           <div v-if="terminalAprobada" class="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-5 flex items-start gap-3 text-emerald-300">
             <AppIcon name="award" :size="22" class="mt-0.5 shrink-0" />
             <p class="text-sm font-medium">
-              <strong>¡FELICIDADES APROBADO!</strong> Tu tesis de grado fue aprobada
+              <strong>¡FELICIDADES APROBADO!</strong> Tu {{ articuloModalidad }} fue aprobada
               y ya no puedes realizar más solicitudes de trámite.
             </p>
           </div>
@@ -157,7 +183,7 @@
           <div v-else-if="terminalReprobada" class="rounded-xl bg-red-900/50 border border-red-500/30 p-4 flex items-start gap-3 text-red-400">
             <AppIcon name="x-circle" :size="20" class="mt-0.5 shrink-0" />
             <p class="text-sm font-medium">
-              Tu tesis de grado no fue aprobada.
+              Tu {{ articuloModalidad }} no fue aprobada.
               <template v-if="reoptar.puede">
                 Ya puedes volver a presentar tu solicitud para optar por una modalidad.
               </template>
@@ -173,7 +199,7 @@
             <p class="text-sm font-medium">
               Tu último trámite finalizó con estado
               <strong>{{ formatoEstado(tramitesStore.tramiteActivo.estado_actual) }}</strong>.
-              Puedes iniciar una nueva tesis de grado cuando lo necesites.
+              Puedes iniciar una nueva {{ articuloModalidad }} cuando lo necesites.
             </p>
           </div>
 
@@ -187,6 +213,25 @@
                 <div>
                   <h2 class="text-lg font-extrabold text-white transition-colors duration-200 group-hover:text-orange-300">Tesis de Grado</h2>
                   <p class="text-sm text-slate-400">Aqui puedes solicitar la modalidad de graduación de Tesis de Grado y realizar el seguimiento correspondiente.</p>
+                </div>
+              </div>
+              <span class="btn-warm px-5 py-2.5">
+                <AppIcon name="arrow-left" :size="15" class="rotate-180" />
+                Solicitar Modalidad
+              </span>
+            </div>
+          </router-link>
+
+          <router-link to="/estudiante/trabajo-dirigido" class="card overflow-hidden relative block group hover:ring-2 hover:ring-orange-500/40 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-2 bg-orange"></div>
+            <div class="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-300 group-hover:bg-orange-500/20 group-hover:scale-105 transition-all duration-200">
+                  <AppIcon name="folder" :size="28" />
+                </div>
+                <div>
+                  <h2 class="text-lg font-extrabold text-white transition-colors duration-200 group-hover:text-orange-300">Trabajo Dirigido</h2>
+                  <p class="text-sm text-slate-400">Aquí puedes solicitar la modalidad de graduación de Trabajo Dirigido y realizar el seguimiento correspondiente.</p>
                 </div>
               </div>
               <span class="btn-warm px-5 py-2.5">
@@ -232,6 +277,7 @@
 // (seguimiento del trámite activo y acceso al módulo dedicado de Tesis).
 import { TimelineTramite, useTramitesStore, formatoEstado, ESTADOS_TERMINALES } from '@/modules/tramites';
 import { useTesisStore, reoptarInfo } from '@/modules/tesis';
+import { useTrabajoDirigidoStore } from '@/modules/trabajodirigido';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useEstudianteStore } from '../stores/estudiante';
 import SeguimientoExamenGrado from '../components/SeguimientoExamenGrado.vue';
@@ -246,6 +292,7 @@ import StatCard from '@/ui/StatCard.vue';
 const tramitesStore = useTramitesStore();
 const estudianteStore = useEstudianteStore();
 const tesisStore = useTesisStore();
+const trabajoDirigidoStore = useTrabajoDirigidoStore();
 const excelenciaStore = useExcelenciaStore();
 
 // Es null cuando el perfil aún no fue registrado.
@@ -264,25 +311,49 @@ const displayNombres = computed(() =>
 // true si el trámite activo ya alcanzó un estado terminal.
 const tramiteTerminado = computed(() => ESTADOS_TERMINALES.includes(tramitesStore.tramiteActivo?.estado_actual));
 
-// Resultados terminales de la tesis: aprobada bloquea nuevos trámites; reprobada
-// habilita la re-opción de modalidad según los plazos reglamentarios.
+// Resultados terminales de la modalidad: aprobada bloquea nuevos trámites;
+// reprobada habilita la re-opción de modalidad según los plazos reglamentarios.
 const terminalAprobada = computed(() =>
-  tramitesStore.tramiteActivo?.modalidad?.nombre === 'Tesis de Grado'
+  ['Tesis de Grado', 'Trabajo Dirigido'].includes(tramitesStore.tramiteActivo?.modalidad?.nombre)
   && tramitesStore.tramiteActivo?.estado_actual === 'aprobado'
 );
 const terminalReprobada = computed(() =>
-  tramitesStore.tramiteActivo?.modalidad?.nombre === 'Tesis de Grado'
+  ['Tesis de Grado', 'Trabajo Dirigido'].includes(tramitesStore.tramiteActivo?.modalidad?.nombre)
   && ['reprobado'].includes(tramitesStore.tramiteActivo?.estado_actual)
 );
-const reoptar = computed(() => reoptarInfo(tramitesStore.tramiteActivo, {
-  diasCorreccion: tesisStore.config.dias_correccion,
-  diasRemodalidad: tesisStore.config.dias_remodalidad,
-}));
+
+// Plazos de re-opción: cada modalidad define los suyos (el backend los expone
+// en su endpoint de configuración).
+const reoptar = computed(() => {
+  const esTrabajoDirigido = tramitesStore.tramiteActivo?.modalidad?.nombre === 'Trabajo Dirigido';
+  const config = esTrabajoDirigido
+    ? trabajoDirigidoStore.config
+    : tesisStore.config;
+  return reoptarInfo(tramitesStore.tramiteActivo, {
+    diasCorreccion: config.dias_correccion,
+    diasRemodalidad: config.dias_remodalidad,
+  });
+});
+
+// Nombre del trabajo en minúscula para los mensajes del portal
+// ("tesis de grado" / "trabajo dirigido").
+const articuloModalidad = computed(() => {
+  const nombre = tramitesStore.tramiteActivo?.modalidad?.nombre;
+  if (nombre === 'Trabajo Dirigido') return 'trabajo dirigido';
+  return 'tesis de grado';
+});
 
 // true si el trámite activo es de la modalidad Tesis de Grado: en ese caso el
 // portal no duplica la línea de tiempo (la muestra el módulo dedicado), solo
 // el resumen/estado con acceso al módulo.
 const esTesisActivo = computed(() => tramitesStore.tramiteActivo?.modalidad?.nombre === 'Tesis de Grado');
+
+// true si el trámite activo es de la modalidad Trabajo Dirigido: al igual que
+// la Tesis, la modalidad tiene su propio módulo de seguimiento y el portal
+// solo muestra el resumen/estado con acceso al módulo.
+const esTrabajoDirigidoActivo = computed(
+  () => tramitesStore.tramiteActivo?.modalidad?.nombre === 'Trabajo Dirigido',
+);
 
 // true si el trámite activo es de la modalidad Examen de Grado: el seguimiento
 // muestra el avance en tarjetas, los intentos y la última actualización.
@@ -344,6 +415,8 @@ onMounted(async () => {
         tramitesStore.cargarTramiteActivo(),
         // El mínimo de promedio de la Excelencia Académica lo define el backend.
         excelenciaStore.cargarConfig(),
+        // Plazos de corrección y re-opción de la modalidad Trabajo Dirigido.
+        trabajoDirigidoStore.cargarConfig(),
     ]);
     document.addEventListener('visibilitychange', alVolverPestana);
 });

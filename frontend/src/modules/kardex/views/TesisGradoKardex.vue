@@ -312,7 +312,7 @@ import { fechaLegible, iniciales } from '@/modules/kardex/utils/formato';
 import { TimelineTramite, EstadoBadge, formatoEstado, ESTADOS_TERMINALES, useTramitesStore } from '@/modules/tramites';
 import { DESCRIPCION_ESTADO, countdownDe, tituloPerfilTesis } from '@/modules/tesis';
 import { DOCENTES_MOCK } from '@/modules/kardex/mock/data';
-import { esFlujoTitulacion as esFlujoDeModulos } from '@/modules/tesis/utils/flujoTitulacion';
+import { esFlujoTitulacion as esFlujoDeModulos } from '@/modules/tramites/utils/flujoTitulacion';
 import { useToastStore } from '@/core/stores/toast';
 import AppIcon from '@/ui/AppIcon.vue';
 import EmptyState from '@/ui/EmptyState.vue';

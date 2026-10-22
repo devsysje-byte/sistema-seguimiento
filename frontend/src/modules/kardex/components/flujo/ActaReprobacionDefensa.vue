@@ -17,7 +17,7 @@
         </div>
       </header>
 
-      <h1 class="doc-titulo">Acta de Reprobación de Defensa de Tesis</h1>
+      <h1 class="doc-titulo">Acta de Reprobación de Defensa de {{ etiquetaTitulo }}</h1>
 
       <section class="doc-info">
         <div class="doc-info__bloque">
@@ -70,7 +70,7 @@
           Se deja constancia de que el estudiante <strong>{{ datosEstudiante.nombre }}</strong>
           (C.I. {{ datosEstudiante.ci }}), inscrito en la modalidad
           <strong>{{ tramite?.modalidad?.nombre || '—' }}</strong> con trámite N.º
-          #{{ tramite?.id_tramite || '—' }} realizó su defensa de tesis el
+          #{{ tramite?.id_tramite || '—' }} realizó su defensa de {{ tituloGenerico }} el
           {{ fechaDefensa }} obteniendo una nota final de
           <strong>{{ notaFinal }} puntos</strong>, por debajo de la nota mínima de
           aprobación de {{ notaMinima }} puntos.
@@ -135,7 +135,7 @@
 import { computed, ref } from 'vue';
 import html2pdf from 'html2pdf.js';
 import { formatoEstado } from '@/modules/tramites';
-import { NOTA_MINIMA_DEFENSA, datosDeModulo } from '@/modules/tesis/utils/flujoTitulacion';
+import { NOTA_MINIMA_DEFENSA, configDeTramite, datosDeModulo } from '@/modules/tramites/utils/flujoTitulacion';
 import { fechaLegible } from '@/modules/kardex/utils/formato';
 import { useAuthStore } from '@/modules/auth/stores/auth';
 
@@ -157,6 +157,18 @@ const contenedorActa = ref(null);
 const generando = ref(false);
 
 const notaMinima = NOTA_MINIMA_DEFENSA;
+
+/**
+ * Configuración de la modalidad del trámite: define cómo se llama el trabajo
+ * en el acta ("Defensa de Tesis" / "Defensa de Trabajo Dirigido").
+ */
+const config = computed(() => configDeTramite(props.tramite));
+
+/** Nombre del trabajo con mayúscula inicial ("Tesis" / "Trabajo Dirigido"). */
+const etiquetaTitulo = computed(() => config.value?.etiquetaTituloCorto || 'Tesis');
+
+/** Nombre del trabajo en minúscula ("tesis" / "trabajo dirigido"). */
+const tituloGenerico = computed(() => config.value?.etiquetaTitulo || 'tesis');
 
 const defensa = computed(() => props.defensa || datosDeModulo(props.tramite, 'defensa') || {});
 

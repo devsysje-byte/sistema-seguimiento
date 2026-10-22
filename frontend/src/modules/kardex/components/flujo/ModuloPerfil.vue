@@ -1,8 +1,8 @@
 <template>
   <ModuloTarjeta
     numero="1"
-    titulo="Perfil de Tesis"
-    descripcion="Revise el título y los 3 documentos presentados por el postulante, verifíquelos y apruebe o rechace su perfil. El estudiante sube los PDF; aquí solo se validan."
+    :titulo="etiquetaPerfil"
+    :descripcion="descripcionModulo"
     icono="file-text"
     :completado="completado"
     :en-progreso="enProgreso"
@@ -13,14 +13,14 @@
       <div v-if="tituloAprobado" class="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-3">
         <p class="text-[11px] uppercase tracking-wider text-emerald-300/80 font-semibold flex items-center gap-1.5">
           <AppIcon name="file-text" :size="13" />
-          Título de tesis aprobado
+          {{ tituloLabel }} aprobado
         </p>
         <p class="mt-1 text-sm font-semibold text-emerald-100">{{ tituloAprobado }}</p>
       </div>
 
       <div class="space-y-2 mt-3">
         <div
-          v-for="d in DOCUMENTOS_PERFIL"
+          v-for="d in documentosPerfil"
           :key="d.tipo"
           class="flex items-center justify-between gap-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-2.5"
         >
@@ -43,11 +43,11 @@
       <div class="rounded-xl bg-red-900/50 border border-red-500/30 px-4 py-3.5">
         <p class="flex items-center gap-2 text-sm font-bold text-red-300">
           <AppIcon name="x-circle" :size="17" />
-          Perfil rechazado — esperando corrección
+          {{ etiquetaPerfil }} rechazado — esperando corrección
         </p>
         <p class="mt-1.5 text-sm text-red-200/90">
           El estudiante ya fue notificado y debe presentar nuevamente su perfil
-          con un título de tesis diferente.
+          con un {{ tituloGenerico }} diferente.
         </p>
       </div>
 
@@ -84,14 +84,14 @@
       <!-- Título presentado por el estudiante: editable para corregir errores
            ortográficos; la corrección se persiste al aprobar el perfil. -->
       <div class="rounded-xl bg-white/5 border border-white/10 p-3.5">
-        <label class="label" for="perfil-titulo">Título de tesis de grado presentado por el estudiante</label>
+        <label class="label" for="perfil-titulo">{{ tituloLabel }} presentado por el estudiante</label>
         <textarea
           id="perfil-titulo"
           v-model="form.titulo"
           rows="2"
           maxlength="255"
           class="input resize-none"
-          placeholder="El estudiante aún no registró un título de tesis."
+          :placeholder="`El estudiante aún no registró un ${tituloGenerico}.`"
         ></textarea>
         <div class="mt-2.5 flex flex-wrap items-center justify-between gap-2.5">
           <p class="flex items-center gap-1.5 text-xs text-slate-400">
@@ -126,7 +126,7 @@
               </template>
               <template v-else-if="tituloHaySimilares">
                 No hay títulos idénticos, pero se encontraron
-                <strong>{{ kardexStore.verificacionTitulo.total }} {{ kardexStore.verificacionTitulo.total === 1 ? 'tesis similar' : 'tesis similares' }}</strong>.
+                <strong>{{ kardexStore.verificacionTitulo.total }} {{ etiquetaSimilares }}</strong>.
                 Revise si existe algún riesgo de duplicidad.
               </template>
               <template v-else>
@@ -179,7 +179,7 @@
       <!-- Documentos presentados por el estudiante: solo se verifican -->
       <div class="space-y-3 mt-3.5">
         <div
-          v-for="d in DOCUMENTOS_PERFIL"
+          v-for="d in documentosPerfil"
           :key="d.tipo"
           class="rounded-xl bg-white/5 border border-white/10 p-3.5"
         >
@@ -303,24 +303,26 @@
 </template>
 
 <script setup>
-// Módulo 1 del flujo de titulación: revisión del PERFIL DE TESIS por parte de
-// KARDEX. Integra la verificación de unicidad del título presentado por el
-// estudiante (que KARDEX puede corregir —p. ej. errores ortográficos— antes de
-// decidir; la corrección se persiste al aprobar) y la decisión de aprobar o
-// rechazar el perfil:
+// Módulo 1 del flujo de titulación: revisión del PERFIL por parte de KARDEX.
+//
+// Es genérico: lo usan las modalidades del flujo de titulación por módulos
+// (Tesis de Grado y Trabajo Dirigido). Lo que distingue a una de otra —el
+// nombre del módulo de perfil, el nombre del trabajo y el catálogo de
+// documentos que el estudiante adjunta— llega en la prop `config` (el registro
+// `MODALIDADES_TITULACION` del núcleo compartido).
+//
+// Integra la verificación de unicidad del título presentado por el estudiante
+// (que KARDEX puede corregir —p. ej. errores ortográficos— antes de decidir;
+// la corrección se persiste al aprobar) y la decisión de aprobar o rechazar el
+// perfil:
 //
 //   - Aprobar: exige título verificado (sin trabajos con el mismo título) y los
-//     3 documentos marcados; el trámite avanza a `perfil_aprobado`.
+//     documentos marcados; el trámite avanza a `perfil_aprobado`.
 //   - Rechazar: exige una observación (con sugerencia automática cuando el
 //     título está repetido); el trámite pasa a `perfil_rechazado` y queda a la
 //     espera de que el estudiante presente otro perfil con otro título.
 import { computed, reactive, ref, watch } from 'vue';
-import {
-  DOCUMENTOS_PERFIL,
-  MOTIVO_TITULO_REPETIDO,
-  tituloPerfilTesis,
-  validarModulo,
-} from '@/modules/tesis/utils/flujoTitulacion';
+import { tituloPerfil, validarModulo } from '@/modules/tramites/utils/flujoTitulacion';
 import { useKardexStore } from '../../stores/kardex';
 import { fechaLegible } from '../../utils/formato';
 import { EstadoBadge } from '@/modules/tramites';
@@ -336,6 +338,7 @@ const props = defineProps({
   cargando: { type: Boolean, default: false },
   tramite: { type: Object, default: null },
   rechazo: { type: Object, default: null },
+  config: { type: Object, default: null },
 });
 
 const emit = defineEmits(['guardar', 'consultar-coincidencia']);
@@ -355,21 +358,61 @@ const tituloVerificado = ref('');
 
 const form = reactive({
   titulo: '',
-  documentos: Object.fromEntries(
-    DOCUMENTOS_PERFIL.map((d) => [d.tipo, { marcado: false, archivo: null }]),
-  ),
+  documentos: {},
   observaciones: '',
 });
+
+/* ==========================================================================
+   Textos y catálogos de la modalidad (todo viene de `config`)
+   ========================================================================== */
+
+/** Nombre del módulo de perfil ("Perfil de Tesis" / "Perfil de Proyecto"). */
+const etiquetaPerfil = computed(() => props.config?.etiquetaPerfil || 'Perfil');
+
+/** Etiqueta del título del trabajo ("Título de tesis" / "Título del trabajo dirigido"). */
+const tituloLabel = computed(() => props.config?.tituloLabelCorto || 'Título');
+
+/** Nombre genérico del trabajo en minúscula ("tesis" / "trabajo dirigido"). */
+const tituloGenerico = computed(() => props.config?.etiquetaTitulo || 'tesis');
+
+/** Documentos que el estudiante adjunta en la fase de solicitud. */
+const documentosPerfil = computed(() => props.config?.documentosPerfil || []);
+
+/** Etiqueta de los títulos parecidos hallados por la verificación. */
+const etiquetaSimilares = computed(() => {
+  const similares = props.config?.similares;
+  if (!similares) return 'tesis similares';
+  return kardexStore.verificacionTitulo?.total === 1 ? similares.singular : similares.plural;
+});
+
+const descripcionModulo = computed(
+  () => `Revise el título y los ${documentosPerfil.value.length} documentos presentados por el postulante, `
+    + 'verifíquelos y apruebe o rechace su perfil. El estudiante sube los PDF; aquí solo se validan.',
+);
+
+// Garantiza que el formulario tenga una entrada por cada documento de la
+// modalidad (la configuración puede llegar después del montaje).
+watch(documentosPerfil, (docs) => {
+  docs.forEach((d) => {
+    if (!form.documentos[d.tipo]) {
+      form.documentos[d.tipo] = { marcado: false, archivo: null };
+    }
+  });
+}, { immediate: true });
 
 // true mientras el trámite está en `perfil_rechazado`: el módulo solo informa
 // al estudiante y espera a que vuelva a presentar su perfil.
 const rechazado = computed(() => props.tramite?.estado_actual === 'perfil_rechazado');
 
 // Título que el estudiante presentó con el perfil (o el confirmado en el tema).
-const tituloPresentado = computed(() => tituloPerfilTesis(props.tramite));
+const tituloPresentado = computed(() => tituloPerfil(props.tramite));
 
 const tituloAprobado = computed(() => props.datos?.titulo || tituloPresentado.value);
 const tituloRechazado = computed(() => tituloPresentado.value);
+
+// Identificador del módulo de perfil de la modalidad (define el estado al que
+// avanza el trámite cuando KARDEX lo aprueba).
+const moduloPerfilId = computed(() => props.config?.moduloPerfil || 'perfil_tesis');
 
 // true cuando el título en pantalla (posiblemente corregido por KARDEX) aún no
 // fue verificado tras la última modificación.
@@ -399,9 +442,9 @@ const tonoVerificacion = computed(() => {
     return { icono: 'x-circle', texto: 'text-red-300', borde: 'bg-red-900/40 border-red-500/30' };
   }
   if (tituloHaySimilares.value) {
-    return { icono: 'alert-triangle', texto: 'text-amber-200', borde: 'bg-amber-500/10 border-amber-500/30' };
+    return { icono: 'alert-triangle', texto: 'text-amber-200', borde: 'bg-amber-500/10 border border-amber-500/30' };
   }
-  return { icono: 'check-circle', texto: 'text-emerald-200', borde: 'bg-emerald-500/10 border-emerald-500/30' };
+  return { icono: 'check-circle', texto: 'text-emerald-200', borde: 'bg-emerald-500/10 border border-emerald-500/30' };
 });
 
 // Documentos que el estudiante adjuntó en su solicitud, por tipo.
@@ -409,7 +452,7 @@ const documentosDelTramite = computed(() => {
   const lista = props.tramite?.documentos || [];
   return Object.fromEntries(
     lista
-      .filter((d) => DOCUMENTOS_PERFIL.some((x) => x.tipo === d.tipo_documento))
+      .filter((d) => documentosPerfil.value.some((x) => x.tipo === d.tipo_documento))
       .map((d) => [
         d.tipo_documento,
         { nombre: d.nombre_archivo, tamanio: d.tamanio_kb, ruta: d.ruta_archivo },
@@ -428,7 +471,7 @@ watch(
       form.titulo = titulo;
     }
 
-    for (const d of DOCUMENTOS_PERFIL) {
+    for (const d of documentosPerfil.value) {
       const previo = documentos[d.tipo];
       const guardado = props.datos?.documentos?.[d.tipo];
 
@@ -486,7 +529,7 @@ function iniciarRechazo() {
   rechazar.value = true;
   errores.value = [];
   if (tituloDuplicado.value && !form.observaciones.trim()) {
-    form.observaciones = MOTIVO_TITULO_REPETIDO;
+    form.observaciones = props.config?.motivoTituloRepetido || '';
   }
 }
 
@@ -521,7 +564,7 @@ function obtenerDatos(accion) {
 /** Aprueba el perfil: el trámite avanza a la siguiente etapa del flujo. */
 function aprobar() {
   const datos = obtenerDatos('aprobar');
-  const res = validarModulo('perfil_tesis', datos);
+  const res = validarModulo(moduloPerfilId.value, datos, props.config?.nombre);
   if (!res.ok) {
     errores.value = res.errores;
     return;
@@ -533,7 +576,7 @@ function aprobar() {
 /** Rechaza el perfil: el estudiante deberá presentar otro con otro título. */
 function rechazarPerfil() {
   const datos = obtenerDatos('rechazar');
-  const res = validarModulo('perfil_tesis', datos);
+  const res = validarModulo(moduloPerfilId.value, datos, props.config?.nombre);
   if (!res.ok) {
     errores.value = res.errores;
     return;

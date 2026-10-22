@@ -95,7 +95,7 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue';
-import { ROLES_TRIBUNAL, validarModulo } from '@/modules/tesis/utils/flujoTitulacion';
+import { ROLES_TRIBUNAL, validarModulo } from '@/modules/tramites/utils/flujoTitulacion';
 import { fechaLegible } from '@/modules/kardex/utils/formato';
 import AppIcon from '@/ui/AppIcon.vue';
 import ModuloTarjeta from './ModuloTarjeta.vue';

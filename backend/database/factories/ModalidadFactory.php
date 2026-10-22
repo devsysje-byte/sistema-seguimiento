@@ -38,6 +38,12 @@ class ModalidadFactory extends Factory
         return $this->state(fn (array $attributes) => ['nombre' => 'Examen de Grado']);
     }
 
+    /** Modalidad de Trabajo Dirigido (flujo de titulación por módulos). */
+    public function trabajoDirigido(): static
+    {
+        return $this->state(fn (array $attributes) => ['nombre' => 'Trabajo Dirigido']);
+    }
+
     /** Modalidad de Excelencia Académica (flujo por promedio, resolución y acta). */
     public function excelencia(): static
     {

@@ -199,10 +199,10 @@ import { computed, ref, watch } from 'vue';
 import html2pdf from 'html2pdf.js';
 import { formatoEstado } from '@/modules/tramites';
 import {
-  DOCUMENTOS_PERFIL,
+  configDeTramite,
   datosDeModulo,
   pctTitulacion,
-} from '@/modules/tesis/utils/flujoTitulacion';
+} from '@/modules/tramites/utils/flujoTitulacion';
 import { fechaLegible } from '@/modules/kardex/utils/formato';
 import { useAuthStore } from '@/modules/auth/stores/auth';
 import { useToastStore } from '@/core/stores/toast';
@@ -249,7 +249,29 @@ const datosEstudiante = computed(() => {
 /* ============================================================
    DATOS DE CADA MÓDULO
    ============================================================ */
-const perfilDatos = computed(() => datosDeModulo(props.tramite, 'perfil_tesis') || {});
+
+/**
+ * Configuración de la modalidad del trámite (Tesis de Grado, Trabajo Dirigido):
+ * define el módulo de perfil, sus documentos y cómo se llama el trabajo en el
+ * reporte.
+ */
+const config = computed(() => configDeTramite(props.tramite));
+
+/** Documentos que el estudiante adjuntó en la fase de solicitud. */
+const documentosPerfil = computed(() => config.value?.documentosPerfil || []);
+
+/** Nombre del trabajo en minúscula ("tesis" / "trabajo dirigido"). */
+const tituloGenerico = computed(() => config.value?.etiquetaTitulo || 'tesis');
+
+/** Prefijo del archivo PDF del reporte. */
+const prefijoReporte = computed(() =>
+  (config.value?.nombre || 'Tesis de Grado')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, ''),
+);
+
+const perfilDatos = computed(() => datosDeModulo(props.tramite, config.value?.moduloPerfil) || {});
 const aprobacionTema = computed(() => datosDeModulo(props.tramite, 'aprobacion_tema') || {});
 const tribunalDatos = computed(() => datosDeModulo(props.tramite, 'tribunal_revisor') || {});
 const defensa = computed(() => datosDeModulo(props.tramite, 'defensa') || {});
@@ -285,11 +307,11 @@ const etapasProceso = computed(() => {
     detalle: `Modalidad: ${props.tramite?.modalidad?.nombre || '—'}`,
   });
 
-  DOCUMENTOS_PERFIL.forEach((doc) => {
+  documentosPerfil.value.forEach((doc) => {
     const item = perfilDatos.value.documentos?.[doc.tipo] || {};
     etapas.push({
       etapa: doc.etiqueta,
-      subetapa: 'Módulo 1 — Perfil de Tesis',
+      subetapa: `Módulo 1 — ${config.value?.etiquetaPerfil || 'Perfil'}`,
       estado: item.marcado ? 'COMPLETADO' : 'PENDIENTE',
       fecha: item.fecha ? fechaLegible(item.fecha) : '—',
       detalle: item.archivo?.nombre || '—',
@@ -297,7 +319,7 @@ const etapasProceso = computed(() => {
   });
 
   etapas.push({
-    etapa: 'Aprobación del tema de tesis',
+    etapa: `Aprobación del tema de ${tituloGenerico.value}`,
     subetapa: 'Módulo 2 — Aprobación del Tema',
     estado: aprobacionTema.value.completado ? 'COMPLETADO' : 'PENDIENTE',
     fecha: fechaLegible(aprobacionTema.value.fecha_resolucion) || '—',
@@ -324,7 +346,7 @@ const etapasProceso = computed(() => {
   });
 
   etapas.push({
-    etapa: 'Defensa de tesis',
+    etapa: `Defensa de ${tituloGenerico.value}`,
     subetapa: 'Módulo 4 — Defensa',
     estado: defensa.value.completado ? 'COMPLETADO' : 'PENDIENTE',
     fecha: fechaLegible(defensa.value.fecha_defensa) || '—',
@@ -492,7 +514,7 @@ watch(
 );
 
 function nombreReporte() {
-  return `reporte_ejecutivo_tesis${props.tramite?.id_tramite ? `_${props.tramite.id_tramite}` : ''}.pdf`;
+  return `reporte_ejecutivo_${prefijoReporte.value}${props.tramite?.id_tramite ? `_${props.tramite.id_tramite}` : ''}.pdf`;
 }
 
 async function esperarImagenes(contenedor) {
@@ -606,7 +628,7 @@ function badgeClass(estado) {
 
 <style scoped>
 /* ============================================================
-   Área imprimible — Reporte Ejecutivo de Tesis (Blanco y Negro)
+   Área imprimible — Reporte Ejecutivo de Titulación (Blanco y Negro)
    ============================================================ */
 
 .reporte-oculto {

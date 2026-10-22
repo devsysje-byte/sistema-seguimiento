@@ -41,8 +41,8 @@
           :style="{ width: Math.max(porcentajeRestante, 2) + '%' }"
         ></div>
       </div>
-      <p class="mt-2 text-xs text-slate-400">
-        Ventana configurada de presentación del documento final.
+      <p v-if="pie" class="mt-2 text-xs text-slate-400">
+        {{ pie }}
       </p>
     </div>
 
@@ -53,10 +53,11 @@
 </template>
 
 <script setup>
-// Componente de cuenta regresiva (countdown) del módulo de Tesis de Grado.
+// Componente de cuenta regresiva (countdown) del flujo de titulación.
 // Muestra el tiempo restante del periodo de presentación del documento final
 // (configurable entre 3 y 12 meses vía .env) o del plazo de correcciones,
-// con una barra de avance del periodo transcurrido.
+// con una barra de avance del periodo transcurrido. Es genérico: lo usan las
+// modalidades que avanzan por el flujo de titulación por módulos.
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import AppIcon from '@/ui/AppIcon.vue';
 
@@ -65,6 +66,7 @@ const props = defineProps({
   fechaInicio: { type: String, default: null },
   titulo: { type: String, default: 'Tiempo límite' },
   descripcion: { type: String, default: '' },
+  pie: { type: String, default: 'Ventana configurada de presentación del documento final.' },
 });
 
 const ahora = ref(Date.now());

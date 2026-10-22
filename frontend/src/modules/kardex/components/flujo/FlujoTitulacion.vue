@@ -59,10 +59,11 @@
     <!-- 6 módulos del flujo -->
     <div class="grid lg:grid-cols-2 gap-4">
       <template v-for="(m, i) in modulos" :key="m.id">
-        <ModuloPerfilTesis
-          v-if="m.id === 'perfil_tesis'"
-          id="modulo-perfil-tesis"
+        <ModuloPerfil
+          v-if="m.id === config?.moduloPerfil"
+          id="modulo-perfil"
           ref="moduloPerfil"
+          :config="config"
           :completado="m.completado"
           :en-progreso="m.enProgreso"
           :bloqueado="m.bloqueado"
@@ -137,22 +138,23 @@
 import { computed, ref } from 'vue';
 import { useKardexStore } from '../../stores/kardex';
 import {
-  MODULOS_FLUJO_TITULACION,
+  configDeTramite,
+  modulosDe,
   modulosTitulacion,
   proximoModuloPendiente,
   pctTitulacion,
   estadoBadgeTitulacion,
-  rechazoPerfilTesis,
+  rechazoPerfil as rechazoPerfilDe,
   validarModulo,
   NOTA_MINIMA_DEFENSA,
-  tituloPerfilTesis,
-} from '@/modules/tesis/utils/flujoTitulacion';
+  tituloPerfil,
+} from '@/modules/tramites/utils/flujoTitulacion';
 import { fechaLegible, iniciales } from '@/modules/kardex/utils/formato';
 import { EstadoBadge } from '@/modules/tramites';
 import { useToastStore } from '@/core/stores/toast';
 import AppIcon from '@/ui/AppIcon.vue';
 import BarraProgresoTitulacion from './BarraProgresoTitulacion.vue';
-import ModuloPerfilTesis from './ModuloPerfilTesis.vue';
+import ModuloPerfil from './ModuloPerfil.vue';
 import ModuloAprobacionTema from './ModuloAprobacionTema.vue';
 import ModuloTribunalRevisor from './ModuloTribunalRevisor.vue';
 import ModuloDefensa from './ModuloDefensa.vue';
@@ -186,10 +188,14 @@ const estadoBadge = computed(() => estadoBadgeTitulacion(props.tramite));
 const progreso = computed(() => pctTitulacion(props.tramite));
 const proximoPendiente = computed(() => proximoModuloPendiente(props.tramite));
 
-// Motivo y observación del último rechazo del perfil (los ve el estudiante).
-const rechazoPerfil = computed(() => rechazoPerfilTesis(props.tramite));
+// Configuración de la modalidad del trámite (Tesis de Grado, Trabajo Dirigido):
+// define el módulo de perfil, sus documentos y sus textos.
+const config = computed(() => configDeTramite(props.tramite));
 
-const tituloPerfilTramite = computed(() => tituloPerfilTesis(props.tramite));
+// Motivo y observación del último rechazo del perfil (los ve el estudiante).
+const rechazoPerfil = computed(() => rechazoPerfilDe(props.tramite));
+
+const tituloPerfilTramite = computed(() => tituloPerfil(props.tramite));
 
 const modulos = computed(() => {
   const proximo = proximoPendiente.value;
@@ -205,8 +211,8 @@ const fechaInicio = computed(() =>
 );
 
 async function guardar(moduloId, datos) {
-  const modulo = MODULOS_FLUJO_TITULACION.find((m) => m.id === moduloId);
-  const res = validarModulo(moduloId, datos);
+  const modulo = modulosDe(config.value).find((m) => m.id === moduloId);
+  const res = validarModulo(moduloId, datos, config.value?.nombre);
   if (!res.ok) {
     toastStore.error(res.errores.join(' · '));
     return;
@@ -254,8 +260,12 @@ function defensaReprobada(datos) {
 
 // Verificación de unicidad disparada desde el resumen del postulante.
 function verificarTituloPerfil() {
-  moduloPerfil.value?.verificarTitulo();
-  document.getElementById('modulo-perfil-tesis')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // El ref vive dentro de un v-for: puede llegar como instancia única o como
+  // arreglo según how Vue lo collecting (se toma la primera de ambas formas).
+  const referencia = moduloPerfil.value;
+  const instancia = Array.isArray(referencia) ? referencia[0] : referencia;
+  instancia?.verificarTitulo?.();
+  document.getElementById('modulo-perfil')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 defineExpose({ verificarTituloPerfil });

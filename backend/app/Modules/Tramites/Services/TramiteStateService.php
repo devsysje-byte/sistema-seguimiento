@@ -28,17 +28,61 @@ class TramiteStateService
     public const MODALIDAD_EXAMEN = 'Examen de Grado';
 
     /**
+     * Flujo de estados de las modalidades que avanzan por MÓDULOS del flujo de
+     * titulación (Tesis de Grado y Trabajo Dirigido).
+     *
+     * Ambas modalidades comparten la misma secuencia: solicitud con 3 archivos,
+     * evaluación del Consejo Universitario, reenvío del perfil rechazado, tutor
+     * asignado, investigación con plazo de presentación (3-12 meses), comisión
+     * revisora (suficiente/insuficiente), solicitud de fecha de defensa,
+     * defensa y 90 días de corrección si no la aprueba.
+     *
+     * @var array<string, array<int, string>>
+     */
+    private const TRANSICIONES_TITULACION = [
+        // 1. Fase de solicitud. El puente a `perfil_aprobado` permite que
+        //    Kardex registre el módulo de perfil directamente desde la
+        //    solicitud, sin pasar por el estado intermedio del Consejo.
+        'solicitud_presentada' => ['pendiente_concejo_universitario', 'perfil_aprobado', 'perfil_rechazado', 'rechazado'],
+        // 2. Evaluación del perfil por el Consejo Universitario.
+        'pendiente_concejo_universitario' => ['perfil_aprobado', 'perfil_rechazado'],
+        'perfil_rechazado' => ['pendiente_concejo_universitario', 'perfil_aprobado', 'tutor_asignado', 'rechazado'],
+        // 3. Módulos del flujo de titulación gestionados por Kardex. Cada
+        //    módulo se guarda desde su formulario y avanza al estado objetivo.
+        'perfil_aprobado' => ['tema_aprobado', 'tutor_asignado'],
+        // Puente del flujo anterior: tras asignar tutor se puede continuar
+        // por el flujo heredado (investigación) o registrar el tema (nuevo).
+        'tutor_asignado' => ['tema_aprobado', 'investigacion_en_desarrollo'],
+        'tema_aprobado' => ['tribunal_asignado'],
+        'tribunal_asignado' => ['defensa_aprobada', 'solicitud_fecha_defensa', 'reprobado'],
+        'defensa_aprobada' => ['publicado'],
+        'publicado' => ['titulado'],
+        'reporte_generado' => ['titulado'],
+        // 4. Flujo heredado: investigación, comisión revisora y defensa.
+        'investigacion_en_desarrollo' => ['documento_final_presentado', 'tribunal_asignado'],
+        'documento_final_presentado' => ['comision_revisora', 'tribunal_asignado'],
+        'comision_revisora' => ['suficiente', 'insuficiente', 'tribunal_asignado'],
+        'insuficiente' => ['comision_revisora'],
+        // Puentes hacia el estado objetivo del módulo de defensa. Registrar
+        // la nota final de la defensa puede cerrar el trámite como
+        // `defensa_aprobada` (nota mínima alcanzada) o `reprobado` (nota por
+        // debajo del mínimo): en ese caso el flujo termina y el estudiante
+        // debe volver a solicitar la modalidad de graduación.
+        'suficiente' => ['solicitud_fecha_defensa', 'defensa_aprobada', 'reprobado'],
+        'solicitud_fecha_defensa' => ['defensa_programada', 'defensa_aprobada', 'reprobado'],
+        'defensa_programada' => ['defensa_en_curso', 'defensa_aprobada', 'reprobado'],
+        'defensa_en_curso' => ['aprobado', 'correcciones_90_dias', 'defensa_aprobada', 'reprobado'],
+        // Tras reprobar la defensa, el estudiante tiene 90 días para corregir
+        // y volver a solicitar una fecha; si no, la gestión lo pasa a `reprobado`.
+        'correcciones_90_dias' => ['solicitud_fecha_defensa', 'reprobado'],
+    ];
+
+    /**
      * Mapa de transiciones permitidas por modalidad de titulación.
      *
      * Cada modalidad define su flujo como `estado_actual => [estados siguientes]`.
      * El estado `rechazado` solo se alcanza por flujos de evaluación (revisión
      * inicial o rechazo definitivo del perfil), no como avance normal.
-     *
-     * Tesis de Grado sigue el flujo oficial del estudiante: solicitud con 3
-     * archivos, evaluación del Consejo Universitario, reenvío del perfil
-     * rechazado, tutor asignado, investigación con plazo de presentación
-     * (3-12 meses), comisión revisora (suficiente/insuficiente), solicitud de
-     * fecha de defensa, defensa y 90 días de corrección si no la aprueba.
      *
      * Examen de Grado avanza por módulos gestionados por KARDEX: verificación
      * de intentos (rechazo por `numero_intentos >= 3`), habilitación con
@@ -107,55 +151,8 @@ class TramiteStateService
             'aprobado' => ['titulado', 'reporte_examen_generado'],
             'reporte_examen_generado' => ['titulado'],
         ],
-        'Tesis de Grado' => [
-            // 1. Fase de solicitud. El puente a `perfil_aprobado` permite que
-            //    Kardex registre el módulo de perfil directamente desde la
-            //    solicitud, sin pasar por el estado intermedio del Consejo.
-            'solicitud_presentada' => ['pendiente_concejo_universitario', 'perfil_aprobado', 'perfil_rechazado', 'rechazado'],
-            // 2. Evaluación del perfil por el Consejo Universitario.
-            'pendiente_concejo_universitario' => ['perfil_aprobado', 'perfil_rechazado'],
-            'perfil_rechazado' => ['pendiente_concejo_universitario', 'perfil_aprobado', 'tutor_asignado', 'rechazado'],
-            // 3. Módulos del flujo de titulación gestionados por Kardex. Cada
-            //    módulo se guarda desde su formulario y avanza al estado objetivo.
-            'perfil_aprobado' => ['tema_aprobado', 'tutor_asignado'],
-            // Puente del flujo anterior: tras asignar tutor se puede continuar
-            // por el flujo heredado (investigación) o registrar el tema (nuevo).
-            'tutor_asignado' => ['tema_aprobado', 'investigacion_en_desarrollo'],
-            'tema_aprobado' => ['tribunal_asignado'],
-            'tribunal_asignado' => ['defensa_aprobada', 'solicitud_fecha_defensa', 'reprobado'],
-            'defensa_aprobada' => ['publicado'],
-            'publicado' => ['titulado'],
-            'reporte_generado' => ['titulado'],
-            // 4. Flujo heredado: investigación, comisión revisora y defensa.
-            'investigacion_en_desarrollo' => ['documento_final_presentado', 'tribunal_asignado'],
-            'documento_final_presentado' => ['comision_revisora', 'tribunal_asignado'],
-            'comision_revisora' => ['suficiente', 'insuficiente', 'tribunal_asignado'],
-            'insuficiente' => ['comision_revisora'],
-            // Puentes hacia el estado objetivo del módulo de defensa. Registrar
-            // la nota final de la defensa puede cerrar el trámite como
-            // `defensa_aprobada` (nota mínima alcanzada) o `reprobado` (nota por
-            // debajo del mínimo): en ese caso el flujo termina y el estudiante
-            // debe volver a solicitar la modalidad de graduación.
-            'suficiente' => ['solicitud_fecha_defensa', 'defensa_aprobada', 'reprobado'],
-            'solicitud_fecha_defensa' => ['defensa_programada', 'defensa_aprobada', 'reprobado'],
-            'defensa_programada' => ['defensa_en_curso', 'defensa_aprobada', 'reprobado'],
-            'defensa_en_curso' => ['aprobado', 'correcciones_90_dias', 'defensa_aprobada', 'reprobado'],
-            // Tras reprobar la defensa, el estudiante tiene 90 días para corregir
-            // y volver a solicitar una fecha; si no, la gestión lo pasa a `reprobado`.
-            'correcciones_90_dias' => ['solicitud_fecha_defensa', 'reprobado'],
-        ],
-        'Trabajo Dirigido' => [
-            'solicitud_presentada' => ['convenio_verificado', 'rechazado'],
-            'convenio_verificado' => ['plan_trabajo_aprobado'],
-            'plan_trabajo_aprobado' => ['ejecucion_en_curso'],
-            'ejecucion_en_curso' => ['informe_final_presentado'],
-            'informe_final_presentado' => ['informe_en_evaluacion'],
-            'informe_en_evaluacion' => ['complementaciones_en_curso', 'defensa_programada'],
-            'complementaciones_en_curso' => ['informe_en_evaluacion'],
-            'defensa_programada' => ['defensa_en_curso'],
-            'defensa_en_curso' => ['deliberacion_defensa'],
-            'deliberacion_defensa' => ['aprobado', 'reprobado'],
-        ],
+        'Tesis de Grado' => self::TRANSICIONES_TITULACION,
+        'Trabajo Dirigido' => self::TRANSICIONES_TITULACION,
         'Excelencia Académica' => [
             // 1. Verificación del promedio general. Con el promedio en o por
             //    encima del mínimo reglamentario el trámite habilita al

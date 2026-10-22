@@ -2,7 +2,7 @@
   <ModuloTarjeta
     numero="5"
     titulo="Publicación"
-    descripcion="Verifique el trabajo de investigación (PDF) subido por el estudiante para concluir la publicación."
+    :descripcion="`Verifique el ${etiquetaPublicacion.toLowerCase()} (PDF) subido por el estudiante para concluir la publicación.`"
     icono="graduation"
     :completado="completado"
     :en-progreso="enProgreso"
@@ -30,12 +30,12 @@
 
     <div v-else-if="!enProgreso && !bloqueado" class="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-slate-400">
       <AppIcon name="clock" :size="15" class="inline mr-1.5" />
-      Este módulo se habilitará cuando el estudiante suba su trabajo de investigación tras aprobar la defensa.
+      Este módulo se habilitará cuando el estudiante suba su {{ etiquetaPublicacion.toLowerCase() }} tras aprobar la defensa.
     </div>
 
     <div v-else class="space-y-3">
       <div class="rounded-xl bg-white/5 border border-white/10 p-3.5">
-        <p class="text-sm font-semibold text-white">Trabajo de Investigación subido por el estudiante</p>
+        <p class="text-sm font-semibold text-white">{{ etiquetaPublicacion }} subido por el estudiante</p>
         <div class="mt-2 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-900/40 px-3.5 py-2.5">
           <span class="flex items-center gap-2 text-sm min-w-0" :class="archivo?.nombre ? 'text-slate-200' : 'text-slate-500'">
             <AppIcon :name="archivo?.nombre ? 'file-text' : 'alert-triangle'" :size="16" class="shrink-0 text-orange-300" />
@@ -74,7 +74,7 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue';
-import { validarModulo } from '@/modules/tesis/utils/flujoTitulacion';
+import { configDeTramite, validarModulo } from '@/modules/tramites/utils/flujoTitulacion';
 import { assetUrl } from '@/core/http/storage';
 import AppIcon from '@/ui/AppIcon.vue';
 import ModuloTarjeta from './ModuloTarjeta.vue';
@@ -85,9 +85,19 @@ const props = defineProps({
   bloqueado: { type: Boolean, default: false },
   datos: { type: Object, default: null },
   cargando: { type: Boolean, default: false },
+  tramite: { type: Object, default: null },
 });
 
 const emit = defineEmits(['guardar']);
+
+/**
+ * Cómo se llama el documento que el estudiante publica tras la defensa
+ * ("Trabajo de Investigación" / "Trabajo Dirigido"): depende de la modalidad
+ * del trámite.
+ */
+const etiquetaPublicacion = computed(
+  () => configDeTramite(props.tramite)?.etiquetaPublicacion || 'Trabajo de Investigación',
+);
 
 const form = reactive({
   archivo: null,

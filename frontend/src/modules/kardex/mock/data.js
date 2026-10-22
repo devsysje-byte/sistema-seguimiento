@@ -710,6 +710,7 @@ export function asignarTutorMock(tramite, idTutor) {
 // Estado objetivo de cada módulo del flujo de titulación (espejo del backend).
 const ESTADOS_MODULOS = {
   perfil_tesis: 'perfil_aprobado',
+  perfil_proyecto: 'perfil_aprobado',
   aprobacion_tema: 'tema_aprobado',
   tribunal_revisor: 'tribunal_asignado',
   defensa: 'defensa_aprobada',
@@ -727,7 +728,9 @@ const NOTA_MINIMA_DEFENSA = 51;
 // Simula POST /tramites/{id}/flujo/{modulo} (guardado de un módulo del flujo).
 export function aplicarModuloMock(tramite, moduloId, datos) {
   const t = clonar(tramite);
-  const rechaza = moduloId === 'perfil_tesis' && datos.accion === 'rechazar';
+  // El rechazo del perfil aplica a cualquier modalidad (perfil de tesis o
+  // perfil de proyecto): el estudiante debe presentar otro perfil.
+  const rechaza = moduloId.startsWith('perfil_') && datos.accion === 'rechazar';
   // La defensa con nota por debajo del mínimo deja el trámite REPROBADO
   // (estado terminal): el flujo termina aquí (espejo del TramiteService).
   const paso = Number(datos.paso ?? 2);
@@ -1131,6 +1134,7 @@ export function verificarTituloMock(titulo, excluirTramite = null, excluirEstudi
       id_tramite: p.tramite?.id_tramite,
       id_estudiante: p.id_estudiante,
       titulo: p.tramite?.hitos?.modulos?.perfil_tesis?.titulo
+        || p.tramite?.hitos?.modulos?.perfil_proyecto?.titulo
         || p.tramite?.hitos?.modulos?.aprobacion_tema?.tema_investigacion,
       estado_actual: p.tramite?.estado_actual,
       modalidad: p.tramite?.modalidad?.nombre,
