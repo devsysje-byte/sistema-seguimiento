@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia';
 import { kardexService } from '../services/kardex';
 import { tramitesService } from '@/modules/tramites/services/tramites';
-import { MODALIDADES_MOCK, buscarMock, consultarMock, asignarMock, transicionarMock, asignarTutorMock, resumenMock, aplicarModuloMock, verificarTituloMock, guardarModuloExamenMock, reabrirExamenMock } from '../mock/data';
+import { MODALIDADES_MOCK, buscarMock, consultarMock, asignarMock, transicionarMock, asignarTutorMock, resumenMock, aplicarModuloMock, verificarTituloMock, guardarModuloExamenMock, guardarModuloExcelenciaMock, reabrirExamenMock } from '../mock/data';
 
 // Modalidades que el KARDEX puede asignar a un postulante.
-export const MODALIDADES_ASIGNABLES = ['Tesis de Grado', 'Trabajo Dirigido', 'Examen de Grado'];
+export const MODALIDADES_ASIGNABLES = ['Tesis de Grado', 'Trabajo Dirigido', 'Examen de Grado', 'Excelencia Académica'];
 
 /**
  * Store del Dashboard de KARDEX.
@@ -370,6 +370,42 @@ export const useKardexStore = defineStore('kardex', {
                 return this.tramite;
             } catch (error) {
                 this.errorMessage = this._mensajeDeError(error, 'No se pudo guardar el módulo del examen.');
+                return null;
+            } finally {
+                this.cargando = false;
+            }
+        },
+        /**
+         * Guarda un módulo del flujo de Excelencia Académica y avanza el estado
+         * del trámite (verificación del promedio, Resolución del HCC o reporte
+         * final, que titula al estudiante).
+         *
+         * @param {string} moduloId Identificador del módulo.
+         * @param {Object} datos    Datos validados del formulario del módulo.
+         * @returns {Promise<Object|null>} Trámite actualizado.
+         */
+        async guardarModuloExcelencia(moduloId, datos) {
+            this.cargando = true;
+            this.errorMessage = null;
+            try {
+                if (!this.tramite) return null;
+
+                // Respaldo de demostración: sin API el módulo avanza contra los
+                // datos simulados.
+                if (this.simulado) {
+                    this.tramite = guardarModuloExcelenciaMock(this.tramite, moduloId, datos);
+                    return this.tramite;
+                }
+
+                const { data } = await kardexService.guardarModuloExcelencia(
+                    this.tramite.id_tramite,
+                    moduloId,
+                    datos,
+                );
+                this.tramite = data;
+                return this.tramite;
+            } catch (error) {
+                this.errorMessage = this._mensajeDeError(error, 'No se pudo guardar el módulo de Excelencia Académica.');
                 return null;
             } finally {
                 this.cargando = false;

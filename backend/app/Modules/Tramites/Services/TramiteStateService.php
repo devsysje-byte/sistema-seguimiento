@@ -48,6 +48,11 @@ class TramiteStateService
      * el flujo: el estudiante puede volver a solicitar el examen y el trámite se
      * reabre desde `habilitado_examen`.
      *
+     * Excelencia Académica también avanza por módulos gestionados por KARDEX:
+     * verificación del promedio general (rechazo si queda por debajo del
+     * mínimo reglamentario), registro de la Resolución del HCC y reporte final,
+     * que titula al estudiante.
+     *
      * @var array<string, array<string, array<int, string>>>
      */
     private const TRANSITIONS = [
@@ -152,12 +157,16 @@ class TramiteStateService
             'deliberacion_defensa' => ['aprobado', 'reprobado'],
         ],
         'Excelencia Académica' => [
+            // 1. Verificación del promedio general. Con el promedio en o por
+            //    encima del mínimo reglamentario el trámite habilita al
+            //    estudiante; por debajo, la solicitud queda RECHAZADA y el
+            //    flujo termina (el estudiante no opta a la modalidad).
             'solicitud_presentada' => ['promedio_verificado', 'rechazado'],
-            'promedio_verificado' => ['monografia_presentada'],
-            'monografia_presentada' => ['monografia_en_evaluacion'],
-            'monografia_en_evaluacion' => ['monografia_aprobada', 'monografia_rechazada'],
-            'monografia_aprobada' => ['revision_final'],
-            'revision_final' => ['aprobado', 'reprobado'],
+            // 2. Registro de la Resolución del HCC que habilita al estudiante.
+            'promedio_verificado' => ['resolucion_hcc_registrada'],
+            // 3. Reporte final: el acta de Excelencia Académica titula al
+            //    estudiante.
+            'resolucion_hcc_registrada' => ['titulado'],
         ],
     ];
 

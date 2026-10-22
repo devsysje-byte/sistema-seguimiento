@@ -36,6 +36,9 @@ export const ESTADOS_OK = [
   'intentos_verificados',
   'habilitado_examen',
   'reporte_examen_generado',
+  // Excelencia Académica
+  'promedio_verificado',
+  'resolucion_hcc_registrada',
 ];
 
 // Estados de error/rechazo con tono rojo.

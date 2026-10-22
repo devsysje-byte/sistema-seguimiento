@@ -47,6 +47,29 @@ export const kardexService = {
         return http.post(`/tramites/${id}/examen/${modulo}`, { datos });
     },
     /**
+     * Guarda un módulo del flujo de Excelencia Académica.
+     *
+     * Los tres módulos son gestionados por KARDEX: verificación del promedio
+     * (que puede corregir la nota del estudiante), registro de la Resolución
+     * del HCC y reporte final, que titula al estudiante.
+     *
+     * @param {number} id     Identificador del trámite.
+     * @param {string} modulo Módulo del flujo (ver `flujoExcelencia.js`).
+     * @param {Object} datos  Datos validados del formulario.
+     */
+    guardarModuloExcelencia(id, modulo, datos) {
+        return http.post(`/tramites/${id}/excelencia/${modulo}`, { datos });
+    },
+    /**
+     * Configuración del módulo de Excelencia Académica (promedio mínimo y rango
+     * válido de nota).
+     *
+     * @returns {Promise} Respuesta con `{ modalidad, nota_minima, rango_nota }`.
+     */
+    configuracionExcelencia() {
+        return http.get('/excelencia/config');
+    },
+    /**
      * Reabre un trámite de Examen de Grado reprobado o con ausencia para que el
      * estudiante vuelva a sortear el examen. Consume un intento.
      *

@@ -37,4 +37,10 @@ class ModalidadFactory extends Factory
     {
         return $this->state(fn (array $attributes) => ['nombre' => 'Examen de Grado']);
     }
+
+    /** Modalidad de Excelencia Académica (flujo por promedio, resolución y acta). */
+    public function excelencia(): static
+    {
+        return $this->state(fn (array $attributes) => ['nombre' => 'Excelencia Académica']);
+    }
 }

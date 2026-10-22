@@ -104,6 +104,18 @@
           <SeguimientoExamenGrado :tramite="tramitesStore.tramiteActivo" />
         </div>
 
+        <!-- Excelencia Académica: el seguimiento propio de la modalidad -->
+        <div v-else-if="tramitesStore.tramiteActivo && esExcelenciaActivo">
+          <SeguimientoExcelencia
+            :tramite="tramitesStore.tramiteActivo"
+            :nota-minima="excelenciaStore.config?.nota_minima ?? NOTA_MINIMA"
+          />
+          <router-link to="/estudiante/excelencia" class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-orange-300 hover:text-orange-200">
+            <AppIcon name="arrow-left" :size="15" class="rotate-180" />
+            Ir al módulo de Excelencia Académica
+          </router-link>
+        </div>
+
         <div v-else-if="tramitesStore.tramiteActivo && !esTesisActivo" class="card overflow-hidden">
           <div class="h-2 bg-orange"></div>
           <div class="p-6 sm:p-8">
@@ -183,6 +195,29 @@
               </span>
             </div>
           </router-link>
+
+          <!-- Excelencia Académica: solicitud con el promedio general declarado -->
+          <router-link to="/estudiante/excelencia" class="card overflow-hidden relative block group hover:ring-2 hover:ring-orange-500/40 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-amber-400 to-orange-500"></div>
+            <div class="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-300 group-hover:bg-amber-500/20 group-hover:scale-105 transition-all duration-200">
+                  <AppIcon name="award" :size="28" />
+                </div>
+                <div>
+                  <h2 class="text-lg font-extrabold text-white transition-colors duration-200 group-hover:text-amber-300">Excelencia Académica</h2>
+                  <p class="text-sm text-slate-400">
+                    Solicita la modalidad por promedio sobresaliente (mínimo
+                    {{ notaMinimaExcelencia }} puntos) y sigue la verificación de Kardex.
+                  </p>
+                </div>
+              </div>
+              <span class="btn-warm px-5 py-2.5">
+                <AppIcon name="arrow-left" :size="15" class="rotate-180" />
+                Solicitar Modalidad
+              </span>
+            </div>
+          </router-link>
         </template>
       </div>
     </template>
@@ -200,7 +235,10 @@ import { useTesisStore, reoptarInfo } from '@/modules/tesis';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useEstudianteStore } from '../stores/estudiante';
 import SeguimientoExamenGrado from '../components/SeguimientoExamenGrado.vue';
+import SeguimientoExcelencia from '@/modules/excelencia/components/SeguimientoExcelencia.vue';
 import { esFlujoExamen } from '@/modules/examen/utils/flujoExamen';
+import { esFlujoExcelencia, NOTA_MINIMA } from '@/modules/excelencia/utils/flujoExcelencia';
+import { useExcelenciaStore } from '@/modules/excelencia';
 import { AppShell } from '@/modules/layout';
 import AppIcon from '@/ui/AppIcon.vue';
 import StatCard from '@/ui/StatCard.vue';
@@ -208,6 +246,7 @@ import StatCard from '@/ui/StatCard.vue';
 const tramitesStore = useTramitesStore();
 const estudianteStore = useEstudianteStore();
 const tesisStore = useTesisStore();
+const excelenciaStore = useExcelenciaStore();
 
 // Es null cuando el perfil aún no fue registrado.
 const perfilEstudiante = computed(() => estudianteStore.perfilEstudiante);
@@ -249,6 +288,13 @@ const esTesisActivo = computed(() => tramitesStore.tramiteActivo?.modalidad?.nom
 // muestra el avance en tarjetas, los intentos y la última actualización.
 const esExamenActivo = computed(() => esFlujoExamen(tramitesStore.tramiteActivo));
 
+// true si el trámite activo es de la modalidad Excelencia Académica: el
+// seguimiento propio de la modalidad muestra el avance del flujo por promedio.
+const esExcelenciaActivo = computed(() => esFlujoExcelencia(tramitesStore.tramiteActivo));
+
+// Mínimo de promedio exigido por la modalidad (lo define el backend).
+const notaMinimaExcelencia = computed(() => Number(excelenciaStore.config?.nota_minima) || NOTA_MINIMA);
+
 // Seguimiento en vivo del Examen de Grado: mientras el portal esté abierto con
 // esta modalidad, el trámite activo se refresca en segundo plano (silencioso,
 // sin indicador de carga) para que los módulos que va registrando Kardex se
@@ -269,12 +315,16 @@ async function refrescarTramiteSilencioso() {
 
 // Al volver a la pestaña del navegador se refresca de inmediato.
 function alVolverPestana() {
-    if (document.visibilityState === 'visible' && esExamenActivo.value) {
+    if (document.visibilityState === 'visible' && refrescoEnVivo.value) {
         refrescarTramiteSilencioso();
     }
 }
 
-watch(esExamenActivo, (activo) => {
+// Seguimiento en vivo: los módulos que va registrando Kardex (Examen de Grado y
+// Excelencia Académica) se reflejan al instante en las tarjetas del estudiante.
+const refrescoEnVivo = computed(() => esExamenActivo.value || esExcelenciaActivo.value);
+
+watch(refrescoEnVivo, (activo) => {
     clearInterval(timerRefresco);
     timerRefresco = null;
     if (activo) {
@@ -290,7 +340,11 @@ const mostrarInicioSolicitud = computed(() => !tramitesStore.tramiteActivo || tr
 onMounted(async () => {
     await estudianteStore.cargarPerfil(true);
     sinPerfil.value = !estudianteStore.perfilEstudiante;
-    await tramitesStore.cargarTramiteActivo();
+    await Promise.all([
+        tramitesStore.cargarTramiteActivo(),
+        // El mínimo de promedio de la Excelencia Académica lo define el backend.
+        excelenciaStore.cargarConfig(),
+    ]);
     document.addEventListener('visibilitychange', alVolverPestana);
 });
 

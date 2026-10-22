@@ -42,6 +42,12 @@ export const SECUENCIAS = {
     'reporte_examen_generado',
     'titulado',
   ],
+  'Excelencia Académica': [
+    'solicitud_presentada',
+    'promedio_verificado',
+    'resolucion_hcc_registrada',
+    'titulado',
+  ],
 };
 
 // Estados siguientes permitidos por estado (espejo del backend).
@@ -77,6 +83,10 @@ export const SIGUIENTES_POR_ESTADO = {
   examen_ambos_reprobados: ['intentos_verificados'],
   aprobado: ['reporte_examen_generado'],
   reporte_examen_generado: ['titulado'],
+
+  // --- Excelencia Académica (espejo de TramiteStateService::TRANSITIONS) ---
+  promedio_verificado: ['resolucion_hcc_registrada'],
+  resolucion_hcc_registrada: ['titulado'],
 
   reprobado: [],
   rechazado: [],
@@ -548,6 +558,48 @@ export const POSTULANTES_MOCK = [
       secuencia: SECUENCIAS['Examen de Grado'],
     },
   },
+  {
+    // Excelencia Académica: la solicitud está presentada y KARDEX aún no
+    // verificó el promedio general del estudiante.
+    id_estudiante: 110,
+    ci: '9081726',
+    nombres: 'Andrea Nataly',
+    apellidos: 'Ccori Mamani',
+    registro_universitario: 'RU-2017-0334',
+    fecha_nacimiento: '2000-05-11',
+    email: 'andrea.c@upea.edu.bo',
+    telefono: '70667788',
+    promedio_global: 88.4,
+    tiene_cuenta: true,
+    username: 'Andrea_9081726',
+    tramite: {
+      id_tramite: 308,
+      id_estudiante: 110,
+      id_modalidad: 4,
+      id_tutor: null,
+      tutor: null,
+      estado_actual: 'solicitud_presentada',
+      observaciones: null,
+      hitos: {
+        solicitud_presentada: '2026-09-18',
+        modulos: {
+          verificacion_promedio: {
+            promedio_declarado: 88.4,
+            nota_minima: 80,
+          },
+        },
+      },
+      created_at: '2026-09-18T08:00:00.000000Z',
+      updated_at: '2026-09-18T08:00:00.000000Z',
+      modalidad: { id_modalidad: 4, nombre: 'Excelencia Académica' },
+      estudiante: { id_estudiante: 110, ci: '9081726', nombres: 'Andrea Nataly', apellidos: 'Ccori Mamani', registro_universitario: 'RU-2017-0334', promedio_global: 88.4 },
+      estados: [
+        { nombre_estado: 'solicitud_presentada', descripcion: 'Solicitud presentada', created_at: '2026-09-18T08:00:00.000000Z' },
+      ],
+      siguientes_estados: SIGUIENTES_POR_ESTADO['solicitud_presentada'],
+      secuencia: SECUENCIAS['Excelencia Académica'],
+    },
+  },
 ];
 
 // Estrategia de búsqueda por CI o R.U. (mismo criterio que el backend).
@@ -782,6 +834,8 @@ const REAPERTURA_POR_ESTADO = {
 
 const MAXIMO_INTENTOS_MOCK = 3;
 const NOTA_MINIMA_MOCK = 51;
+// Mínimo de promedio exigido por la modalidad de Excelencia Académica.
+const NOTA_MINIMA_EXCELENCIA_MOCK = 80;
 
 /** Resuelve el estado y el resultado de un sorteo a partir de sus datos (1 paso). */
 function destinoSorteoMock(datos, prefijo) {
@@ -949,6 +1003,60 @@ export function guardarModuloExamenMock(tramite, moduloId, datos) {
   ];
   t.siguientes_estados = SIGUIENTES_POR_ESTADO[destino.estado] || [];
   t.secuencia = SECUENCIAS['Examen de Grado'];
+  return t;
+}
+
+/**
+ * Simula POST /tramites/{id}/excelencia/{modulo}.
+ *
+ * El flujo de Excelencia Académica es lineal: verificación del promedio
+ * (única bifurcación, que puede dejar la solicitud RECHAZADA), registro de la
+ * Resolución del HCC y reporte final, que titula al estudiante.
+ *
+ * @param {Object} tramite   Trámite de Excelencia Académica.
+ * @param {string} moduloId  Identificador del módulo.
+ * @param {Object} datos     Datos del formulario.
+ */
+export function guardarModuloExcelenciaMock(tramite, moduloId, datos) {
+  const t = clonar(tramite);
+  const hoy = new Date().toISOString();
+
+  let destino;
+  if (moduloId === 'verificacion_promedio') {
+    const nota = Number(datos.promedio);
+    if (!Number.isFinite(nota)) {
+      throw { message: 'Ingrese el promedio verificado del estudiante.' };
+    }
+    destino = nota >= NOTA_MINIMA_EXCELENCIA_MOCK
+      ? { estado: 'promedio_verificado', resultado: 'verificado' }
+      : { estado: 'rechazado', resultado: 'rechazado' };
+  } else if (moduloId === 'resolucion_hcc') {
+    destino = { estado: 'resolucion_hcc_registrada', resultado: 'resolucion_registrada' };
+  } else if (moduloId === 'reporte') {
+    destino = { estado: 'titulado', resultado: 'titulado' };
+  } else {
+    throw { message: 'El módulo del flujo de Excelencia Académica no es reconocido.' };
+  }
+
+  const guardado = { ...(t.hitos?.modulos?.[moduloId] || {}), ...datos };
+
+  t.updated_at = hoy;
+  t.estado_actual = destino.estado;
+  t.observaciones = datos.observaciones || t.observaciones;
+  t.hitos = { ...(t.hitos || {}) };
+  t.hitos.modulos = { ...(t.hitos.modulos || {}), [moduloId]: guardado };
+  // El promedio verificado queda registrado en el hito del estado alcanzado.
+  t.hitos[destino.estado] = hoy.slice(0, 10);
+  t.estados = [
+    ...(t.estados || []),
+    { nombre_estado: destino.estado, descripcion: destino.estado, observaciones: datos.observaciones || null, created_at: hoy },
+  ];
+  // El promedio verificado actualiza el promedio global del estudiante.
+  if (moduloId === 'verificacion_promedio' && t.estudiante) {
+    t.estudiante.promedio_global = Number(datos.promedio);
+  }
+  t.siguientes_estados = SIGUIENTES_POR_ESTADO[destino.estado] || [];
+  t.secuencia = SECUENCIAS['Excelencia Académica'];
   return t;
 }
 
