@@ -64,4 +64,24 @@ final class CredencialesEstudiante
 
         return $candidato;
     }
+
+    /**
+     * Email que puede usarse en la cuenta de acceso sin violar
+     * `users.users_email_unique`.
+     *
+     * `users.email` es opcional desde que el login pasó a basarse en el
+     * username. Si el correo del perfil ya pertenece a otra cuenta, se omite en
+     * la nueva cuenta (el dato real permanece en `estudiantes.email`) para no
+     * reventar el alta automática con un error 500.
+     */
+    public static function emailDisponible(Estudiante $estudiante): ?string
+    {
+        $email = trim((string) $estudiante->email);
+
+        if ($email === '') {
+            return null;
+        }
+
+        return User::query()->where('email', $email)->exists() ? null : $email;
+    }
 }

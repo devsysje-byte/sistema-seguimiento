@@ -74,19 +74,21 @@
             type="text"
             class="input pl-10"
             placeholder="Buscar docente por nombre..."
-            @focus="abierta = true"
+            @focus="abrirLista"
+            @blur="cerrarLista"
           />
           <ul
-            v-if="abierta && busqueda"
-            class="absolute z-20 mt-1 w-full rounded-xl border border-white/10 bg-slate-800 max-h-44 overflow-auto shadow-xl"
+            v-if="abierta"
+            class="absolute z-20 mt-1 w-full rounded-xl border border-white/10 bg-slate-800 max-h-56 overflow-auto shadow-xl"
           >
             <li v-if="!docentesFiltrados.length" class="px-4 py-3 text-sm text-slate-400">
               Sin coincidencias.
             </li>
             <li
               v-for="doc in docentesFiltrados"
-              :key="doc.id_usuario"
+              :key="doc.id_docente"
               class="px-4 py-2.5 text-sm text-slate-200 cursor-pointer hover:bg-orange-500/10 hover:text-orange-200 flex items-center gap-2"
+              @mousedown.prevent
               @click="seleccionar(doc)"
             >
               <AppIcon name="user" :size="14" class="text-slate-500" />
@@ -149,24 +151,31 @@ const abierta = ref(false);
 const errores = ref([]);
 
 const hoyISO = computed(() => new Date().toISOString().slice(0, 10));
-const tutorElegido = computed(() => props.docentes.find((d) => d.id_usuario === Number(form.tutor_id)));
+const tutorElegido = computed(() => props.docentes.find((d) => d.id_docente === Number(form.tutor_id)));
 
 const docentesFiltrados = computed(() => {
   const q = busqueda.value.trim().toLowerCase();
-  if (!q) return [];
-  return props.docentes
-    .filter((d) => `${d.nombres} ${d.apellidos}`.toLowerCase().includes(q))
-    .slice(0, 8);
+  if (!q) return props.docentes;
+  return props.docentes.filter((d) => `${d.nombres} ${d.apellidos}`.toLowerCase().includes(q));
 });
 
 const nombreTutor = computed(() => {
   if (!props.datos?.tutor_id) return 'No registrado';
-  const doc = props.docentes.find((d) => d.id_usuario === Number(props.datos.tutor_id));
+  const doc = props.docentes.find((d) => d.id_docente === Number(props.datos.tutor_id));
   return doc ? `${doc.nombres} ${doc.apellidos}` : `Docente #${props.datos.tutor_id}`;
 });
 
+function abrirLista() {
+  if (tutorElegido.value) busqueda.value = '';
+  abierta.value = true;
+}
+
+function cerrarLista() {
+  abierta.value = false;
+}
+
 function seleccionar(doc) {
-  form.tutor_id = doc.id_usuario;
+  form.tutor_id = doc.id_docente;
   busqueda.value = `${doc.nombres} ${doc.apellidos}`;
   abierta.value = false;
 }

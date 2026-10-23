@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -18,4 +19,11 @@ class Docente extends Model
     protected $fillable = [
         'ci', 'nombre', 'apellidos', 'telefono', 'email', 'materia',
     ];
+
+    protected $appends = ['nombres'];
+
+    protected function nombres(): Attribute
+    {
+        return Attribute::get(fn (): string => $this->nombre);
+    }
 }

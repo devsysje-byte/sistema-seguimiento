@@ -2,6 +2,7 @@
 
 namespace App\Modules\Tramites\Services;
 
+use App\Models\Docente;
 use App\Models\EstadoTramite;
 use App\Models\Modalidad;
 use App\Models\Tramite;
@@ -51,7 +52,7 @@ class TramiteService extends BasePaginadoService
         'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,ruta_archivo,tamanio_kb,created_at',
         'estados:id_estado,id_tramite,nombre_estado,descripcion,observaciones,id_usuario_responsable,created_at',
         'estados.responsable:id_usuario,nombres,apellidos,rol',
-        'tutor:id_usuario,nombres,apellidos,email,telefono,rol',
+        'tutor:id_docente,nombre,apellidos,email,telefono,materia,ci',
     ];
 
     /** Eager-loads mínimos de los listados (tablero de revisión). */
@@ -59,7 +60,7 @@ class TramiteService extends BasePaginadoService
         'modalidad:id_modalidad,nombre',
         'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,promedio_global',
         'estudiante.user:id_usuario,estudiante_id,nombres,apellidos',
-        'tutor:id_usuario,nombres,apellidos',
+        'tutor:id_docente,nombre,apellidos',
         'documentos:id_documento,id_tramite,tipo_documento,ruta_archivo',
     ];
 
@@ -393,7 +394,7 @@ class TramiteService extends BasePaginadoService
 
     /**
      * Avanza un trámite a un nuevo estado del flujo de su modalidad y notifica
-     * al estudiante y al tutor (si existe) vía evento de dominio.
+     * al estudiante vía evento de dominio.
      */
     public function transicionar(int $id, string $nuevoEstado, ?string $observaciones, User $actor): array
     {
@@ -422,21 +423,15 @@ class TramiteService extends BasePaginadoService
     }
 
     /**
-     * Asigna (o reasigna) el docente tutor de un trámite y notifica al tutor
-     * vía evento de dominio.
+     * Asigna (o reasigna) el docente tutor de un trámite desde el registro
+     * académico de docentes.
      */
     public function asignarTutor(int $id, int $idTutor): array
     {
-        $tutor = User::findOrFail($idTutor);
-
-        if ($tutor->rol !== Roles::DOCENTE) {
-            throw ValidationException::withMessages([
-                'id_tutor' => 'El tutor debe ser un usuario con rol docente',
-            ]);
-        }
+        $tutor = Docente::findOrFail($idTutor);
 
         $tramite = Tramite::with('modalidad')->findOrFail($id);
-        $tramite->update(['id_tutor' => $tutor->id_usuario]);
+        $tramite->update(['id_tutor' => $tutor->id_docente]);
 
         $tramite->load(self::DETALLE_CARGAS);
 
@@ -565,13 +560,13 @@ class TramiteService extends BasePaginadoService
 
         // El módulo de tema asigna el tutor designado en el formulario.
         if ($modulo === 'aprobacion_tema' && ! empty($datos['tutor_id'])) {
-            $tutor = User::find($datos['tutor_id']);
-            if ($tutor === null || $tutor->rol !== Roles::DOCENTE) {
+            $tutor = Docente::find($datos['tutor_id']);
+            if ($tutor === null) {
                 throw ValidationException::withMessages([
                     'datos' => ['El tutor seleccionado no es un docente válido.'],
                 ]);
             }
-            $soloHitos['id_tutor'] = $tutor->id_usuario;
+            $soloHitos['id_tutor'] = $tutor->id_docente;
         }
 
         $tramite->update($soloHitos);
@@ -806,12 +801,20 @@ class TramiteService extends BasePaginadoService
      */
     public function tutoriasDe(User $user, ?int $perPage = 20): array
     {
+        $docente = Docente::query()->where('ci', $user->ci)->first();
+
+        $query = Tramite::query()
+            ->select(self::DETALLE_COLUMNAS)
+            ->with(self::DETALLE_CARGAS);
+
+        if ($docente === null) {
+            $query->whereRaw('1 = 0');
+        } else {
+            $query->where('id_tutor', $docente->id_docente);
+        }
+
         return $this->paginar(
-            Tramite::query()
-                ->select(self::DETALLE_COLUMNAS)
-                ->with(self::DETALLE_CARGAS)
-                ->where('id_tutor', $user->id_usuario)
-                ->orderByDesc('created_at'),
+            $query->orderByDesc('created_at'),
             $this->porPagina($perPage),
             fn (Tramite $t) => $this->formatear($t)
         );

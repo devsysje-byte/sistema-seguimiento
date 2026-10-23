@@ -45,15 +45,22 @@ export const useKardexStore = defineStore('kardex', {
          * @returns {null} Siempre null (convención de las acciones).
          */
         _manejarError(error) {
-            const redInasible = !error?.response || (error?.response?.status ?? 0) >= 500;
-            if (redInasible) {
+            // Solo hay respaldo simulado cuando la API no responde (red caída o
+            // backend apagado). Un 5xx es un error real del servidor: si se
+            // tratara como "sin conexión" la UI mostraría datos de demostración
+            // y ocultaría el fallo.
+            if (!error?.response) {
                 this.simulado = true;
                 return null;
             }
+
+            this.simulado = false;
             this.errorMessage =
-                error?.response?.data?.message ||
-                error?.response?.data?.errors?.identificador?.[0] ||
-                'No se pudo completar la operación.';
+                error.response.data?.message ||
+                error.response.data?.errors?.identificador?.[0] ||
+                error.response.data?.errors?.email?.[0] ||
+                error.response.data?.errors?.id_modalidad?.[0] ||
+                'No se pudo completar la operación. Intente nuevamente.';
             return null;
         },
         /** Carga la lista de modalidades activas (con caché breve). */
@@ -251,7 +258,7 @@ export const useKardexStore = defineStore('kardex', {
          * trámite local de demostración.
          *
          * @param {number|string} id      Identificador del trámite.
-         * @param {number|string} idTutor Identificador del usuario docente.
+         * @param {number|string} idTutor Identificador del docente.
          * @returns {Promise<Object|null>} Trámite actualizado.
          */
         async asignarTutor(idTramite, idTutor) {

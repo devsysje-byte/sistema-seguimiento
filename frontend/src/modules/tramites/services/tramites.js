@@ -51,8 +51,8 @@ export const tramitesService = {
     tutorias(params = {}) {
         return http.get('/tutorias', { params });
     },
-    /** Lista los docentes activos para el selector de tutor. */
+    /** Lista los docentes del registro académico para el selector de tutor. */
     docentes() {
-        return http.get('/usuarios/docentes');
+        return http.get('/docentes/catalogo');
     },
 };

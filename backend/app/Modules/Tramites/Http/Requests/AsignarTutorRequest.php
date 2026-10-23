@@ -20,7 +20,7 @@ class AsignarTutorRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id_tutor' => ['required', 'exists:users,id_usuario'],
+            'id_tutor' => ['required', 'exists:docentes,id_docente'],
         ];
     }
 }

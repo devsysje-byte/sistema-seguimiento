@@ -102,7 +102,7 @@
             <div class="flex flex-col sm:flex-row gap-2">
               <select v-model="tutorSeleccionado" class="input flex-1 min-w-0">
                 <option value="" disabled>Seleccione un docente tutor...</option>
-                <option v-for="doc in tramitesStore.docentes" :key="doc.id_usuario" :value="doc.id_usuario">
+                <option v-for="doc in tramitesStore.docentes" :key="doc.id_docente" :value="doc.id_docente">
                   {{ doc.nombres }} {{ doc.apellidos }}
                 </option>
               </select>

@@ -11,6 +11,7 @@ use App\Modules\Tramites\Services\TramiteStateService;
 use App\Support\CredencialesEstudiante;
 use App\Support\Roles;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -34,7 +35,7 @@ class KardexService
         'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,ruta_archivo,tamanio_kb,created_at',
         'estados:id_estado,id_tramite,nombre_estado,descripcion,observaciones,id_usuario_responsable,created_at',
         'estados.responsable:id_usuario,nombres,apellidos,rol',
-        'tutor:id_usuario,nombres,apellidos,email,rol',
+        'tutor:id_docente,nombre,apellidos,email,telefono,materia,ci',
         // Historial especializado del Examen de Grado: las tarjetas del panel
         // reconstruyen los módulos completados a partir de estas filas, porque
         // tras un reintento el estado actual no refleja lo ya superado.
@@ -119,18 +120,24 @@ class KardexService
             $username = CredencialesEstudiante::usernameUnico($estudiante);
             $password = CredencialesEstudiante::passwordDe($estudiante);
 
-            $usuario = User::create([
-                'ci' => $estudiante->ci,
-                'nombres' => $estudiante->nombres,
-                'apellidos' => $estudiante->apellidos,
-                'email' => $estudiante->email,
-                'telefono' => $estudiante->telefono,
-                'username' => $username,
-                'password' => Hash::make($password),
-                'rol' => Roles::ESTUDIANTE,
-                'activo' => true,
-                'estudiante_id' => $estudiante->id_estudiante,
-            ]);
+            try {
+                $usuario = User::create([
+                    'ci' => $estudiante->ci,
+                    'nombres' => $estudiante->nombres,
+                    'apellidos' => $estudiante->apellidos,
+                    'email' => CredencialesEstudiante::emailDisponible($estudiante),
+                    'telefono' => $estudiante->telefono,
+                    'username' => $username,
+                    'password' => Hash::make($password),
+                    'rol' => Roles::ESTUDIANTE,
+                    'activo' => true,
+                    'estudiante_id' => $estudiante->id_estudiante,
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                throw ValidationException::withMessages([
+                    'identificador' => 'No se pudo crear la cuenta de acceso: el CI o el usuario ya está registrado.',
+                ]);
+            }
 
             return [
                 [

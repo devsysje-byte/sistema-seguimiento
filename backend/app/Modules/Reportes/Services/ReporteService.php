@@ -26,7 +26,7 @@ class ReporteService
     private const CARGAS = [
         'modalidad:id_modalidad,nombre,descripcion,duracion_maxima_meses',
         'estudiante:id_estudiante,ci,nombres,apellidos,registro_universitario,email,telefono,promedio_global',
-        'tutor:id_usuario,nombres,apellidos,email,telefono,rol',
+        'tutor:id_docente,nombre,apellidos,email,telefono,materia,ci',
         'estados:id_estado,id_tramite,nombre_estado,descripcion,observaciones,created_at',
         'documentos:id_documento,id_tramite,tipo_documento,nombre_archivo,created_at',
     ];

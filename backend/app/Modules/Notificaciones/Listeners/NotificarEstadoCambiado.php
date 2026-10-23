@@ -9,7 +9,7 @@ use App\Modules\Tramites\Services\FlujoTitulacionModalidad;
 /**
  * Listener del evento \App\Modules\Tramites\Events\EstadoTramiteCambiado.
  *
- * Notifica al estudiante y al tutor (si existe) del avance de un trámite. Para
+ * Notifica al estudiante del avance de un trámite. Para
  * las modalidades que comparten el flujo de titulación (Tesis de Grado y
  * Trabajo Dirigido) personaliza el mensaje al estudiante en los estados clave
  * del flujo (rechazo del perfil, veredicto suficiente, correcciones de 90
@@ -47,16 +47,6 @@ class NotificarEstadoCambiado
                     '/estudiante'
                 );
             }
-        }
-
-        if ($event->tramite->id_tutor && $estudiante) {
-            NotificacionService::paraUsuario(
-                $event->tramite->id_tutor,
-                'cambio_estado',
-                'Actualización en su tutoría',
-                "El trámite del estudiante {$estudiante->nombres} {$estudiante->apellidos} avanzó al estado: {$event->nuevoEstado}.",
-                '/docente'
-            );
         }
     }
 

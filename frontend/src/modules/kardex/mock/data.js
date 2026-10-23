@@ -101,11 +101,12 @@ export const MODALIDADES_MOCK = [
   { id_modalidad: 4, nombre: 'Excelencia Académica', activo: true },
 ];
 
-// Usuarios docentes (catálogo para asignar tutor, forma de GET /api/usuarios/docentes).
+// Docentes del registro académico (catálogo para asignar tutor, forma de
+// GET /api/docentes/catalogo).
 export const DOCENTES_MOCK = [
-  { id_usuario: 5, nombres: 'Julia', apellidos: 'Paredes Villca', email: 'julia.paredes@upea.edu.bo', rol: 'docente' },
-  { id_usuario: 6, nombres: 'Roberto', apellidos: 'Sánchez Calle', email: 'roberto.sanchez@upea.edu.bo', rol: 'docente' },
-  { id_usuario: 7, nombres: 'Elena', apellidos: 'Aguilar Rojas', email: 'elena.aguilar@upea.edu.bo', rol: 'docente' },
+  { id_docente: 1, nombre: 'Julia', nombres: 'Julia', apellidos: 'Paredes Villca', email: 'julia.paredes@upea.edu.bo', materia: null, ci: '1234567' },
+  { id_docente: 2, nombre: 'Roberto', nombres: 'Roberto', apellidos: 'Sánchez Calle', email: 'roberto.sanchez@upea.edu.bo', materia: null, ci: '2345678' },
+  { id_docente: 3, nombre: 'Elena', nombres: 'Elena', apellidos: 'Aguilar Rojas', email: 'elena.aguilar@upea.edu.bo', materia: null, ci: '3456789' },
 ];
 
 // Postulantes de prueba con sus trámites (los que tengan `tramite`).
@@ -154,8 +155,8 @@ export const POSTULANTES_MOCK = [
       id_tramite: 301,
       id_estudiante: 103,
       id_modalidad: 2,
-      id_tutor: 5,
-      tutor: { id_usuario: 5, nombres: 'Julia', apellidos: 'Paredes Villca', email: 'julia.paredes@upea.edu.bo', telefono: '70011223', rol: 'docente' },
+      id_tutor: 1,
+      tutor: { id_docente: 1, nombre: 'Julia', nombres: 'Julia', apellidos: 'Paredes Villca', email: 'julia.paredes@upea.edu.bo', materia: null, ci: '1234567' },
       estado_actual: 'tema_aprobado',
       observaciones: null,
       hitos: {
@@ -177,7 +178,7 @@ export const POSTULANTES_MOCK = [
             numero_resolucion: 'HCC-0245/2026',
             fecha_resolucion: '2026-06-24',
             tema_investigacion: 'Sistemas de riego eficientes para cultivos de altura en el altiplano boliviano.',
-            tutor_id: 5,
+            tutor_id: 1,
           },
         },
       },
@@ -210,8 +211,8 @@ export const POSTULANTES_MOCK = [
       id_tramite: 302,
       id_estudiante: 104,
       id_modalidad: 2,
-      id_tutor: 7,
-      tutor: { id_usuario: 7, nombres: 'Elena', apellidos: 'Aguilar Rojas', email: 'elena.aguilar@upea.edu.bo', telefono: '69887766', rol: 'docente' },
+      id_tutor: 3,
+      tutor: { id_docente: 3, nombre: 'Elena', nombres: 'Elena', apellidos: 'Aguilar Rojas', email: 'elena.aguilar@upea.edu.bo', materia: null, ci: '3456789' },
       estado_actual: 'tribunal_asignado',
       observaciones: null,
       hitos: {
@@ -233,7 +234,7 @@ export const POSTULANTES_MOCK = [
             numero_resolucion: 'HCC-0031/2026',
             fecha_resolucion: '2026-02-15',
             tema_investigacion: 'Incidencia de la educación digital en el rendimiento académico universitario.',
-            tutor_id: 7,
+            tutor_id: 3,
           },
           tribunal_revisor: {
             numero_resolucion: 'HCC-0158/2026',
@@ -696,11 +697,11 @@ export function transicionarMock(tramite, nuevoEstado, observaciones) {
 // Simula POST /tramites/{id}/asignar-tutor (asignación de tutor docente).
 export function asignarTutorMock(tramite, idTutor) {
   const t = clonar(tramite);
-  const tutor = DOCENTES_MOCK.find((d) => d.id_usuario === Number(idTutor));
+  const tutor = DOCENTES_MOCK.find((d) => d.id_docente === Number(idTutor));
   if (!tutor) {
     throw { message: 'El tutor seleccionado no existe o no es un docente válido.' };
   }
-  t.id_tutor = tutor.id_usuario;
+  t.id_tutor = tutor.id_docente;
   t.tutor = { ...tutor };
   t.hitos = { ...(t.hitos || {}), tutor_asignado: new Date().toISOString().slice(0, 10) };
   t.updated_at = new Date().toISOString();
@@ -776,9 +777,9 @@ export function aplicarModuloMock(tramite, moduloId, datos) {
   if (rechaza) {
     t.observaciones = datos.observaciones || t.observaciones;
   } else if (moduloId === 'aprobacion_tema' && datos.tutor_id) {
-    const tutor = DOCENTES_MOCK.find((d) => d.id_usuario === Number(datos.tutor_id));
+    const tutor = DOCENTES_MOCK.find((d) => d.id_docente === Number(datos.tutor_id));
     if (tutor) {
-      t.id_tutor = tutor.id_usuario;
+      t.id_tutor = tutor.id_docente;
       t.tutor = { ...tutor };
     }
   }

@@ -206,7 +206,7 @@
               <option value="" disabled>
                 {{ kardexStore.tramite.tutor ? 'Seleccione un docente para cambiar' : 'Seleccione un docente tutor...' }}
               </option>
-              <option v-for="doc in docentes" :key="doc.id_usuario" :value="doc.id_usuario">
+              <option v-for="doc in docentes" :key="doc.id_docente" :value="doc.id_docente">
                 {{ doc.nombres }} {{ doc.apellidos }}
               </option>
             </select>
@@ -329,8 +329,8 @@ const tutorSeleccionado = ref('');
 const asignandoTutor = ref(false);
 const flujoTitulacionRef = ref(null);
 
-// Catálogo de docentes disponibles para asignar como tutor (con respaldo demo
-// cuando la API de usuarios no está disponible en modo simulado).
+// Catálogo de docentes del registro académico para asignar como tutor (con
+// respaldo demo cuando la API no está disponible en modo simulado).
 const docentes = computed(() =>
   tramitesStore.docentes.length ? tramitesStore.docentes : DOCENTES_MOCK,
 );

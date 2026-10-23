@@ -59,12 +59,12 @@ class Tramite extends Model
     /**
      * Relación inversa con el docente tutor asignado al trámite.
      *
-     * @return BelongsTo Usuario tutor `\App\Models\User`
-     *                   (rol docente), `null` si aún no se asignó.
+     * @return BelongsTo Docente `\App\Models\Docente`
+     *                   del registro académico, `null` si aún no se asignó.
      */
     public function tutor()
     {
-        return $this->belongsTo(User::class, 'id_tutor', 'id_usuario');
+        return $this->belongsTo(Docente::class, 'id_tutor', 'id_docente');
     }
 
     /**

@@ -278,7 +278,7 @@ const defensa = computed(() => datosDeModulo(props.tramite, 'defensa') || {});
 
 const nombreTutor = computed(() => {
   const t = aprobacionTema.value;
-  const porDocentes = props.docentes?.find((d) => d.id_usuario === Number(t.tutor_id));
+  const porDocentes = props.docentes?.find((d) => d.id_docente === Number(t.tutor_id));
   if (porDocentes) return `${porDocentes.nombres} ${porDocentes.apellidos}`;
   const tr = props.tramite?.tutor;
   if (tr) return `${tr.nombres} ${tr.apellidos}`;

@@ -6,7 +6,7 @@
       <div class="p-5 sm:p-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 class="text-base font-extrabold text-white">Mi Excelencia Académica</h2>
+            <h2 class="text-base font-extrabold text-white">Excelencia Académica</h2>
             <p class="text-xs text-slate-400">
               Estado:
               <span class="font-bold text-orange-300">{{ formatoEstado(estadoActual) }}</span>

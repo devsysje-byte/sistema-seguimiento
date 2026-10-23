@@ -119,7 +119,7 @@
                     </button>
                     <button class="inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition px-2 py-1 rounded-lg hover:bg-red-500/10" @click.stop="eliminarUsuario(user)">
                       <AppIcon name="trash" :size="15" />
-                      Dar de baja
+                      Eliminar
                     </button>
                   </div>
                 </td>

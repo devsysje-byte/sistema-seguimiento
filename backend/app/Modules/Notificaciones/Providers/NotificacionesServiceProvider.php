@@ -6,12 +6,10 @@ use App\Modules\Notificaciones\Listeners\NotificarEstadoCambiado;
 use App\Modules\Notificaciones\Listeners\NotificarFechaDefensaSolicitada;
 use App\Modules\Notificaciones\Listeners\NotificarTramiteCreado;
 use App\Modules\Notificaciones\Listeners\NotificarTramiteRevisado;
-use App\Modules\Notificaciones\Listeners\NotificarTutorAsignado;
 use App\Modules\Tramites\Events\EstadoTramiteCambiado;
 use App\Modules\Tramites\Events\FechaDefensaSolicitada;
 use App\Modules\Tramites\Events\TramiteCreado;
 use App\Modules\Tramites\Events\TramiteRevisado;
-use App\Modules\Tramites\Events\TutorAsignado;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -29,7 +27,6 @@ class NotificacionesServiceProvider extends ServiceProvider
         Event::listen(TramiteCreado::class, NotificarTramiteCreado::class);
         Event::listen(TramiteRevisado::class, NotificarTramiteRevisado::class);
         Event::listen(EstadoTramiteCambiado::class, NotificarEstadoCambiado::class);
-        Event::listen(TutorAsignado::class, NotificarTutorAsignado::class);
         Event::listen(FechaDefensaSolicitada::class, NotificarFechaDefensaSolicitada::class);
     }
 }
