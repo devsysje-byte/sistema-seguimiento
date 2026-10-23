@@ -151,6 +151,56 @@ class ExcelenciaService
     }
 
     /**
+     * Actualiza el promedio declarado por el estudiante antes de la
+     * verificación de KARDEX.
+     *
+     * Sirve tanto para declarar la nota cuando KARDEX asignó la modalidad
+     * (trámite sin promedio declarado) como para corregirla mientras siga
+     * pendiente de verificación. Una vez verificado, el valor queda cerrado.
+     *
+     * @param  array<string, mixed>  $validated  Datos validados de la solicitud.
+     * @return array Trámite formateado.
+     *
+     * @throws ValidationException
+     */
+    public function actualizarPromedioDeclarado(int $id, array $validated, User $user): array
+    {
+        $tramite = Tramite::with('modalidad')->findOrFail($id);
+
+        if ($tramite->modalidad->nombre !== self::MODALIDAD) {
+            throw ValidationException::withMessages([
+                'modulo' => ['El flujo de Excelencia Académica solo aplica a la modalidad Excelencia Académica.'],
+            ]);
+        }
+
+        $estudiante = $user->estudiante;
+
+        if ($estudiante === null || (int) $tramite->id_estudiante !== (int) $estudiante->id_estudiante) {
+            throw ValidationException::withMessages([
+                'datos' => ['Solo el estudiante titular del trámite puede declarar su promedio.'],
+            ]);
+        }
+
+        if ($tramite->estado_actual !== 'solicitud_presentada') {
+            throw ValidationException::withMessages([
+                'datos' => ['El promedio ya fue verificado por KARDEX; no es posible modificarlo.'],
+            ]);
+        }
+
+        $hitos = $tramite->hitos ?? [];
+        $modulos = $hitos['modulos'] ?? [];
+        $verificacion = $modulos[self::MODULO_VERIFICACION] ?? [];
+        $verificacion['promedio_declarado'] = (float) $validated['promedio'];
+        $verificacion['nota_minima'] = self::notaMinima();
+        $modulos[self::MODULO_VERIFICACION] = $verificacion;
+        $hitos['modulos'] = $modulos;
+
+        $tramite->update(['hitos' => $hitos]);
+
+        return $this->formatear($tramite);
+    }
+
+    /**
      * Registra un módulo del flujo de Excelencia Académica y avanza el estado
      * del trámite al que corresponde.
      *

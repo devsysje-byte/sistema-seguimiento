@@ -18,6 +18,7 @@ export const useExcelenciaStore = defineStore('excelencia', {
         },
         cargandoConfig: false,
         enviando: false,
+        guardandoPromedio: false,
     }),
     actions: {
         /**
@@ -53,6 +54,23 @@ export const useExcelenciaStore = defineStore('excelencia', {
             } catch (error) {
                 this.enviando = false;
                 throw error;
+            }
+        },
+        /**
+         * Declara o corrige el promedio general mientras KARDEX aún no lo
+         * verifica. Devuelve el trámite actualizado con el nuevo valor.
+         *
+         * @param {number} idTramite Identificador del trámite.
+         * @param {number} promedio  Promedio general declarado.
+         * @returns {Promise<Object>} Trámite actualizado.
+         */
+        async actualizarPromedioDeclarado(idTramite, promedio) {
+            this.guardandoPromedio = true;
+            try {
+                const { data } = await excelenciaService.actualizarPromedio(idTramite, promedio);
+                return data;
+            } finally {
+                this.guardandoPromedio = false;
             }
         },
     },

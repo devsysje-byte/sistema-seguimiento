@@ -44,6 +44,72 @@ class ExcelenciaAcademicaFlujoTest extends TestCase
         $this->assertSame(Carbon::today()->toDateString(), $tramite->hitos['solicitud_presentada'] ?? null);
     }
 
+    public function test_el_estudiante_declara_su_promedio_desde_el_seguimiento(): void
+    {
+        // KARDEX puede asignar la modalidad sin que el estudiante haya declarado
+        // su promedio: el seguimiento le permite ingresarlo después.
+        $estudiante = $this->crearEstudianteConCuenta();
+        $tramite = $this->crearTramiteExcelencia($estudiante);
+
+        $this->actingAs($this->usuarioDe($estudiante))
+            ->putJson("/api/excelencia/solicitud/{$tramite->id_tramite}/promedio", ['promedio' => 91.4])
+            ->assertOk()
+            ->assertJsonPath('estado_actual', 'solicitud_presentada');
+
+        $tramite->refresh();
+
+        $this->assertSame(91.4, (float) $tramite->hitos['modulos']['verificacion_promedio']['promedio_declarado']);
+        $this->assertSame(80, $tramite->hitos['modulos']['verificacion_promedio']['nota_minima']);
+    }
+
+    public function test_el_estudiante_corrige_su_promedio_declarado_antes_de_la_verificacion(): void
+    {
+        $this->crearModalidad();
+        $estudiante = $this->crearEstudianteConCuenta();
+        $usuario = $this->usuarioDe($estudiante);
+
+        $creado = $this->actingAs($usuario)
+            ->postJson('/api/excelencia/solicitud', ['promedio' => 82])
+            ->assertCreated();
+
+        $id = $creado->json('id_tramite');
+
+        $this->actingAs($usuario)
+            ->putJson("/api/excelencia/solicitud/{$id}/promedio", ['promedio' => 89.75])
+            ->assertOk();
+
+        $tramite = Tramite::findOrFail($id);
+
+        $this->assertSame(89.75, (float) $tramite->hitos['modulos']['verificacion_promedio']['promedio_declarado']);
+        $this->assertSame('solicitud_presentada', $tramite->estado_actual);
+    }
+
+    public function test_no_se_actualiza_el_promedio_despues_de_la_verificacion(): void
+    {
+        $tramite = $this->crearTramiteExcelencia();
+        $this->verificarPromedio($this->crearUsuarioGestion(), $tramite);
+
+        $this->actingAs($this->usuarioDe($tramite->estudiante))
+            ->putJson("/api/excelencia/solicitud/{$tramite->id_tramite}/promedio", ['promedio' => 95])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('datos');
+
+        $this->assertSame('promedio_verificado', $tramite->refresh()->estado_actual);
+    }
+
+    public function test_otro_estudiante_no_puede_declarar_el_promedio(): void
+    {
+        $tramite = $this->crearTramiteExcelencia();
+        $otro = $this->crearEstudianteConCuenta();
+
+        $this->actingAs($this->usuarioDe($otro))
+            ->putJson("/api/excelencia/solicitud/{$tramite->id_tramite}/promedio", ['promedio' => 95])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('datos');
+
+        $this->assertNull($tramite->refresh()->hitos['modulos']['verificacion_promedio']['promedio_declarado'] ?? null);
+    }
+
     public function test_la_solicitud_exige_un_promedio_valido(): void
     {
         $estudiante = $this->crearEstudianteConCuenta();

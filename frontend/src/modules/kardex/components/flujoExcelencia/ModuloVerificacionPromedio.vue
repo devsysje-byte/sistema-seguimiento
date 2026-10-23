@@ -203,12 +203,12 @@ const advertencias = ref([]);
 const confirmoRechazo = ref(false);
 
 /** El promedio verificado habilita la modalidad cuando alcanza el mínimo. */
-const aprobado = computed(() => verificado.value !== null && verificado.value >= notaMinima);
+const aprobado = computed(() => verificado.value !== null && verificado.value >= notaMinima.value);
 
 /** ¿El promedio capturado deja la solicitud en estado RECHAZADO? */
 const rechazara = computed(() => {
     const nota = Number(form.promedio);
-    return form.promedio !== '' && !Number.isNaN(nota) && nota < notaMinima;
+    return form.promedio !== '' && !Number.isNaN(nota) && nota < notaMinima.value;
 });
 
 function guardar() {

@@ -18,7 +18,34 @@
         <dl class="mt-5 grid sm:grid-cols-3 gap-2.5">
           <div class="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5">
             <dt class="dato-label">Promedio declarado</dt>
-            <dd class="text-2xl font-extrabold text-white mt-0.5">
+            <dd v-if="puedeDeclararPromedio" class="mt-1.5">
+              <form class="flex items-center gap-2" @submit.prevent="guardarPromedio">
+                <input
+                  v-model="promedioInput"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  class="input flex-1 min-w-0 text-lg font-extrabold"
+                  placeholder="Ej: 87.50"
+                  aria-label="Promedio declarado"
+                  :disabled="guardandoPromedio"
+                />
+                <button
+                  type="submit"
+                  class="btn-warm px-3 py-2 shrink-0"
+                  title="Guardar promedio declarado"
+                  :disabled="guardandoPromedio || !promedioValido"
+                >
+                  <AppIcon v-if="guardandoPromedio" name="loader" :size="16" class="animate-spin" />
+                  <AppIcon v-else name="check" :size="16" />
+                </button>
+              </form>
+              <p class="mt-1.5 text-[11px] text-slate-400 leading-snug">
+                KARDEX revisará esta nota para verificarla.
+              </p>
+            </dd>
+            <dd v-else class="text-2xl font-extrabold text-white mt-0.5">
               {{ declarado !== null ? declarado : '—' }}
               <span class="text-xs font-semibold text-slate-400">/ 100</span>
             </dd>
@@ -120,8 +147,9 @@
 // registra la Resolución del HCC y, por último, se emite el acta que lo titula.
 // El único desenlace alternativo es el RECHAZO por promedio insuficiente, que
 // cierra el trámite sin habilitar la modalidad.
-import { computed } from 'vue';
-import { EstadoBadge, formatoEstado, toneEstado } from '@/modules/tramites';
+import { computed, ref, watch } from 'vue';
+import { EstadoBadge, formatoEstado, toneEstado, useTramitesStore } from '@/modules/tramites';
+import { useToastStore } from '@/core/stores/toast';
 import {
     NOTA_MINIMA,
     modulosExcelencia,
@@ -129,6 +157,7 @@ import {
     promedioVerificado,
     resolucionHcc,
 } from '../utils/flujoExcelencia';
+import { useExcelenciaStore } from '../stores/excelencia';
 import AppIcon from '@/ui/AppIcon.vue';
 
 const props = defineProps({
@@ -145,6 +174,56 @@ const verificado = computed(() => promedioVerificado(props.tramite));
 const resolucion = computed(() => resolucionHcc(props.tramite));
 const rechazado = computed(() => estadoActual.value === 'rechazado');
 const titulado = computed(() => estadoActual.value === 'titulado');
+
+const tramitesStore = useTramitesStore();
+const excelenciaStore = useExcelenciaStore();
+const toastStore = useToastStore();
+
+const promedioInput = ref('');
+const guardandoPromedio = computed(() => excelenciaStore.guardandoPromedio);
+
+// El estudiante declara (o corrige) su promedio mientras KARDEX no lo haya
+// verificado: es la nota que KARDEX revisa en su panel.
+const puedeDeclararPromedio = computed(() =>
+    estadoActual.value === 'solicitud_presentada' && verificado.value === null,
+);
+
+const promedioValido = computed(() => {
+    if (promedioInput.value === '' || promedioInput.value === null) return false;
+    const nota = Number(promedioInput.value);
+    return !Number.isNaN(nota) && nota >= 0 && nota <= 100;
+});
+
+watch(
+    declarado,
+    (valor) => {
+        promedioInput.value = valor !== null ? String(valor) : '';
+    },
+    { immediate: true },
+);
+
+/** Guarda el promedio declarado para que KARDEX lo revise y verifique. */
+async function guardarPromedio() {
+    if (!promedioValido.value) {
+        toastStore.warning('Ingrese un promedio entre 0 y 100.');
+        return;
+    }
+
+    try {
+        const nota = Number(promedioInput.value);
+        const actualizado = await excelenciaStore.actualizarPromedioDeclarado(
+            props.tramite.id_tramite,
+            nota,
+        );
+
+        // El padre muestra el trámite desde este store: se actualiza en el acto.
+        tramitesStore.tramiteActivo = actualizado;
+        promedioInput.value = String(promedioDeclarado(actualizado) ?? nota);
+        toastStore.success('Promedio declarado. KARDEX lo revisará para verificarlo.');
+    } catch (error) {
+        toastStore.error('No se pudo guardar el promedio: ' + detalleDeError(error));
+    }
+}
 
 /** Última actualización del trámite (la más reciente de `tramite.estados`). */
 const ultimaActualizacion = computed(() => {
@@ -205,6 +284,16 @@ function datosModulo(m) {
         default:
             return '';
     }
+}
+
+/** Detalle legible del fallo al guardar el promedio declarado. */
+function detalleDeError(error) {
+    if (!error.response) {
+        return 'no hay conexión con el servidor.';
+    }
+    const errores = error.response.data?.errors;
+    const primero = errores && Object.values(errores).find((lista) => Array.isArray(lista) && lista.length);
+    return primero?.[0] || error.response.data?.message || 'verifique los datos e intente de nuevo.';
 }
 
 /** Formatea una fecha ISO en formato corto local (dd mmm yyyy, hh:mm). */

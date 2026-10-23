@@ -14,6 +14,15 @@ export const excelenciaService = {
     crearSolicitud(promedio, observaciones = null) {
         return http.post('/excelencia/solicitud', { promedio, observaciones });
     },
+    /**
+     * Declara o corrige el promedio general antes de que KARDEX lo verifique.
+     *
+     * @param {number} idTramite Identificador del trámite.
+     * @param {number} promedio  Promedio general declarado.
+     */
+    actualizarPromedio(idTramite, promedio) {
+        return http.put(`/excelencia/solicitud/${idTramite}/promedio`, { promedio });
+    },
     /** Configuración del módulo (promedio mínimo y rango válido de nota). */
     config() {
         return http.get('/excelencia/config');

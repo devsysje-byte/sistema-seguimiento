@@ -91,12 +91,12 @@
           rows="2"
           maxlength="255"
           class="input resize-none"
-          :placeholder="`El estudiante aún no registró un ${tituloGenerico}.`"
+          :placeholder="`El estudiante aún no registró un titulo de ${tituloGenerico}.`"
         ></textarea>
         <div class="mt-2.5 flex flex-wrap items-center justify-between gap-2.5">
           <p class="flex items-center gap-1.5 text-xs text-slate-400">
             <AppIcon name="info" :size="13" class="shrink-0" />
-            Puede corregir errores ortográficos; verifique la unicidad del título y el resultado se guardará al aprobar el perfil.
+            Puede corregir errores ortográficos; verifique el título y el resultado se guardará al aprobar el perfil.
           </p>
           <button
             type="button"

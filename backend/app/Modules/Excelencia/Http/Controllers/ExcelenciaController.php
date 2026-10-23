@@ -3,6 +3,7 @@
 namespace App\Modules\Excelencia\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Excelencia\Http\Requests\ActualizarPromedioExcelenciaRequest;
 use App\Modules\Excelencia\Http\Requests\CrearSolicitudExcelenciaRequest;
 use App\Modules\Excelencia\Http\Requests\GuardarModuloExcelenciaRequest;
 use App\Modules\Excelencia\Services\ExcelenciaService;
@@ -36,6 +37,22 @@ class ExcelenciaController extends Controller
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 400);
         }
+    }
+
+    /**
+     * PUT /api/excelencia/solicitud/{id}/promedio
+     *
+     * Declara o corrige el promedio general antes de que KARDEX lo verifique.
+     */
+    public function actualizarPromedio(ActualizarPromedioExcelenciaRequest $request, int $id): JsonResponse
+    {
+        return response()->json(
+            $this->excelenciaService->actualizarPromedioDeclarado(
+                $id,
+                $request->validated(),
+                $request->user()
+            )
+        );
     }
 
     /**

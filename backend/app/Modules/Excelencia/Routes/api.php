@@ -7,6 +7,9 @@ use App\Support\Roles;
 Route::middleware(['auth:sanctum', 'role:'.Roles::ESTUDIANTE])->group(function () {
     // Presenta la solicitud declarando su promedio general.
     Route::post('/excelencia/solicitud', [ExcelenciaController::class, 'store']);
+
+    // Declara o corrige el promedio mientras KARDEX aún no lo verifica.
+    Route::put('/excelencia/solicitud/{id}/promedio', [ExcelenciaController::class, 'actualizarPromedio']);
 });
 
 // Configuración del módulo (promedio mínimo y rango válido).
