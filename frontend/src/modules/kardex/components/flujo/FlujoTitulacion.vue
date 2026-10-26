@@ -243,9 +243,11 @@ async function guardar(moduloId, datos, archivos = {}) {
       return;
     }
     toastStore.success(
-      datos.accion === 'rechazar'
-        ? 'Perfil rechazado. Se notificó al estudiante para que presente otro perfil.'
-        : `Módulo completado — estado: ${modulo.badge}`,
+      moduloId === 'defensa' && Number(datos.paso ?? 3) < 3
+        ? 'Resolución y fecha de defensa registradas.'
+        : datos.accion === 'rechazar'
+          ? 'Perfil rechazado. Se notificó al estudiante para que presente otro perfil.'
+          : `Módulo completado — estado: ${modulo.badge}`,
     );
     emit('guardado', actualizado);
   } else {

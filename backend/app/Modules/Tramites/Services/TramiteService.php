@@ -511,10 +511,11 @@ class TramiteService extends BasePaginadoService
             ]);
         }
 
-        // La defensa se registra en DOS pasos: el paso 1 guarda la Resolución de
-        // Aprobación Final y la fecha de la defensa; el paso 2 cierra el módulo
-        // con la nota final. Sin `paso` se interpreta como guardado completo.
-        $paso = (int) ($datos['paso'] ?? 2);
+        // La defensa se registra en TRES pasos: el paso 1 confirma la entrega
+        // de los 8 empastados y el CD; el paso 2 guarda la Resolución de
+        // Aprobación Final y la fecha; el paso 3 cierra el módulo con la nota
+        // final. Sin `paso` se interpreta como guardado completo.
+        $paso = (int) ($datos['paso'] ?? 3);
 
         // Módulos con decisión: el perfil se aprueba o se rechaza.
         $rechaza = $this->rechazaModulo($modulo, $datos, $modalidad);
@@ -532,9 +533,9 @@ class TramiteService extends BasePaginadoService
         $pctActual = self::PCT_POR_ESTADO[$tramite->estado_actual] ?? 0;
         $pctObjetivo = self::PCT_POR_ESTADO[$objetivo] ?? 0;
 
-        // El paso 1 de la defensa solo registra los datos: el trámite avanza al
-        // estado objetivo cuando la nota final se guarda (paso 2).
-        $avanza = ! ($modulo === 'defensa' && $paso === 1);
+        // Los pasos 1 y 2 de la defensa solo registran los datos: el trámite
+        // avanza al estado objetivo cuando la nota final se guarda (paso 3).
+        $avanza = ! ($modulo === 'defensa' && $paso < 3);
         $transiciono = false;
 
         // El rechazo y la reprobación de la defensa son decisiones de cierre o
@@ -750,12 +751,12 @@ class TramiteService extends BasePaginadoService
      *
      * @param  string  $modulo  Identificador del módulo.
      * @param  array<string, mixed>  $datos  Datos del formulario del módulo.
-     * @param  int  $paso  Paso del módulo de defensa (1 = resolución + fecha).
+     * @param  int  $paso  Paso del módulo de defensa (3 = nota final).
      * @param  string  $modalidad  Nombre de la modalidad del trámite.
      */
     private function defensaReprobada(string $modulo, array $datos, int $paso, string $modalidad): bool
     {
-        if ($modulo !== 'defensa' || $paso === 1) {
+        if ($modulo !== 'defensa' || $paso < 3) {
             return false;
         }
 
@@ -788,7 +789,7 @@ class TramiteService extends BasePaginadoService
      *
      * @param  string  $modulo  Identificador del módulo.
      * @param  array<string, mixed>  $datos  Datos enviados desde el formulario del módulo.
-     * @param  int  $paso  Paso del módulo de defensa (1 = resolución + fecha, 2 = nota).
+     * @param  int  $paso  Paso del módulo de defensa (1 = empastados y CD, 2 = resolución + fecha, 3 = nota).
      * @param  bool  $rechaza  true cuando KARDEX rechaza el módulo en lugar de aprobarlo.
      * @param  Tramite|null  $tramite  Trámite que se está procesando (para no
      *                                 comparar el título consigo mismo).
@@ -880,13 +881,16 @@ class TramiteService extends BasePaginadoService
                 break;
 
             case 'defensa':
-                if (! $val($datos['numero_resolucion'] ?? null)) {
+                if (empty($datos['empastados_cd_entregados'])) {
+                    $errores[] = 'Confirme que el estudiante presentó los 8 empastados y el CD de su tesis de grado.';
+                }
+                if ($paso >= 2 && ! $val($datos['numero_resolucion'] ?? null)) {
                     $errores[] = 'Ingrese el número de Resolución de Aprobación Final.';
                 }
-                if (! $val($datos['fecha_defensa'] ?? null)) {
+                if ($paso >= 2 && ! $val($datos['fecha_defensa'] ?? null)) {
                     $errores[] = 'Seleccione la fecha de la defensa.';
                 }
-                if ($paso !== 1) {
+                if ($paso >= 3) {
                     $nota = $datos['nota_final'] ?? null;
                     if ($nota === null || $nota === '') {
                         $errores[] = 'Ingrese la nota final de la defensa.';

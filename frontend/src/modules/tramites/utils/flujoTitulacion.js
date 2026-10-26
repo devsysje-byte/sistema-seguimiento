@@ -432,6 +432,10 @@ function camposDeModulo(config, moduloId, datos, tramite) {
 
     case 'defensa':
       return filas([
+        {
+          etiqueta: '8 empastados y CD',
+          valor: datos.empastados_cd_entregados ? 'Entregados' : null,
+        },
         { etiqueta: 'N.º de Resolución de Aprobación Final', valor: datos.numero_resolucion },
         { etiqueta: 'Fecha de la defensa', valor: fechaLegible(datos.fecha_defensa) },
         {
@@ -498,9 +502,10 @@ export function actualizacionesKardex(tramite) {
  * el título presentado y los 3 documentos verificados (el PDF adjunto es
  * opcional).
  *
- * La defensa se registra en dos pasos: `paso: 1` valida solo la Resolución de
- * Aprobación Final y la fecha de la defensa; `paso: 2` (o sin `paso`, guardado
- * completo) exige además la nota final.
+ * La defensa se registra en tres pasos: `paso: 1` valida la entrega de los 8
+ * empastados y el CD; `paso: 2` la Resolución de Aprobación Final y la fecha de
+ * la defensa; `paso: 3` (o sin `paso`, guardado completo) exige además la nota
+ * final.
  *
  * @param {string} moduloId   Identificador del módulo.
  * @param {Object} datos      Datos del formulario del módulo.
@@ -568,10 +573,15 @@ export function validarModulo(moduloId, datos = {}, modalidad = null) {
       }
       break;
     case 'defensa': {
-      if (!val(datos.numero_resolucion)) errores.push('Ingrese el número de Resolución de Aprobación Final.');
-      if (!val(datos.fecha_defensa)) errores.push('Seleccione la fecha de la defensa.');
-      const paso = datos.paso ?? 2;
-      if (paso !== 1) {
+      if (!datos.empastados_cd_entregados) {
+        errores.push('Confirme que el estudiante presentó los 8 empastados y el CD de su tesis de grado.');
+      }
+      const paso = Number(datos.paso ?? 3);
+      if (paso >= 2) {
+        if (!val(datos.numero_resolucion)) errores.push('Ingrese el número de Resolución de Aprobación Final.');
+        if (!val(datos.fecha_defensa)) errores.push('Seleccione la fecha de la defensa.');
+      }
+      if (paso >= 3) {
         if (datos.nota_final === null || datos.nota_final === undefined || datos.nota_final === '') {
           errores.push('Ingrese la nota final de la defensa.');
         } else {

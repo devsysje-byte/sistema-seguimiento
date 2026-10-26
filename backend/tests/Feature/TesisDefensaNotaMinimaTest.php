@@ -77,6 +77,42 @@ class TesisDefensaNotaMinimaTest extends TestCase
         $this->assertSame('tribunal_asignado', $tramite->refresh()->estado_actual);
     }
 
+    public function test_la_defensa_exige_confirmar_la_entrega_de_empastados_y_cd(): void
+    {
+        $tramite = $this->crearTramiteEnDefensa();
+
+        $this->guardarModulo($tramite, 'defensa', [
+            'numero_resolucion' => 'HCC-0315/2026',
+            'fecha_defensa' => '2026-10-20',
+        ])
+            ->assertStatus(422)
+            ->assertJsonFragment([
+                'Confirme que el estudiante presentó los 8 empastados y el CD de su tesis de grado.',
+            ]);
+
+        $this->assertSame('tribunal_asignado', $tramite->refresh()->estado_actual);
+    }
+
+    public function test_el_paso_de_resolucion_y_fecha_no_cierra_la_defensa(): void
+    {
+        $tramite = $this->crearTramiteEnDefensa();
+
+        $this->guardarModulo($tramite, 'defensa', [
+            'empastados_cd_entregados' => true,
+            'numero_resolucion' => 'HCC-0315/2026',
+            'fecha_defensa' => '2026-10-20',
+            'paso' => 2,
+        ])->assertCreated();
+
+        $tramite->refresh();
+        $modulo = $tramite->hitos['modulos']['defensa'];
+
+        $this->assertSame('tribunal_asignado', $tramite->estado_actual);
+        $this->assertTrue((bool) $modulo['empastados_cd_entregados']);
+        $this->assertSame('HCC-0315/2026', $modulo['numero_resolucion']);
+        $this->assertSame('2026-10-20', $modulo['fecha_defensa']);
+    }
+
     // ------------------------------------------------------------------
     // Utilidades
     // ------------------------------------------------------------------
@@ -93,10 +129,11 @@ class TesisDefensaNotaMinimaTest extends TestCase
         ]);
     }
 
-    /** Registra la defensa con la nota final indicada (paso 2 completo). */
+    /** Registra la defensa con la nota final indicada (paso 3 completo). */
     private function defensa(Tramite $tramite, float $nota)
     {
         return $this->guardarModulo($tramite, 'defensa', [
+            'empastados_cd_entregados' => true,
             'numero_resolucion' => 'HCC-0315/2026',
             'fecha_defensa' => '2026-10-20',
             'nota_final' => $nota,
