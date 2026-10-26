@@ -472,6 +472,32 @@ export const useKardexStore = defineStore('kardex', {
         limpiarVerificacionTitulo() {
             this.verificacionTitulo = null;
         },
+        /**
+         * Obtiene reporte estadístico filtrado por modalidad, mes, año o rango de fechas.
+         */
+        async obtenerReporte(filtros = {}) {
+            this.cargando = true;
+            this.errorMessage = null;
+            try {
+                const { data } = await kardexService.reportes(filtros);
+                this.simulado = false;
+                return data.reporte || null;
+            } catch (error) {
+                this._manejarError(error);
+                if (this.simulado && !this.errorMessage) {
+                    return {
+                        totales: { total: 0, en_proceso: 0, finalizados: 0, fallos: 0 },
+                        por_modalidad: [],
+                        por_estado: [],
+                        por_mes: [],
+                        listado: [],
+                    };
+                }
+                return null;
+            } finally {
+                this.cargando = false;
+            }
+        },
         /** Limpia el estado de la búsqueda/consulta actual. */
         limpiar() {
             this.postulante = null;

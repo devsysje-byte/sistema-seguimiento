@@ -30,6 +30,14 @@ class UserController extends Controller
     }
 
     /**
+     * GET /api/usuarios/estadisticas (solo admin) — totales por rol.
+     */
+    public function estadisticas(): JsonResponse
+    {
+        return response()->json($this->userService->estadisticas());
+    }
+
+    /**
      * GET /api/usuarios/docentes (roles de gestión)
      */
     public function docentes(): JsonResponse

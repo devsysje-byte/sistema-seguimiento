@@ -9,6 +9,7 @@ use App\Support\CredencialesEstudiante;
 use App\Support\Roles;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -49,6 +50,37 @@ class UserService extends BasePaginadoService
                 ->orderByDesc('created_at'),
             $this->porPagina($perPage)
         );
+    }
+
+    /**
+     * Totales de usuarios activos para las tarjetas del panel de administración.
+     *
+     * Se calculan en SQL sobre toda la tabla (no sobre la página visible), de
+     * modo que las tarjetas no cambien al paginar la matriz de actores.
+     *
+     * @return array{total: int, estudiantes: int, docentes: int, personal_academico: int, por_rol: array<string, int>}
+     */
+    public function estadisticas(): array
+    {
+        $porRol = User::query()
+            ->select('rol', DB::raw('COUNT(*) AS total'))
+            ->where('activo', true)
+            ->groupBy('rol')
+            ->pluck('total', 'rol')
+            ->map(fn ($total) => (int) $total)
+            ->all();
+
+        $total = array_sum($porRol);
+        $estudiantes = (int) ($porRol[Roles::ESTUDIANTE] ?? 0);
+        $docentes = (int) ($porRol[Roles::DOCENTE] ?? 0);
+
+        return [
+            'total' => $total,
+            'estudiantes' => $estudiantes,
+            'docentes' => $docentes,
+            'personal_academico' => $total - $estudiantes - $docentes,
+            'por_rol' => $porRol,
+        ];
     }
 
     /**

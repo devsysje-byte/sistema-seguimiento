@@ -9,6 +9,7 @@ use App\Modules\Kardex\Http\Requests\VerificarTituloTesisRequest;
 use App\Modules\Kardex\Services\KardexService;
 use App\Modules\Kardex\Services\VerificacionTituloService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 /**
@@ -86,6 +87,17 @@ class KardexController extends Controller
                 isset($validated['excluir_tramite']) ? (int) $validated['excluir_tramite'] : null,
                 isset($validated['excluir_estudiante']) ? (int) $validated['excluir_estudiante'] : null,
             ),
+        ]);
+    }
+
+    /**
+     * Reporte estadístico filtrable por modalidad, mes, año o rango de fechas.
+     */
+    public function reportes(Request $request): JsonResponse
+    {
+        return response()->json([
+            'ok' => true,
+            'reporte' => $this->kardex->reportes($request->all()),
         ]);
     }
 }

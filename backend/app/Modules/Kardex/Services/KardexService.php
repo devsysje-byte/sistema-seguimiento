@@ -12,6 +12,7 @@ use App\Support\CredencialesEstudiante;
 use App\Support\Roles;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -300,6 +301,131 @@ class KardexService
                 : null,
             'tiene_cuenta' => $estudiante->user !== null,
             'username' => $estudiante->user?->username,
+        ];
+    }
+
+    /**
+     * Genera reporte estadístico filtrable por modalidad, mes, año o rango de fechas.
+     */
+    public function reportes(array $filtros = []): array
+    {
+        $query = Tramite::query()
+            ->with([
+                'modalidad:id_modalidad,nombre',
+                'estudiante:id_estudiante,ci,nombres,apellidos',
+                'tutor:id_docente,nombre,apellidos',
+            ])
+            ->select('tramites.*');
+
+        if (! empty($filtros['id_modalidad'])) {
+            $query->where('id_modalidad', (int) $filtros['id_modalidad']);
+        }
+
+        if (! empty($filtros['anio'])) {
+            $query->whereYear('created_at', (int) $filtros['anio']);
+        }
+
+        if (! empty($filtros['mes'])) {
+            $query->whereMonth('created_at', (int) $filtros['mes']);
+        }
+
+        if (! empty($filtros['desde'])) {
+            $query->whereDate('created_at', '>=', $filtros['desde']);
+        }
+
+        if (! empty($filtros['hasta'])) {
+            $query->whereDate('created_at', '<=', $filtros['hasta']);
+        }
+
+        $tramites = $query->orderByDesc('created_at')->get();
+
+        $total = $tramites->count();
+        $fallosSet = TramiteStateService::fallos();
+
+        // Un trámite está finalizado cuando alcanzó un estado terminal exitoso
+        // para su modalidad (en Examen de Grado `aprobado` aún espera el reporte).
+        $esFinalizado = fn (Tramite $t): bool => in_array(
+            $t->estado_actual,
+            TramiteStateService::terminalesExitososDe($t->modalidad?->nombre ?? ''),
+            true,
+        );
+
+        $finalizados = $tramites->filter($esFinalizado)->count();
+        $fallos = $tramites->filter(fn ($t) => in_array($t->estado_actual, $fallosSet, true))->count();
+        $enProceso = max($total - $finalizados - $fallos, 0);
+
+        $porModalidad = $tramites->groupBy('id_modalidad')->map(function ($grupo) use ($fallosSet, $esFinalizado) {
+            $modalidad = $grupo->first()->modalidad;
+            $gTotal = $grupo->count();
+            $gFinal = $grupo->filter($esFinalizado)->count();
+            $gFallos = $grupo->filter(fn ($t) => in_array($t->estado_actual, $fallosSet, true))->count();
+            $gProc = max($gTotal - $gFinal - $gFallos, 0);
+
+            return [
+                'id_modalidad' => $modalidad?->id_modalidad,
+                'nombre' => $modalidad?->nombre ?? 'Sin modalidad',
+                'total' => $gTotal,
+                'en_proceso' => $gProc,
+                'finalizados' => $gFinal,
+                'fallos' => $gFallos,
+                'porcentaje_finalizados' => $gTotal > 0 ? round(($gFinal / $gTotal) * 100, 1) : 0,
+            ];
+        })->values()->all();
+
+        $porEstado = $tramites->groupBy('estado_actual')->map(function ($grupo, $estado) use ($total) {
+            $cant = $grupo->count();
+
+            return [
+                'nombre_estado' => $estado,
+                'cantidad' => $cant,
+                'porcentaje' => $total > 0 ? round(($cant / $total) * 100, 1) : 0,
+            ];
+        })->sortByDesc('cantidad')->values()->all();
+
+        $porMes = [];
+        if ($total > 0) {
+            $base = $tramites->groupBy(fn ($t) => Carbon::parse($t->created_at)->format('Y-m'));
+            $max = $base->max(fn ($g) => $g->count()) ?: 1;
+            $porMes = $base->map(function ($grupo, $clave) use ($max) {
+                $fecha = Carbon::parse($grupo->first()->created_at);
+                $cant = $grupo->count();
+
+                return [
+                    'clave' => $clave,
+                    'label' => $fecha->translatedFormat('M Y'),
+                    'cantidad' => $cant,
+                    'porcentaje' => round(($cant / $max) * 100, 1),
+                ];
+            })->sortBy('clave')->values()->all();
+        }
+
+        $listado = $tramites->take(200)->map(function ($t) {
+            $e = $t->estudiante;
+            $tu = $t->tutor;
+            $nombreEst = trim(($e->nombres ?? '').' '.($e->apellidos ?? ''));
+
+            return [
+                'id_tramite' => $t->id_tramite,
+                'estudiante' => $nombreEst !== '' ? $nombreEst : '—',
+                'ci' => $e->ci ?? '—',
+                'modalidad' => $t->modalidad?->nombre ?? '—',
+                'estado_actual' => $t->estado_actual,
+                'tutor' => $tu ? trim(($tu->nombre ?? '').' '.($tu->apellidos ?? '')) : null,
+                'created_at' => $t->created_at,
+            ];
+        })->all();
+
+        return [
+            'totales' => [
+                'total' => $total,
+                'en_proceso' => $enProceso,
+                'finalizados' => $finalizados,
+                'fallos' => $fallos,
+            ],
+            'por_modalidad' => $porModalidad,
+            'por_estado' => $porEstado,
+            'por_mes' => $porMes,
+            'listado' => $listado,
         ];
     }
 

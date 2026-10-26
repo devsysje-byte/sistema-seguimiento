@@ -11,6 +11,10 @@ export const usuariosService = {
     index(params = {}) {
         return http.get('/usuarios', { params: { page: 1, per_page: 20, ...params } });
     },
+    /** Totales de usuarios activos por rol (tarjetas del panel de administración). */
+    estadisticas() {
+        return http.get('/usuarios/estadisticas');
+    },
     /** Crea un usuario manualmente (rol no estudiante; el username lo asigna el admin). */
     crear(datos) {
         return http.post('/usuarios', datos);

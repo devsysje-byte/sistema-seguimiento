@@ -299,26 +299,35 @@ class TramiteService extends BasePaginadoService
      * Resumen estadístico de aprobados/reprobados por modalidad.
      *
      * Agrega en SQL (GROUP BY sobre índices) en vez de cargar todas las filas
-     * a PHP y agruparlas en memoria.
+     * a PHP y agruparlas en memoria. La clasificación respeta los estados
+     * terminales de cada modalidad: `titulado` cuenta como aprobado y el
+     * `aprobado` de Examen de Grado sigue en proceso (aún debe emitir reporte).
      */
     public function estadisticas(): array
     {
+        $conteos = DB::table('tramites')
+            ->join('modalidades', 'modalidades.id_modalidad', '=', 'tramites.id_modalidad')
+            ->selectRaw('modalidades.id_modalidad, tramites.estado_actual, COUNT(*) AS cantidad')
+            ->groupBy('modalidades.id_modalidad', 'tramites.estado_actual')
+            ->get();
+
+        $fallos = TramiteStateService::fallos();
+
         $porModalidad = Modalidad::query()
-            ->leftJoin('tramites', 'tramites.id_modalidad', '=', 'modalidades.id_modalidad')
-            ->select(['modalidades.id_modalidad', 'modalidades.nombre'])
-            ->selectRaw("SUM(CASE WHEN tramites.estado_actual = 'aprobado' THEN 1 ELSE 0 END) AS aprobados")
-            ->selectRaw("SUM(CASE WHEN tramites.estado_actual IN ('rechazado', 'reprobado') THEN 1 ELSE 0 END) AS reprobados")
-            ->selectRaw('COUNT(tramites.id_tramite) AS total')
-            ->groupBy(['modalidades.id_modalidad', 'modalidades.nombre'])
-            ->orderBy('modalidades.nombre')
-            ->get()
-            ->map(fn (Modalidad $m) => [
-                'id_modalidad' => $m->id_modalidad,
-                'nombre' => $m->nombre,
-                'aprobados' => (int) $m->aprobados,
-                'reprobados' => (int) $m->reprobados,
-                'total' => (int) $m->total,
-            ])
+            ->orderBy('nombre')
+            ->get(['id_modalidad', 'nombre'])
+            ->map(function (Modalidad $modalidad) use ($conteos, $fallos) {
+                $filas = $conteos->where('id_modalidad', $modalidad->id_modalidad);
+                $exitosos = TramiteStateService::terminalesExitososDe($modalidad->nombre);
+
+                return [
+                    'id_modalidad' => $modalidad->id_modalidad,
+                    'nombre' => $modalidad->nombre,
+                    'aprobados' => (int) $filas->whereIn('estado_actual', $exitosos)->sum('cantidad'),
+                    'reprobados' => (int) $filas->whereIn('estado_actual', $fallos)->sum('cantidad'),
+                    'total' => (int) $filas->sum('cantidad'),
+                ];
+            })
             ->all();
 
         return [

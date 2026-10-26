@@ -99,4 +99,8 @@ export const kardexService = {
     resumen() {
         return http.get('/kardex/resumen');
     },
+    /** Reportes estadísticos por modalidad, mes, año o rango de fechas. */
+    reportes(filtros = {}) {
+        return http.get('/kardex/reportes', { params: filtros });
+    },
 };

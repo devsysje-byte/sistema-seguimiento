@@ -52,8 +52,7 @@ export default [
             {
                 path: 'reporte',
                 name: 'KardexReporte',
-                component: () => import('@/modules/kardex/views/ModuloPlaceholder.vue'),
-                props: { modulo: 'Reporte de Modalidad', icono: 'chart', descripcion: 'Estadísticas y reportes de avance por modalidad de titulación.' },
+                component: () => import('@/modules/kardex/views/ReporteModalidad.vue'),
             },
         ],
     },

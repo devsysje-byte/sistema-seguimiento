@@ -23,4 +23,7 @@ Route::middleware(['auth:sanctum', 'role:'.implode(',', Roles::GESTION)])->group
     // Verifica la unicidad del título de una tesis de grado: indica si ya existe
     // otro trámite con el mismo título y lista los trabajos más parecidos.
     Route::get('/kardex/titulos-tesis', [KardexController::class, 'verificarTitulo']);
+
+    // Reportes estadísticos por modalidad, mes y año.
+    Route::get('/kardex/reportes', [KardexController::class, 'reportes']);
 });

@@ -2,10 +2,10 @@
   <AppShell title="Panel de Administración" subtitle="Gestión de usuarios y roles del sistema">
     <div id="seccion-estadisticas" class="scroll-mt-28">
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total de Usuarios" :value="users.length" icon="users" tone="amber" />
-        <StatCard label="Estudiantes" :value="porRol('estudiante')" icon="graduation" tone="rose" />
-        <StatCard label="Docentes" :value="porRol('docente')" icon="user-check" tone="orange" />
-        <StatCard label="Personal Académico" :value="users.length - porRol('estudiante') - porRol('docente')" icon="shield" tone="amber" />
+        <StatCard label="Total de Usuarios" :value="totales.total" icon="users" tone="amber" />
+        <StatCard label="Estudiantes" :value="totales.estudiantes" icon="graduation" tone="rose" />
+        <StatCard label="Docentes" :value="totales.docentes" icon="user-check" tone="orange" />
+        <StatCard label="Personal Académico" :value="totales.personal_academico" icon="shield" tone="amber" />
       </div>
 
       <EstadisticasModalidades />
@@ -400,6 +400,7 @@ const toastStore = useToastStore();
 // Estado de la matriz de usuarios y de la UI.
 const users = ref([]);
 const cargando = ref(false);
+const totales = ref({ total: 0, estudiantes: 0, docentes: 0, personal_academico: 0 });
 const showModalCrearEstudiante = ref(false);
 const showModalAltaUsuario = ref(false);
 const showModalCrear = ref(false);
@@ -458,7 +459,19 @@ const usuariosFiltrados = computed(() => {
   });
 });
 
-const porRol = (rol) => users.value.filter((u) => u.rol === rol).length;
+const fetchEstadisticas = async () => {
+  try {
+    const { data } = await usuariosService.estadisticas();
+    totales.value = {
+      total: data.total ?? 0,
+      estudiantes: data.estudiantes ?? 0,
+      docentes: data.docentes ?? 0,
+      personal_academico: data.personal_academico ?? 0,
+    };
+  } catch (error) {
+    console.error('Error al cargar las estadísticas de usuarios:', error);
+  }
+};
 
 const fetchUsers = async () => {
   cargando.value = true;
@@ -470,6 +483,7 @@ const fetchUsers = async () => {
   } finally {
     cargando.value = false;
   }
+  await fetchEstadisticas();
 };
 
 const seleccionarUsuario = (user) => {
