@@ -291,19 +291,45 @@ export const useKardexStore = defineStore('kardex', {
          *
          * @param {string} moduloId Identificador del módulo (perfil_tesis, ...).
          * @param {Object} datos    Datos validados del formulario del módulo.
+         * @param {Object<string, File>} archivos PDFs opcionales del módulo.
          * @returns {Promise<Object|null>} Trámite actualizado.
          */
-        async guardarModuloFlujo(moduloId, datos) {
+        async guardarModuloFlujo(moduloId, datos, archivos = {}) {
             this.cargando = true;
             this.errorMessage = null;
             try {
                 if (!this.tramite) return null;
                 if (this.simulado) {
-                    const actualizado = aplicarModuloMock(this.tramite, moduloId, datos);
+                    const metadatos = (archivo) => ({ nombre: archivo.name, tamanio: archivo.size });
+                    const datosMock = { ...datos };
+
+                    if (archivos.resolucion_tutor) {
+                        datosMock.resolucion_tutor = metadatos(archivos.resolucion_tutor);
+                    }
+
+                    if (moduloId === 'tribunal_revisor') {
+                        if (archivos.nota_suficiencia_tutor) {
+                            datosMock.nota_suficiencia_tutor = metadatos(archivos.nota_suficiencia_tutor);
+                        }
+
+                        datosMock.tribunal = (datos.tribunal || []).map((miembro) => {
+                            const archivo = archivos[`nota_suficiencia_${miembro.rol}`];
+                            return archivo
+                                ? { ...miembro, nota_suficiencia: metadatos(archivo) }
+                                : miembro;
+                        });
+                    }
+
+                    const actualizado = aplicarModuloMock(this.tramite, moduloId, datosMock);
                     this.tramite = actualizado;
                     return this.tramite;
                 }
-                const { data } = await kardexService.guardarModuloFlujo(this.tramite.id_tramite, moduloId, datos);
+                const { data } = await kardexService.guardarModuloFlujo(
+                    this.tramite.id_tramite,
+                    moduloId,
+                    datos,
+                    archivos,
+                );
                 this.tramite = data;
                 return this.tramite;
             } catch (error) {

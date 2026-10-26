@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Docente;
 use App\Models\Estudiante;
 use App\Models\Modalidad;
 use App\Models\Notificacion;
@@ -173,6 +174,112 @@ class TesisVerificacionTituloTest extends TestCase
         $tramite->refresh();
         $this->assertSame('perfil_aprobado', $tramite->estado_actual);
         $this->assertSame(self::TITULO, $tramite->hitos['modulos']['perfil_tesis']['titulo']);
+    }
+
+    public function test_la_aprobacion_del_tema_guarda_opcionalmente_la_resolucion_de_designacion_del_tutor(): void
+    {
+        $this->crearModalidadTesis();
+        $tramite = $this->crearTramiteConTitulo(self::TITULO, $this->crearEstudianteConCuenta());
+        $tramite->update(['estado_actual' => 'perfil_aprobado']);
+
+        $docente = Docente::create([
+            'ci' => '1234567',
+            'nombre' => 'Julia',
+            'apellidos' => 'Paredes Villca',
+        ]);
+
+        $this->actingAs($this->crearUsuarioGestion())
+            ->post("/api/tramites/{$tramite->id_tramite}/flujo/aprobacion_tema", [
+                'datos' => [
+                    'numero_resolucion' => 'HCC-0102/2026',
+                    'fecha_resolucion' => now()->toDateString(),
+                    'tema_investigacion' => 'Sistemas de riego eficientes en el altiplano',
+                    'tutor_id' => $docente->id_docente,
+                ],
+                'resolucion_tutor' => UploadedFile::fake()->create('resolucion_tutor.pdf', 100, 'application/pdf'),
+            ])
+            ->assertCreated();
+
+        $tramite->refresh();
+        $resolucion = $tramite->hitos['modulos']['aprobacion_tema']['resolucion_tutor'];
+
+        $this->assertSame('tema_aprobado', $tramite->estado_actual);
+        $this->assertSame($docente->id_docente, $tramite->id_tutor);
+        $this->assertSame('resolucion_tutor.pdf', $resolucion['nombre']);
+        $this->assertTrue(Storage::disk('public')->exists($resolucion['ruta']));
+    }
+
+    public function test_el_tribunal_revisor_exige_confirmar_las_notas_de_suficiencia_y_guarda_sus_pdf_opcionales(): void
+    {
+        $this->crearModalidadTesis();
+        $tramite = $this->crearTramiteConTitulo(self::TITULO, $this->crearEstudianteConCuenta());
+        $tramite->update(['estado_actual' => 'tema_aprobado']);
+
+        $tribunal = [
+            ['rol' => 'presidente', 'nombre' => 'Ana Rojas'],
+            ['rol' => 'vocal', 'nombre' => 'Luis Mamani'],
+            ['rol' => 'secretario', 'nombre' => 'Carla Quispe'],
+        ];
+
+        $datos = [
+            'numero_resolucion' => 'HCC-0201/2026',
+            'fecha_resolucion' => now()->toDateString(),
+            'tribunal' => $tribunal,
+        ];
+
+        $this->actingAs($this->crearUsuarioGestion())
+            ->post("/api/tramites/{$tramite->id_tramite}/flujo/tribunal_revisor", ['datos' => $datos])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('datos');
+
+        $this->assertSame('tema_aprobado', $tramite->refresh()->estado_actual);
+
+        $datos['nota_suficiencia_tutor_entregada'] = true;
+
+        $this->actingAs($this->crearUsuarioGestion())
+            ->post("/api/tramites/{$tramite->id_tramite}/flujo/tribunal_revisor", ['datos' => $datos])
+            ->assertStatus(422)
+            ->assertJsonFragment(['Confirme que el Vocal entregó su Nota de Suficiencia.']);
+
+        $this->assertSame('tema_aprobado', $tramite->refresh()->estado_actual);
+
+        $datos['tribunal'] = array_map(
+            fn (array $miembro) => $miembro + ['nota_suficiencia_entregada' => true],
+            $tribunal,
+        );
+
+        $this->actingAs($this->crearUsuarioGestion())
+            ->post("/api/tramites/{$tramite->id_tramite}/flujo/tribunal_revisor", [
+                'datos' => $datos,
+                'nota_suficiencia_tutor' => UploadedFile::fake()->create('nota_tutor.pdf', 100, 'application/pdf'),
+                'nota_suficiencia_presidente' => UploadedFile::fake()->create('nota_presidente.pdf', 100, 'application/pdf'),
+                'nota_suficiencia_vocal' => UploadedFile::fake()->create('nota_vocal.pdf', 100, 'application/pdf'),
+                'nota_suficiencia_secretario' => UploadedFile::fake()->create('nota_secretario.pdf', 100, 'application/pdf'),
+            ])
+            ->assertCreated();
+
+        $tramite->refresh();
+        $modulo = $tramite->hitos['modulos']['tribunal_revisor'];
+
+        $this->assertSame('tribunal_asignado', $tramite->estado_actual);
+        $this->assertTrue((bool) $modulo['nota_suficiencia_tutor_entregada']);
+        $this->assertSame('nota_tutor.pdf', $modulo['nota_suficiencia_tutor']['nombre']);
+        $this->assertTrue(Storage::disk('public')->exists($modulo['nota_suficiencia_tutor']['ruta']));
+
+        $archivos = [
+            'presidente' => 'nota_presidente.pdf',
+            'vocal' => 'nota_vocal.pdf',
+            'secretario' => 'nota_secretario.pdf',
+        ];
+
+        foreach ($archivos as $rol => $nombre) {
+            $miembro = collect($modulo['tribunal'])->firstWhere('rol', $rol);
+
+            $this->assertNotNull($miembro);
+            $this->assertTrue((bool) $miembro['nota_suficiencia_entregada']);
+            $this->assertSame($nombre, $miembro['nota_suficiencia']['nombre']);
+            $this->assertTrue(Storage::disk('public')->exists($miembro['nota_suficiencia']['ruta']));
+        }
     }
 
     public function test_la_solicitud_acepta_el_titulo_sin_documentos_pdf(): void

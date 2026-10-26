@@ -138,12 +138,21 @@ class TramiteController extends Controller
     {
         $validated = $request->validated();
 
+        $adjuntos = array_filter([
+            'resolucion_tutor' => $request->file('resolucion_tutor'),
+            'nota_suficiencia_tutor' => $request->file('nota_suficiencia_tutor'),
+            'nota_suficiencia_presidente' => $request->file('nota_suficiencia_presidente'),
+            'nota_suficiencia_vocal' => $request->file('nota_suficiencia_vocal'),
+            'nota_suficiencia_secretario' => $request->file('nota_suficiencia_secretario'),
+        ]);
+
         return response()->json(
             $this->tramiteService->guardarModuloFlujo(
                 $id,
                 $modulo,
                 $validated['datos'],
-                $request->user()
+                $request->user(),
+                $adjuntos
             ),
             201
         );

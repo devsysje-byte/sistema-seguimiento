@@ -83,7 +83,7 @@
           :docentes="docentes"
           :cargando="i === proximoPendiente && guardando"
           :titulo-perfil="tituloPerfilTramite"
-          @guardar="(datos) => guardar(m.id, datos)"
+          @guardar="(datos, archivo) => guardar(m.id, datos, archivo ? { resolucion_tutor: archivo } : {})"
         />
         <ModuloTribunalRevisor
           v-else-if="m.id === 'tribunal_revisor'"
@@ -91,8 +91,9 @@
           :en-progreso="m.enProgreso"
           :bloqueado="m.bloqueado"
           :datos="m.datos"
+          :tutor="tramite.tutor"
           :cargando="i === proximoPendiente && guardando"
-          @guardar="(datos) => guardar(m.id, datos)"
+          @guardar="(datos, archivos) => guardar(m.id, datos, archivos)"
         />
         <ModuloDefensa
           v-else-if="m.id === 'defensa'"
@@ -210,7 +211,7 @@ const fechaInicio = computed(() =>
   fechaLegible(props.tramite?.hitos?.solicitud_presentada || props.tramite?.created_at),
 );
 
-async function guardar(moduloId, datos) {
+async function guardar(moduloId, datos, archivos = {}) {
   const modulo = modulosDe(config.value).find((m) => m.id === moduloId);
   const res = validarModulo(moduloId, datos, config.value?.nombre);
   if (!res.ok) {
@@ -218,7 +219,7 @@ async function guardar(moduloId, datos) {
     return;
   }
   guardando.value = true;
-  const actualizado = await kardexStore.guardarModuloFlujo(moduloId, datos);
+  const actualizado = await kardexStore.guardarModuloFlujo(moduloId, datos, archivos);
   guardando.value = false;
   if (actualizado) {
     // Defensa con nota insuficiente: el trámite queda REPROBADO, el flujo

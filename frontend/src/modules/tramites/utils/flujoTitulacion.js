@@ -402,16 +402,27 @@ function camposDeModulo(config, moduloId, datos, tramite) {
                 ? `Docente #${datos.tutor_id}`
                 : null,
         },
+        { etiqueta: 'Resolución de designación del tutor', valor: datos.resolucion_tutor?.nombre },
       ]);
 
     case 'tribunal_revisor':
       return filas([
         { etiqueta: 'N.º de Resolución del HCC', valor: datos.numero_resolucion },
         { etiqueta: 'Fecha de la resolución', valor: fechaLegible(datos.fecha_resolucion) },
-        ...ROLES_TRIBUNAL.map((rol) => ({
-          etiqueta: ETIQUETAS_ROL_TRIBUNAL[rol] || rol,
-          valor: (datos.tribunal || []).find((t) => t.rol === rol)?.nombre,
-        })),
+        {
+          etiqueta: 'Nota de Suficiencia del tutor',
+          valor: datos.nota_suficiencia_tutor?.nombre
+            || (datos.nota_suficiencia_tutor_entregada ? 'Entregada' : null),
+        },
+        ...ROLES_TRIBUNAL.map((rol) => {
+          const miembro = (datos.tribunal || []).find((t) => t.rol === rol);
+          const nota = miembro?.nota_suficiencia?.nombre
+            || (miembro?.nota_suficiencia_entregada ? 'Entregada' : null);
+          return {
+            etiqueta: ETIQUETAS_ROL_TRIBUNAL[rol] || rol,
+            valor: [miembro?.nombre, nota].filter(Boolean).join(' · ') || null,
+          };
+        }),
       ]);
 
     case 'defensa':
@@ -528,6 +539,9 @@ export function validarModulo(moduloId, datos = {}, modalidad = null) {
       if (!val(datos.tutor_id)) errores.push('Seleccione el tutor asignado.');
       break;
     case 'tribunal_revisor':
+      if (!datos.nota_suficiencia_tutor_entregada) {
+        errores.push('Confirme que el tutor entregó la Nota de Suficiencia.');
+      }
       if (!val(datos.numero_resolucion)) errores.push('Ingrese el número de Resolución del HCC.');
       if (!val(datos.fecha_resolucion)) errores.push('Seleccione la fecha de la Resolución.');
       if (!Array.isArray(datos.tribunal) || datos.tribunal.length < ROLES_TRIBUNAL.length) {
@@ -535,8 +549,12 @@ export function validarModulo(moduloId, datos = {}, modalidad = null) {
       } else {
         ROLES_TRIBUNAL.forEach((rol) => {
           const miembro = datos.tribunal.find((t) => t.rol === rol);
+          const etiquetaRol = rol.charAt(0).toUpperCase() + rol.slice(1);
           if (!miembro || !val(miembro.nombre)) {
-            errores.push(`Complete el nombre del ${rol.charAt(0).toUpperCase() + rol.slice(1)}.`);
+            errores.push(`Complete el nombre del ${etiquetaRol}.`);
+          }
+          if (!miembro?.nota_suficiencia_entregada) {
+            errores.push(`Confirme que el ${etiquetaRol} entregó su Nota de Suficiencia.`);
           }
         });
       }

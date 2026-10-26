@@ -1,5 +1,25 @@
 import http from '@/core/http/client';
 
+function anexarDatosFormData(formData, valor, prefijo) {
+    if (Array.isArray(valor)) {
+        valor.forEach((item, indice) => {
+            anexarDatosFormData(formData, item, `${prefijo}[${indice}]`);
+        });
+        return;
+    }
+
+    if (valor !== null && typeof valor === 'object') {
+        Object.entries(valor).forEach(([clave, item]) => {
+            anexarDatosFormData(formData, item, `${prefijo}[${clave}]`);
+        });
+        return;
+    }
+
+    if (valor === null || valor === undefined) return;
+
+    formData.append(prefijo, typeof valor === 'boolean' ? (valor ? '1' : '0') : valor);
+}
+
 /**
  * Servicio del Dashboard de KARDEX.
  *
@@ -28,9 +48,30 @@ export const kardexService = {
     consultar(identificador) {
         return http.get('/kardex/postulantes/consultar', { params: { identificador } });
     },
-    /** Guarda un módulo del flujo de titulación y avanza el estado del trámite. */
-    guardarModuloFlujo(id, modulo, datos) {
-        return http.post(`/tramites/${id}/flujo/${modulo}`, { datos });
+    /**
+     * Guarda un módulo del flujo de titulación y avanza el estado del trámite.
+     *
+     * Si el módulo adjunta PDFs opcionales (por ejemplo, la Resolución de
+     * designación del tutor o las Notas de Suficiencia) se envía como
+     * multipart; en caso contrario se mantiene el envío JSON habitual.
+     *
+     * @param {number} id          Identificador del trámite.
+     * @param {string} modulo      Módulo del flujo.
+     * @param {Object} datos       Datos validados del formulario.
+     * @param {Object<string, File>} archivos PDFs opcionales del módulo por campo.
+     */
+    guardarModuloFlujo(id, modulo, datos, archivos = {}) {
+        const adjuntos = Object.entries(archivos || {}).filter(([, archivo]) => Boolean(archivo));
+
+        if (!adjuntos.length) {
+            return http.post(`/tramites/${id}/flujo/${modulo}`, { datos });
+        }
+
+        const formData = new FormData();
+        anexarDatosFormData(formData, datos, 'datos');
+        adjuntos.forEach(([campo, archivo]) => formData.append(campo, archivo));
+
+        return http.post(`/tramites/${id}/flujo/${modulo}`, formData);
     },
     /**
      * Guarda un módulo del flujo de Examen de Grado.

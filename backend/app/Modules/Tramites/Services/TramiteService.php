@@ -18,6 +18,7 @@ use App\Support\DocumentoAdjuntoService;
 use App\Support\Roles;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -95,6 +96,9 @@ class TramiteService extends BasePaginadoService
      * tesis queda por debajo del mínimo de aprobación.
      */
     private const DEFENSA_REPROBADA = 'reprobado';
+
+    /** Documento opcional que designa al docente como tutor del trabajo. */
+    private const DOC_RESOLUCION_TUTOR = 'resolucion_designacion_tutor';
 
     /**
      * Porcentaje de avance por estado (incluye estados heredados) para saber si
@@ -463,12 +467,23 @@ class TramiteService extends BasePaginadoService
      * con `accion: aprobar` (por defecto) avanza a `perfil_aprobado` y solo si
      * el título propuesto no está repetido en otro trabajo de grado.
      *
+     * El módulo de tema puede incluir opcionalmente el PDF de la Resolución
+     * que designa al docente como tutor; el módulo del tribunal puede incluir
+     * los PDFs de las Notas de Suficiencia del tutor y de cada miembro. Todos
+     * se guardan como documentos adjuntos y sus metadatos quedan registrados
+     * en el módulo.
+     *
      * @return array Trámite formateado (con siguientes_estados y secuencia).
      *
      * @throws ValidationException
      */
-    public function guardarModuloFlujo(int $id, string $modulo, array $datos, User $actor): array
-    {
+    public function guardarModuloFlujo(
+        int $id,
+        string $modulo,
+        array $datos,
+        User $actor,
+        array $adjuntos = [],
+    ): array {
         $tramite = Tramite::with('modalidad')->findOrFail($id);
 
         $modalidad = $tramite->modalidad->nombre;
@@ -551,6 +566,10 @@ class TramiteService extends BasePaginadoService
         // `paso` y `accion` son controles del formulario, no datos del módulo.
         unset($datos['paso'], $datos['accion']);
 
+        // Los PDFs opcionales del módulo se guardan como documentos del trámite
+        // y sus metadatos quedan en `hitos.modulos` para mostrarlos en el flujo.
+        $datos = $this->guardarAdjuntosDelModulo($tramite, $actor, $modulo, $datos, $rechaza ? [] : $adjuntos);
+
         $hitos = $tramite->hitos ?? [];
         $soloHitos = ['hitos' => $hitos];
 
@@ -588,6 +607,86 @@ class TramiteService extends BasePaginadoService
         }
 
         return $this->formatear($tramite);
+    }
+
+    /**
+     * Guarda los PDFs opcionales del módulo y agrega sus metadatos a `datos`.
+     *
+     * @param  array<string, UploadedFile>  $adjuntos  Archivos del request por campo.
+     * @return array<string, mixed>
+     */
+    private function guardarAdjuntosDelModulo(
+        Tramite $tramite,
+        User $actor,
+        string $modulo,
+        array $datos,
+        array $adjuntos,
+    ): array {
+        if ($modulo === 'aprobacion_tema' && isset($adjuntos['resolucion_tutor'])) {
+            $datos['resolucion_tutor'] = $this->guardarMetadatosDocumento(
+                $tramite,
+                $actor,
+                $adjuntos['resolucion_tutor'],
+                self::DOC_RESOLUCION_TUTOR,
+            );
+        }
+
+        if ($modulo !== 'tribunal_revisor') {
+            return $datos;
+        }
+
+        if (isset($adjuntos['nota_suficiencia_tutor'])) {
+            $datos['nota_suficiencia_tutor'] = $this->guardarMetadatosDocumento(
+                $tramite,
+                $actor,
+                $adjuntos['nota_suficiencia_tutor'],
+                'nota_suficiencia_tutor',
+            );
+        }
+
+        foreach (['presidente', 'vocal', 'secretario'] as $rol) {
+            $campo = "nota_suficiencia_{$rol}";
+
+            if (! isset($adjuntos[$campo])) {
+                continue;
+            }
+
+            $metadatos = $this->guardarMetadatosDocumento($tramite, $actor, $adjuntos[$campo], $campo);
+
+            foreach ($datos['tribunal'] ?? [] as $indice => $miembro) {
+                if (($miembro['rol'] ?? null) === $rol) {
+                    $datos['tribunal'][$indice]['nota_suficiencia'] = $metadatos;
+                    break;
+                }
+            }
+        }
+
+        return $datos;
+    }
+
+    /**
+     * Guarda un PDF del módulo y devuelve los metadatos que se registran en los hitos.
+     *
+     * @return array{nombre: string, tamanio: mixed, ruta: string}
+     */
+    private function guardarMetadatosDocumento(
+        Tramite $tramite,
+        User $actor,
+        UploadedFile $archivo,
+        string $tipoDocumento,
+    ): array {
+        $documento = $this->documentos->reemplazar(
+            $tramite->id_tramite,
+            $actor->id_usuario,
+            $archivo,
+            $tipoDocumento,
+        );
+
+        return [
+            'nombre' => $documento->nombre_archivo,
+            'tamanio' => $documento->tamanio_kb,
+            'ruta' => $documento->ruta_archivo,
+        ];
     }
 
     /**
@@ -745,6 +844,9 @@ class TramiteService extends BasePaginadoService
                 break;
 
             case 'tribunal_revisor':
+                if (empty($datos['nota_suficiencia_tutor_entregada'])) {
+                    $errores[] = 'Confirme que el tutor entregó la Nota de Suficiencia.';
+                }
                 if (! $val($datos['numero_resolucion'] ?? null)) {
                     $errores[] = 'Ingrese el número de Resolución del HCC.';
                 }
@@ -755,6 +857,9 @@ class TramiteService extends BasePaginadoService
                     $miembro = collect($datos['tribunal'] ?? [])->first(fn ($t) => ($t['rol'] ?? null) === $rol);
                     if (! $val($miembro['nombre'] ?? null)) {
                         $errores[] = 'Complete el nombre del '.ucfirst($rol).'.';
+                    }
+                    if (empty($miembro['nota_suficiencia_entregada'])) {
+                        $errores[] = 'Confirme que el '.ucfirst($rol).' entregó su Nota de Suficiencia.';
                     }
                 }
                 break;

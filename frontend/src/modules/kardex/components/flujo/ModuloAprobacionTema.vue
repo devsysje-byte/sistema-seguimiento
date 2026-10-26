@@ -27,6 +27,25 @@
         <AppIcon name="user-check" :size="16" class="text-emerald-400" />
         <span class="text-sm font-semibold text-emerald-200">{{ nombreTutor }}</span>
       </div>
+      <div
+        v-if="datos.resolucion_tutor?.nombre"
+        class="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 flex items-center justify-between gap-3"
+      >
+        <span class="flex items-center gap-2 text-sm text-slate-200 min-w-0">
+          <AppIcon name="file-text" :size="15" class="text-orange-300 shrink-0" />
+          <span class="truncate">{{ datos.resolucion_tutor.nombre }}</span>
+        </span>
+        <a
+          v-if="datos.resolucion_tutor.ruta"
+          :href="assetUrl(datos.resolucion_tutor.ruta)"
+          target="_blank"
+          rel="noopener"
+          class="btn-ghost !py-1.5 text-xs shrink-0"
+        >
+          <AppIcon name="link" :size="13" />
+          Ver PDF
+        </a>
+      </div>
     </div>
 
     <div v-else-if="bloqueado">
@@ -61,6 +80,42 @@
           class="input resize-none"
           placeholder="Tema de investigación aprobado por el Consejo..."
         ></textarea>
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="label" for="tema-resolucion-tutor">
+          Resolución de designación como tutor
+          <span class="text-slate-500 font-normal normal-case">(opcional)</span>
+        </label>
+        <label
+          :class="[
+            'flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition',
+            archivoResolucion ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40',
+          ]"
+        >
+          <span class="flex items-center gap-2 text-sm min-w-0" :class="archivoResolucion ? 'text-orange-200' : 'text-slate-400'">
+            <AppIcon
+              :name="archivoResolucion ? 'check-circle' : 'file-text'"
+              :size="18"
+              :class="archivoResolucion ? 'text-emerald-400 shrink-0' : 'shrink-0'"
+            />
+            <span class="truncate">{{ archivoResolucion?.name || 'Seleccione el PDF de la resolución...' }}</span>
+          </span>
+          <input
+            id="tema-resolucion-tutor"
+            type="file"
+            accept=".pdf,application/pdf"
+            class="hidden"
+            @change="handleResolucion"
+          />
+          <span class="btn-ghost !py-2 pointer-events-none">
+            <AppIcon name="plus" :size="15" />
+            Subir
+          </span>
+        </label>
+        <p class="mt-1.5 text-xs text-slate-500">
+          PDF de la Resolución que designa al docente como tutor. Es opcional.
+        </p>
       </div>
 
       <div class="sm:col-span-2">
@@ -124,6 +179,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { validarModulo } from '@/modules/tramites/utils/flujoTitulacion';
 import { fechaLegible } from '@/modules/kardex/utils/formato';
+import { assetUrl } from '@/core/http/storage';
 import AppIcon from '@/ui/AppIcon.vue';
 import ModuloTarjeta from './ModuloTarjeta.vue';
 
@@ -149,6 +205,7 @@ const form = reactive({
 const busqueda = ref('');
 const abierta = ref(false);
 const errores = ref([]);
+const archivoResolucion = ref(null);
 
 const hoyISO = computed(() => new Date().toISOString().slice(0, 10));
 const tutorElegido = computed(() => props.docentes.find((d) => d.id_docente === Number(form.tutor_id)));
@@ -180,6 +237,19 @@ function seleccionar(doc) {
   abierta.value = false;
 }
 
+function handleResolucion(event) {
+  const file = event.target.files[0] || null;
+  if (file && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    errores.value = ['La Resolución de designación como tutor debe ser un archivo PDF.'];
+    archivoResolucion.value = null;
+    event.target.value = '';
+    return;
+  }
+  archivoResolucion.value = file;
+  errores.value = [];
+  event.target.value = '';
+}
+
 function obtenerDatos() {
   return {
     numero_resolucion: form.numero_resolucion.trim(),
@@ -197,7 +267,7 @@ function guardar() {
     return;
   }
   errores.value = [];
-  emit('guardar', datos);
+  emit('guardar', datos, archivoResolucion.value);
 }
 
 watch(
