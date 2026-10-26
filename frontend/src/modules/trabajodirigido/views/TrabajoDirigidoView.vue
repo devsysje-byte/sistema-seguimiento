@@ -1028,6 +1028,7 @@ function estadoFase(fase) {
 /** Etiqueta legible de un tipo de documento subido. */
 const ETIQUETAS_DOCUMENTO_FLUJO = {
   resolucion_designacion_tutor: 'Resolución de designación de tutor',
+  resolucion_designacion_tribunal: 'Resolución de designación de tribunal revisor',
   nota_suficiencia_tutor: 'Nota de Suficiencia del Tutor',
   nota_suficiencia_presidente: 'Nota de Suficiencia del Presidente',
   nota_suficiencia_vocal: 'Nota de Suficiencia del Vocal',

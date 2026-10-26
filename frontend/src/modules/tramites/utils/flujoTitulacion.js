@@ -407,13 +407,18 @@ function camposDeModulo(config, moduloId, datos, tramite) {
 
     case 'tribunal_revisor':
       return filas([
-        { etiqueta: 'N.º de Resolución del HCC', valor: datos.numero_resolucion },
-        { etiqueta: 'Fecha de la resolución', valor: fechaLegible(datos.fecha_resolucion) },
         {
           etiqueta: 'Nota de Suficiencia del tutor',
           valor: datos.nota_suficiencia_tutor?.nombre
             || (datos.nota_suficiencia_tutor_entregada ? 'Entregada' : null),
         },
+        {
+          etiqueta: 'Resolución de designación del tribunal revisor',
+          valor: datos.resolucion_tribunal?.nombre
+            || (datos.resolucion_tribunal_entregada ? 'Confirmada' : null),
+        },
+        { etiqueta: 'N.º de Resolución del HCC', valor: datos.numero_resolucion },
+        { etiqueta: 'Fecha de la resolución', valor: fechaLegible(datos.fecha_resolucion) },
         ...ROLES_TRIBUNAL.map((rol) => {
           const miembro = (datos.tribunal || []).find((t) => t.rol === rol);
           const nota = miembro?.nota_suficiencia?.nombre
@@ -541,6 +546,9 @@ export function validarModulo(moduloId, datos = {}, modalidad = null) {
     case 'tribunal_revisor':
       if (!datos.nota_suficiencia_tutor_entregada) {
         errores.push('Confirme que el tutor entregó la Nota de Suficiencia.');
+      }
+      if (!datos.resolucion_tribunal_entregada) {
+        errores.push('Confirme que se cuenta con la Resolución de designación del tribunal revisor.');
       }
       if (!val(datos.numero_resolucion)) errores.push('Ingrese el número de Resolución del HCC.');
       if (!val(datos.fecha_resolucion)) errores.push('Seleccione la fecha de la Resolución.');

@@ -308,6 +308,10 @@ export const useKardexStore = defineStore('kardex', {
                     }
 
                     if (moduloId === 'tribunal_revisor') {
+                        if (archivos.resolucion_tribunal) {
+                            datosMock.resolucion_tribunal = metadatos(archivos.resolucion_tribunal);
+                        }
+
                         if (archivos.nota_suficiencia_tutor) {
                             datosMock.nota_suficiencia_tutor = metadatos(archivos.nota_suficiencia_tutor);
                         }

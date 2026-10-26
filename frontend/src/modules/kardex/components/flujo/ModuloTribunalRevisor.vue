@@ -2,7 +2,7 @@
   <ModuloTarjeta
     numero="3"
     titulo="Tribunal Revisor"
-    descripcion="Verifique la Nota de Suficiencia del tutor y registre la Resolución del HCC que designa al tribunal revisor."
+    descripcion="Verifique la Nota de Suficiencia del tutor, la Resolución de designación del tribunal revisor y registre los datos de la Resolución del HCC."
     icono="users"
     :completado="completado"
     :en-progreso="enProgreso"
@@ -45,6 +45,41 @@
             <a
               v-if="datos.nota_suficiencia_tutor?.ruta"
               :href="assetUrl(datos.nota_suficiencia_tutor.ruta)"
+              target="_blank"
+              rel="noopener"
+              class="btn-ghost !py-1.5 text-xs"
+            >
+              <AppIcon name="link" :size="13" />
+              Ver PDF
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+              Resolución de Designación de Tribunal Revisor
+            </p>
+            <p
+              class="text-sm font-semibold mt-0.5 truncate"
+              :class="datos.resolucion_tribunal?.nombre ? 'text-slate-300' : 'text-slate-500'"
+            >
+              {{ datos.resolucion_tribunal?.nombre || 'Sin PDF adjunto' }}
+            </p>
+          </div>
+          <div class="flex flex-col items-end gap-1.5 shrink-0">
+            <span
+              v-if="datos.resolucion_tribunal_entregada"
+              class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-emerald-300"
+            >
+              <AppIcon name="check-circle" :size="13" />
+              Confirmada
+            </span>
+            <a
+              v-if="datos.resolucion_tribunal?.ruta"
+              :href="assetUrl(datos.resolucion_tribunal.ruta)"
               target="_blank"
               rel="noopener"
               class="btn-ghost !py-1.5 text-xs"
@@ -102,7 +137,7 @@
     </div>
 
     <form v-else @submit.prevent="enviar" class="space-y-5">
-      <div class="grid sm:grid-cols-2 gap-3">
+      <div class="grid sm:grid-cols-3 gap-3">
         <button
           type="button"
           class="flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition text-sm"
@@ -135,12 +170,37 @@
             class="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-xs font-extrabold"
             :class="dotPaso2"
           >
-            2
+            <AppIcon v-if="resolucionTribunalEntregada" name="check" :size="14" />
+            <template v-else>2</template>
+          </span>
+          <span class="min-w-0">
+            <span class="block font-bold uppercase tracking-wide">Resolución de Designación de Tribunal Revisor</span>
+            <span
+              class="block text-xs"
+              :class="resolucionTribunalEntregada ? 'text-emerald-300/80' : 'text-slate-400'"
+            >
+              {{ resolucionTribunalEntregada ? 'Resolución confirmada' : 'Confirme la resolución y adjunte el PDF opcional' }}
+            </span>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          class="flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition text-sm"
+          :class="chipPaso3"
+          :disabled="!puedePaso3"
+          @click="irPaso(3)"
+        >
+          <span
+            class="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-xs font-extrabold"
+            :class="dotPaso3"
+          >
+            3
           </span>
           <span class="min-w-0">
             <span class="block font-bold uppercase tracking-wide">Resolución y Tribunal Revisor</span>
             <span class="block text-xs text-slate-400">
-              {{ tutorEntregada ? 'Registre la resolución y valide las notas del tribunal' : 'Se habilita al confirmar el paso 1' }}
+              {{ puedePaso3 ? 'Registre la resolución del HCC y valide las notas' : 'Se habilita al confirmar el paso 2' }}
             </span>
           </span>
         </button>
@@ -201,6 +261,77 @@
             />
             <span class="text-xs text-orange-100 leading-relaxed">
               Confirmo que el tutor entregó la <strong>Nota de Suficiencia</strong> para continuar con la designación del tribunal.
+            </span>
+          </label>
+        </div>
+
+        <div class="flex justify-end">
+          <button type="submit" class="btn-warm px-6">
+            <AppIcon name="check" :size="18" />
+            <span class="uppercase tracking-wide">Continuar a designación del tribunal</span>
+          </button>
+        </div>
+      </div>
+
+      <div v-else-if="paso === '2'" class="space-y-4">
+        <div class="rounded-xl bg-white/5 border border-white/10 p-3.5 space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Tutor asignado</p>
+              <p class="text-sm font-semibold text-white mt-0.5">{{ nombreTutor }}</p>
+            </div>
+            <span
+              v-if="datos?.resolucion_tribunal?.nombre"
+              class="text-xs text-slate-400 truncate max-w-[220px]"
+            >
+              PDF previo: {{ datos.resolucion_tribunal.nombre }}
+            </span>
+          </div>
+
+          <div>
+            <label class="label" for="tribunal-resolucion-designacion">
+              Resolución de designación del tribunal revisor
+              <span class="text-slate-500 font-normal normal-case">(PDF opcional)</span>
+            </label>
+            <label
+              :class="[
+                'flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition',
+                archivoResolucionTribunal ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:border-orange-500/40',
+              ]"
+            >
+              <span class="flex items-center gap-2 text-sm min-w-0" :class="archivoResolucionTribunal ? 'text-orange-200' : 'text-slate-400'">
+                <AppIcon
+                  :name="archivoResolucionTribunal ? 'check-circle' : 'file-text'"
+                  :size="18"
+                  :class="archivoResolucionTribunal ? 'text-emerald-400 shrink-0' : 'shrink-0'"
+                />
+                <span class="truncate">{{ archivoResolucionTribunal?.name || 'Seleccione el PDF de la Resolución...' }}</span>
+              </span>
+              <input
+                id="tribunal-resolucion-designacion"
+                type="file"
+                accept=".pdf,application/pdf"
+                class="hidden"
+                @change="handleArchivoResolucionTribunal"
+              />
+              <span class="btn-ghost !py-2 pointer-events-none">
+                <AppIcon name="plus" :size="15" />
+                Subir
+              </span>
+            </label>
+            <p class="text-[11px] text-slate-500 mt-1.5">
+              Adjunte la resolución del HCC que designa al tribunal revisor, si ya cuenta con ella.
+            </p>
+          </div>
+
+          <label class="flex items-start gap-2.5 rounded-xl border border-orange-500/30 bg-orange-500/10 px-3.5 py-3 cursor-pointer">
+            <input
+              v-model="resolucionTribunalEntregada"
+              type="checkbox"
+              class="mt-0.5 h-4 w-4 rounded border-slate-500 bg-transparent text-orange-500 focus:ring-orange-400 focus:ring-offset-0"
+            />
+            <span class="text-xs text-orange-100 leading-relaxed">
+              Confirmo que se cuenta con la <strong>Resolución de designación del tribunal revisor</strong> para continuar con la resolución del HCC.
             </span>
           </label>
         </div>
@@ -359,7 +490,9 @@ const form = reactive({
 const paso = ref('1');
 const errores = ref([]);
 const tutorEntregada = ref(confirmado(props.datos?.nota_suficiencia_tutor_entregada));
+const resolucionTribunalEntregada = ref(confirmado(props.datos?.resolucion_tribunal_entregada));
 const archivoTutor = ref(null);
+const archivoResolucionTribunal = ref(null);
 const archivoMiembro = reactive({
   presidente: null,
   vocal: null,
@@ -391,16 +524,33 @@ const dotPaso1 = computed(() => {
   return paso.value === '1' ? DOT_ACTIVO : DOT_PENDIENTE;
 });
 
+const puedePaso3 = computed(() => tutorEntregada.value && resolucionTribunalEntregada.value);
+
 const chipPaso2 = computed(() => {
   if (!tutorEntregada.value) return 'border-white/10 bg-white/5 opacity-50';
+  if (resolucionTribunalEntregada.value) return 'border-emerald-500/30 bg-emerald-500/10';
   return paso.value === '2' ? 'border-orange-500 bg-orange-500/10' : 'border-white/10 bg-white/5';
 });
 
-const dotPaso2 = computed(() => (paso.value === '2' ? DOT_ACTIVO : DOT_PENDIENTE));
+const dotPaso2 = computed(() => {
+  if (resolucionTribunalEntregada.value) return 'bg-emerald-500 text-white';
+  return paso.value === '2' ? DOT_ACTIVO : DOT_PENDIENTE;
+});
+
+const chipPaso3 = computed(() => {
+  if (!puedePaso3.value) return 'border-white/10 bg-white/5 opacity-50';
+  return paso.value === '3' ? 'border-orange-500 bg-orange-500/10' : 'border-white/10 bg-white/5';
+});
+
+const dotPaso3 = computed(() => (paso.value === '3' ? DOT_ACTIVO : DOT_PENDIENTE));
 
 function irPaso(n) {
-  if (n === 2 && !tutorEntregada.value) {
+  if (n >= 2 && !tutorEntregada.value) {
     errores.value = ['Confirme que el tutor entregó la Nota de Suficiencia para continuar.'];
+    return;
+  }
+  if (n >= 3 && !resolucionTribunalEntregada.value) {
+    errores.value = ['Confirme que se cuenta con la Resolución de designación del tribunal revisor para continuar.'];
     return;
   }
   paso.value = String(n);
@@ -408,8 +558,14 @@ function irPaso(n) {
 }
 
 watch(tutorEntregada, (entregada) => {
-  if (!entregada && paso.value === '2') {
+  if (!entregada && paso.value !== '1') {
     paso.value = '1';
+  }
+});
+
+watch(resolucionTribunalEntregada, (confirmada) => {
+  if (!confirmada && paso.value === '3') {
+    paso.value = '2';
   }
 });
 
@@ -426,6 +582,19 @@ function handleArchivoTutor(event) {
     return;
   }
   archivoTutor.value = file;
+  errores.value = [];
+  event.target.value = '';
+}
+
+function handleArchivoResolucionTribunal(event) {
+  const file = event.target.files[0] || null;
+  if (file && !esPdf(file)) {
+    errores.value = ['La Resolución de designación del tribunal revisor debe ser un archivo PDF.'];
+    archivoResolucionTribunal.value = null;
+    event.target.value = '';
+    return;
+  }
+  archivoResolucionTribunal.value = file;
   errores.value = [];
   event.target.value = '';
 }
@@ -448,6 +617,7 @@ function obtenerDatos() {
     numero_resolucion: form.numero_resolucion.trim(),
     fecha_resolucion: form.fecha_resolucion,
     nota_suficiencia_tutor_entregada: tutorEntregada.value,
+    resolucion_tribunal_entregada: resolucionTribunalEntregada.value,
     tribunal: form.tribunal.map((t) => ({
       rol: t.rol,
       nombre: t.nombre.trim(),
@@ -457,6 +627,10 @@ function obtenerDatos() {
 
   if (props.datos?.nota_suficiencia_tutor) {
     datos.nota_suficiencia_tutor = props.datos.nota_suficiencia_tutor;
+  }
+
+  if (props.datos?.resolucion_tribunal) {
+    datos.resolucion_tribunal = props.datos.resolucion_tribunal;
   }
 
   form.tribunal.forEach((t, i) => {
@@ -472,6 +646,9 @@ function obtenerArchivos() {
   const archivos = {};
   if (archivoTutor.value) {
     archivos.nota_suficiencia_tutor = archivoTutor.value;
+  }
+  if (archivoResolucionTribunal.value) {
+    archivos.resolucion_tribunal = archivoResolucionTribunal.value;
   }
   ROLES_TRIBUNAL.forEach((rol) => {
     if (archivoMiembro[rol]) {
@@ -489,6 +666,16 @@ function enviar() {
       return;
     }
     paso.value = '2';
+    return;
+  }
+
+  if (paso.value === '2') {
+    errores.value = [];
+    if (!resolucionTribunalEntregada.value) {
+      errores.value = ['Confirme que se cuenta con la Resolución de designación del tribunal revisor para continuar.'];
+      return;
+    }
+    paso.value = '3';
     return;
   }
 

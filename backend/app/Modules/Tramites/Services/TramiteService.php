@@ -100,6 +100,9 @@ class TramiteService extends BasePaginadoService
     /** Documento opcional que designa al docente como tutor del trabajo. */
     private const DOC_RESOLUCION_TUTOR = 'resolucion_designacion_tutor';
 
+    /** Documento opcional que designa al tribunal revisor del trabajo. */
+    private const DOC_RESOLUCION_TRIBUNAL = 'resolucion_designacion_tribunal';
+
     /**
      * Porcentaje de avance por estado (incluye estados heredados) para saber si
      * un módulo avanza el flujo o ya fue superado. Espejo del frontend.
@@ -469,9 +472,9 @@ class TramiteService extends BasePaginadoService
      *
      * El módulo de tema puede incluir opcionalmente el PDF de la Resolución
      * que designa al docente como tutor; el módulo del tribunal puede incluir
-     * los PDFs de las Notas de Suficiencia del tutor y de cada miembro. Todos
-     * se guardan como documentos adjuntos y sus metadatos quedan registrados
-     * en el módulo.
+     * el PDF de la Resolución que designa al tribunal y los PDFs de las Notas
+     * de Suficiencia del tutor y de cada miembro. Todos se guardan como
+     * documentos adjuntos y sus metadatos quedan registrados en el módulo.
      *
      * @return array Trámite formateado (con siguientes_estados y secuencia).
      *
@@ -633,6 +636,15 @@ class TramiteService extends BasePaginadoService
 
         if ($modulo !== 'tribunal_revisor') {
             return $datos;
+        }
+
+        if (isset($adjuntos['resolucion_tribunal'])) {
+            $datos['resolucion_tribunal'] = $this->guardarMetadatosDocumento(
+                $tramite,
+                $actor,
+                $adjuntos['resolucion_tribunal'],
+                self::DOC_RESOLUCION_TRIBUNAL,
+            );
         }
 
         if (isset($adjuntos['nota_suficiencia_tutor'])) {
@@ -846,6 +858,9 @@ class TramiteService extends BasePaginadoService
             case 'tribunal_revisor':
                 if (empty($datos['nota_suficiencia_tutor_entregada'])) {
                     $errores[] = 'Confirme que el tutor entregó la Nota de Suficiencia.';
+                }
+                if (empty($datos['resolucion_tribunal_entregada'])) {
+                    $errores[] = 'Confirme que se cuenta con la Resolución de designación del tribunal revisor.';
                 }
                 if (! $val($datos['numero_resolucion'] ?? null)) {
                     $errores[] = 'Ingrese el número de Resolución del HCC.';

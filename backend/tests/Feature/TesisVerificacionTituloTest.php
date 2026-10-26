@@ -230,11 +230,13 @@ class TesisVerificacionTituloTest extends TestCase
         $this->actingAs($this->crearUsuarioGestion())
             ->post("/api/tramites/{$tramite->id_tramite}/flujo/tribunal_revisor", ['datos' => $datos])
             ->assertStatus(422)
-            ->assertJsonValidationErrors('datos');
+            ->assertJsonValidationErrors('datos')
+            ->assertJsonFragment(['Confirme que se cuenta con la Resolución de designación del tribunal revisor.']);
 
         $this->assertSame('tema_aprobado', $tramite->refresh()->estado_actual);
 
         $datos['nota_suficiencia_tutor_entregada'] = true;
+        $datos['resolucion_tribunal_entregada'] = true;
 
         $this->actingAs($this->crearUsuarioGestion())
             ->post("/api/tramites/{$tramite->id_tramite}/flujo/tribunal_revisor", ['datos' => $datos])
@@ -251,6 +253,7 @@ class TesisVerificacionTituloTest extends TestCase
         $this->actingAs($this->crearUsuarioGestion())
             ->post("/api/tramites/{$tramite->id_tramite}/flujo/tribunal_revisor", [
                 'datos' => $datos,
+                'resolucion_tribunal' => UploadedFile::fake()->create('resolucion_tribunal.pdf', 100, 'application/pdf'),
                 'nota_suficiencia_tutor' => UploadedFile::fake()->create('nota_tutor.pdf', 100, 'application/pdf'),
                 'nota_suficiencia_presidente' => UploadedFile::fake()->create('nota_presidente.pdf', 100, 'application/pdf'),
                 'nota_suficiencia_vocal' => UploadedFile::fake()->create('nota_vocal.pdf', 100, 'application/pdf'),
@@ -262,6 +265,9 @@ class TesisVerificacionTituloTest extends TestCase
         $modulo = $tramite->hitos['modulos']['tribunal_revisor'];
 
         $this->assertSame('tribunal_asignado', $tramite->estado_actual);
+        $this->assertTrue((bool) $modulo['resolucion_tribunal_entregada']);
+        $this->assertSame('resolucion_tribunal.pdf', $modulo['resolucion_tribunal']['nombre']);
+        $this->assertTrue(Storage::disk('public')->exists($modulo['resolucion_tribunal']['ruta']));
         $this->assertTrue((bool) $modulo['nota_suficiencia_tutor_entregada']);
         $this->assertSame('nota_tutor.pdf', $modulo['nota_suficiencia_tutor']['nombre']);
         $this->assertTrue(Storage::disk('public')->exists($modulo['nota_suficiencia_tutor']['ruta']));

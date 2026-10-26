@@ -25,6 +25,7 @@ class GuardarModuloFlujoRequest extends FormRequest
         return [
             'datos' => ['required', 'array'],
             'resolucion_tutor' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
+            'resolucion_tribunal' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
             'nota_suficiencia_tutor' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
             'nota_suficiencia_presidente' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
             'nota_suficiencia_vocal' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
@@ -42,6 +43,8 @@ class GuardarModuloFlujoRequest extends FormRequest
             'datos.array' => 'Los datos del módulo deben ser un objeto.',
             'resolucion_tutor.mimes' => 'La Resolución de designación como tutor debe ser un archivo PDF.',
             'resolucion_tutor.max' => 'La Resolución de designación como tutor no debe superar los 10 MB.',
+            'resolucion_tribunal.mimes' => 'La Resolución de designación del tribunal revisor debe ser un archivo PDF.',
+            'resolucion_tribunal.max' => 'La Resolución de designación del tribunal revisor no debe superar los 10 MB.',
             'nota_suficiencia_tutor.mimes' => 'La Nota de Suficiencia del tutor debe ser un archivo PDF.',
             'nota_suficiencia_tutor.max' => 'La Nota de Suficiencia del tutor no debe superar los 10 MB.',
             'nota_suficiencia_presidente.mimes' => 'La Nota de Suficiencia del presidente debe ser un archivo PDF.',
